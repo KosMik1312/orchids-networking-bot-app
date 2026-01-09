@@ -6,24 +6,34 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 
-type Screen = "welcome" | "quiz" | "onboarding" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userName, setUserName] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
 
-  const handleStartQuiz = () => {
+  const handleStartOnboarding = () => {
+    setCurrentScreen("onboarding");
+  };
+
+  const handleOnboardingComplete = () => {
     setCurrentScreen("quiz");
   };
 
   const handleQuizComplete = (name: string) => {
     setUserName(name);
-    setCurrentScreen("onboarding");
+    setCurrentScreen("main");
   };
 
-  const handleOnboardingComplete = () => {
-    setCurrentScreen("main");
+  const handleBackToWelcome = () => {
+    setCurrentScreen("welcome");
+    setOnboardingStep(1);
+  };
+
+  const handleBackToOnboarding = () => {
+    setCurrentScreen("onboarding");
+    setOnboardingStep(4);
   };
 
   return (
@@ -38,23 +48,7 @@ export default function Home() {
             transition={{ duration: 0.3 }}
             className="min-h-screen"
           >
-            <WelcomeScreen onStart={handleStartQuiz} />
-          </motion.div>
-        )}
-
-        {currentScreen === "quiz" && (
-          <motion.div
-            key="quiz"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <QuizScreen 
-              onNext={handleQuizComplete} 
-              onBack={() => setCurrentScreen("welcome")} 
-            />
+            <WelcomeScreen onStart={handleStartOnboarding} />
           </motion.div>
         )}
 
@@ -70,6 +64,23 @@ export default function Home() {
               currentStep={onboardingStep}
               onStepChange={setOnboardingStep}
               onComplete={handleOnboardingComplete}
+              onBack={handleBackToWelcome}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "quiz" && (
+          <motion.div
+            key="quiz"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <QuizScreen 
+              onNext={handleQuizComplete} 
+              onBack={handleBackToOnboarding} 
             />
           </motion.div>
         )}
@@ -86,16 +97,16 @@ export default function Home() {
           >
             <div className="text-center">
               <h1
-                className="font-serif text-4xl italic text-[#E86A5C] mb-6"
+                className="font-serif text-4xl italic text-[#E15859] mb-6"
                 style={{ fontFamily: "'Cormorant Garamond', serif" }}
               >
                 Аллора Клаб
               </h1>
               <p
-                className="text-[#737373] text-lg mb-8"
+                className="text-[#404243] text-lg mb-8"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
-                Онбординг завершён!
+                {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
                 <br />
                 Здесь будет анкета и список мероприятий.
               </p>
@@ -103,8 +114,9 @@ export default function Home() {
                 onClick={() => {
                   setCurrentScreen("welcome");
                   setOnboardingStep(1);
+                  setUserName("");
                 }}
-                className="px-8 py-3 rounded-full bg-[#E86A5C] text-white font-semibold"
+                className="px-8 py-3 rounded-full bg-[#E15859] text-white font-semibold"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
                 Начать заново

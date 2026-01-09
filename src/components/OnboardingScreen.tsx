@@ -89,12 +89,14 @@ function StepIndicator({ currentStep, totalSteps }: StepIndicatorProps) {
 
 interface OnboardingScreenProps {
   onComplete: () => void;
+  onBack: () => void;
   currentStep: number;
   onStepChange: (step: number) => void;
 }
 
 export function OnboardingScreen({
   onComplete,
+  onBack,
   currentStep,
   onStepChange,
 }: OnboardingScreenProps) {
@@ -112,6 +114,8 @@ export function OnboardingScreen({
   const handleBack = () => {
     if (currentStep > 1) {
       onStepChange(currentStep - 1);
+    } else {
+      onBack();
     }
   };
 
@@ -173,21 +177,19 @@ export function OnboardingScreen({
 
         <div className="px-6 pb-8">
           <div className="flex gap-3">
-            {currentStep > 1 && (
-              <motion.button
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleBack}
-                className="w-14 h-14 rounded-full flex items-center justify-center"
-                style={{ 
-                  backgroundColor: "#E15859",
-                  border: "none"
-                }}
-              >
-                <ChevronLeft className="w-6 h-6" style={{ color: "#FFFFFF" }} />
-              </motion.button>
-            )}
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleBack}
+              className="w-14 h-14 rounded-full flex items-center justify-center"
+              style={{ 
+                backgroundColor: "transparent",
+                border: "1.5px solid #E15859"
+              }}
+            >
+              <ChevronLeft className="w-6 h-6" style={{ color: "#E15859" }} />
+            </motion.button>
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleNext}
