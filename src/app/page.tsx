@@ -3,15 +3,22 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 
-type Screen = "welcome" | "onboarding" | "main";
+type Screen = "welcome" | "quiz" | "onboarding" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
+  const [userName, setUserName] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
 
-  const handleStartOnboarding = () => {
+  const handleStartQuiz = () => {
+    setCurrentScreen("quiz");
+  };
+
+  const handleQuizComplete = (name: string) => {
+    setUserName(name);
     setCurrentScreen("onboarding");
   };
 
@@ -20,7 +27,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: currentScreen === "welcome" ? "#E9E9E9" : currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
+    <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
         {currentScreen === "welcome" && (
           <motion.div
@@ -31,7 +38,23 @@ export default function Home() {
             transition={{ duration: 0.3 }}
             className="min-h-screen"
           >
-            <WelcomeScreen onStart={handleStartOnboarding} />
+            <WelcomeScreen onStart={handleStartQuiz} />
+          </motion.div>
+        )}
+
+        {currentScreen === "quiz" && (
+          <motion.div
+            key="quiz"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <QuizScreen 
+              onNext={handleQuizComplete} 
+              onBack={() => setCurrentScreen("welcome")} 
+            />
           </motion.div>
         )}
 
