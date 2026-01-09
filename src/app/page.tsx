@@ -9,8 +9,9 @@ import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
 import { ChildrenSelectionScreen, type ChildrenStatus } from "@/components/ChildrenSelectionScreen";
+import { OccupationSelectionScreen, type OccupationType } from "@/components/OccupationSelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -19,6 +20,7 @@ export default function Home() {
   const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
   const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
   const [userChildren, setUserChildren] = useState<ChildrenStatus | null>(null);
+  const [userOccupation, setUserOccupation] = useState<OccupationType | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -51,6 +53,11 @@ export default function Home() {
 
   const handleChildrenComplete = (status: ChildrenStatus) => {
     setUserChildren(status);
+    setCurrentScreen("occupation");
+  };
+
+  const handleOccupationComplete = (occupation: OccupationType) => {
+    setUserOccupation(occupation);
     setCurrentScreen("main");
   };
 
@@ -78,6 +85,10 @@ export default function Home() {
 
   const handleBackToRelationship = () => {
     setCurrentScreen("relationship");
+  };
+
+  const handleBackToChildren = () => {
+    setCurrentScreen("children");
   };
 
   return (
@@ -125,7 +136,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={20}
+              progress={15}
             />
           </motion.div>
         )}
@@ -142,7 +153,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={40}
+              progress={30}
             />
           </motion.div>
         )}
@@ -159,7 +170,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={60}
+              progress={45}
             />
           </motion.div>
         )}
@@ -176,7 +187,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={80}
+              progress={60}
             />
           </motion.div>
         )}
@@ -193,7 +204,24 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={100}
+              progress={75}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "occupation" && (
+          <motion.div
+            key="occupation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <OccupationSelectionScreen 
+              onNext={handleOccupationComplete} 
+              onBack={handleBackToChildren}
+              progress={90}
             />
           </motion.div>
         )}
@@ -238,6 +266,23 @@ export default function Home() {
                     "Не указано"
                   }
                 </p>
+                <p>
+                  Сфера: {
+                    userOccupation === "unemployed" ? "Не работаю" :
+                    userOccupation === "it" ? "IT и технологии" :
+                    userOccupation === "retail" ? "Торговля и ритейл" :
+                    userOccupation === "education" ? "Образование и наука" :
+                    userOccupation === "government" ? "Госслужба и политика" :
+                    userOccupation === "transport" ? "Транспорт и логистика" :
+                    userOccupation === "finance" ? "Финансы и юриспруденция" :
+                    userOccupation === "services" ? "Сфера услуг" :
+                    userOccupation === "production" ? "Производство" :
+                    userOccupation === "hospitality" ? "Гостеприимство" :
+                    userOccupation === "marketing" ? "Маркетинг" :
+                    userOccupation === "other" ? "Другое" :
+                    "Не указано"
+                  }
+                </p>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
               <button
@@ -249,6 +294,7 @@ export default function Home() {
                   setUserGender(null);
                   setUserRelationship(null);
                   setUserChildren(null);
+                  setUserOccupation(null);
                 }}
                 className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
