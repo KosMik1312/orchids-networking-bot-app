@@ -20,7 +20,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen" style={{ backgroundColor: currentScreen === "welcome" ? "#E9E9E9" : currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
         {currentScreen === "welcome" && (
           <motion.div
@@ -29,6 +29,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
+            className="min-h-screen"
           >
             <WelcomeScreen onStart={handleStartOnboarding} />
           </motion.div>
@@ -57,7 +58,8 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="min-h-screen bg-white flex flex-col items-center justify-center px-6"
+            className="min-h-screen flex flex-col items-center justify-center px-6"
+            style={{ backgroundColor: "#E9E9E9" }}
           >
             <div className="text-center">
               <h1

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
+import { IMAGE_PATHS } from "@/lib/images";
 
 interface OnboardingStep {
   id: number;
@@ -15,25 +16,25 @@ const onboardingSteps: OnboardingStep[] = [
     id: 1,
     title: "РАССКАЖИ О СЕБЕ",
     description: "Заполни короткую анкету и мы найдем тебе подходящих собеседников",
-    image: "https://images.unsplash.com/photo-1529543544277-750e0962889a?w=800&h=1200&fit=crop&q=80",
+    image: IMAGE_PATHS.onboarding.step1,
   },
   {
     id: 2,
     title: "ПОДБИРАЕМ КОМПАНИЮ",
     description: "Наш алгоритм учитывает возраст, стиль общения, темперамент и другие нюансы",
-    image: "https://images.unsplash.com/photo-1543269664-56d93c1b41a6?w=800&h=1200&fit=crop&q=80",
+    image: IMAGE_PATHS.onboarding.step2,
   },
   {
     id: 3,
     title: "МЫ ВСЁ ОРГАНИЗУЕМ",
     description: "Создаем развлекательную программу для вашей компании, где позитивные эмоции и общие интересы объединяют",
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&h=1200&fit=crop&q=80",
+    image: IMAGE_PATHS.onboarding.step3,
   },
   {
     id: 4,
     title: "ДЕНЬ X",
     description: "Идеально для каждого! Наслаждайтесь вечером с людьми, которые разделяют ваш интерес, цели и желания",
-    image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&h=1200&fit=crop&q=80",
+    image: IMAGE_PATHS.onboarding.step4,
   },
 ];
 
@@ -47,7 +48,8 @@ function StepIndicator({ currentStep, totalSteps }: StepIndicatorProps) {
     <div className="flex items-center gap-0 px-4 pt-4">
       {Array.from({ length: totalSteps }, (_, i) => {
         const stepNum = i + 1;
-        const isActive = stepNum <= currentStep;
+        const isActive = stepNum === currentStep;
+        const isCompleted = stepNum < currentStep;
         const isLast = i === totalSteps - 1;
 
         return (
@@ -59,19 +61,22 @@ function StepIndicator({ currentStep, totalSteps }: StepIndicatorProps) {
               className={`
                 w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold
                 ${
-                  isActive
-                    ? "bg-[#E86A5C] text-white"
-                    : "bg-transparent border-2 border-white/60 text-white/60"
+                  isActive || isCompleted
+                    ? "text-white"
+                    : "bg-transparent border-2 border-white text-white"
                 }
               `}
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              style={{ 
+                fontFamily: "'Montserrat', sans-serif",
+                backgroundColor: (isActive || isCompleted) ? "#E15859" : "transparent"
+              }}
             >
               {stepNum}
             </motion.div>
             {!isLast && (
               <div
                 className={`w-6 h-[2px] ${
-                  stepNum < currentStep ? "bg-[#E86A5C]" : "bg-white/40"
+                  stepNum < currentStep ? "bg-[#E15859]" : "bg-white"
                 }`}
               />
             )}
@@ -118,13 +123,25 @@ export function OnboardingScreen({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="absolute inset-0"
+        className="absolute inset-0 z-0"
       >
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${step.image})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        {/* Градиенты согласно спецификации */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(0deg, rgba(0, 0, 0, 0) 69.16%, #000000 100%)"
+          }}
+        />
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, rgba(0, 0, 0, 0) 39.03%, #000000 80.01%)"
+          }}
+        />
       </motion.div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -162,16 +179,23 @@ export function OnboardingScreen({
                 animate={{ opacity: 1, x: 0 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleBack}
-                className="w-14 h-14 rounded-full border-2 border-[#E86A5C] flex items-center justify-center"
+                className="w-14 h-14 rounded-full flex items-center justify-center"
+                style={{ 
+                  backgroundColor: "#E15859",
+                  border: "none"
+                }}
               >
-                <ChevronLeft className="w-6 h-6 text-[#E86A5C]" />
+                <ChevronLeft className="w-6 h-6" style={{ color: "#FFFFFF" }} />
               </motion.button>
             )}
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleNext}
-              className="flex-1 py-4 rounded-full bg-[#E86A5C] text-white text-lg font-semibold"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              className="flex-1 py-4 rounded-full text-white text-lg font-semibold"
+              style={{ 
+                fontFamily: "'Montserrat', sans-serif",
+                backgroundColor: "#E15859"
+              }}
             >
               Далее
             </motion.button>
