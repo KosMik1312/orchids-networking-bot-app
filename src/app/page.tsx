@@ -7,14 +7,16 @@ import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
+import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userName, setUserName] = useState("");
   const [userAge, setUserAge] = useState<number>(25);
   const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
+  const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -37,6 +39,11 @@ export default function Home() {
 
   const handleGenderComplete = (gender: "male" | "female") => {
     setUserGender(gender);
+    setCurrentScreen("relationship");
+  };
+
+  const handleRelationshipComplete = (status: RelationshipStatus) => {
+    setUserRelationship(status);
     setCurrentScreen("main");
   };
 
@@ -56,6 +63,10 @@ export default function Home() {
 
   const handleBackToAge = () => {
     setCurrentScreen("age");
+  };
+
+  const handleBackToGender = () => {
+    setCurrentScreen("gender");
   };
 
   return (
@@ -103,7 +114,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={33}
+              progress={25}
             />
           </motion.div>
         )}
@@ -120,7 +131,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={66}
+              progress={50}
             />
           </motion.div>
         )}
@@ -137,6 +148,23 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
+              progress={75}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "relationship" && (
+          <motion.div
+            key="relationship"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <RelationshipStatusScreen 
+              onNext={handleRelationshipComplete} 
+              onBack={handleBackToGender}
               progress={100}
             />
           </motion.div>
@@ -149,28 +177,34 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="min-h-screen flex flex-col items-center justify-center px-6"
+            className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
             style={{ backgroundColor: "#E9E9E9" }}
           >
-            <div className="text-center">
+            <div className="max-w-md w-full">
               <h1
                 className="font-serif text-4xl italic text-[#E15859] mb-6"
                 style={{ fontFamily: "'Cormorant Garamond', serif" }}
               >
                 Аллора Клаб
               </h1>
-              <p
-                className="text-[#404243] text-lg mb-8"
+              <div
+                className="text-[#404243] text-lg mb-8 space-y-2"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
-                {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
-                <br />
-                Возраст: {userAge}
-                <br />
-                Пол: {userGender === "male" ? "Мужской" : "Женский"}
-                <br />
-                Здесь будет анкета и список мероприятий.
-              </p>
+                <p className="font-bold text-xl mb-4">
+                  {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
+                </p>
+                <p>Возраст: {userAge}</p>
+                <p>Пол: {userGender === "male" ? "Мужской" : "Женский"}</p>
+                <p>
+                  Статус: {
+                    userRelationship === "in_relationship" ? "В отношениях / в браке" :
+                    userRelationship === "single" ? "Без партнера" :
+                    "Не указано"
+                  }
+                </p>
+                <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
+              </div>
               <button
                 onClick={() => {
                   setCurrentScreen("welcome");
@@ -178,8 +212,9 @@ export default function Home() {
                   setUserName("");
                   setUserAge(25);
                   setUserGender(null);
+                  setUserRelationship(null);
                 }}
-                className="px-8 py-3 rounded-full bg-[#E15859] text-white font-semibold"
+                className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
                 Начать заново
