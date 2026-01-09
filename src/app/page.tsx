@@ -5,12 +5,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
+import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
+import { CalendarScreen } from "@/components/CalendarScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "calendar" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userName, setUserName] = useState("");
+  const [userAge, setUserAge] = useState<number>(25);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -23,6 +27,16 @@ export default function Home() {
 
   const handleQuizComplete = (name: string) => {
     setUserName(name);
+    setCurrentScreen("age");
+  };
+
+  const handleAgeComplete = (age: number) => {
+    setUserAge(age);
+    setCurrentScreen("calendar");
+  };
+
+  const handleCalendarComplete = (date: Date) => {
+    setSelectedDate(date);
     setCurrentScreen("main");
   };
 
@@ -34,6 +48,14 @@ export default function Home() {
   const handleBackToOnboarding = () => {
     setCurrentScreen("onboarding");
     setOnboardingStep(4);
+  };
+
+  const handleBackToQuiz = () => {
+    setCurrentScreen("quiz");
+  };
+
+  const handleBackToAge = () => {
+    setCurrentScreen("age");
   };
 
   return (
@@ -85,6 +107,40 @@ export default function Home() {
           </motion.div>
         )}
 
+        {currentScreen === "age" && (
+          <motion.div
+            key="age"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <AgeSelectionScreen 
+              onNext={handleAgeComplete} 
+              onBack={handleBackToQuiz}
+              progress={30}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "calendar" && (
+          <motion.div
+            key="calendar"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <CalendarScreen 
+              onNext={handleCalendarComplete} 
+              onBack={handleBackToAge}
+              progress={50}
+            />
+          </motion.div>
+        )}
+
         {currentScreen === "main" && (
           <motion.div
             key="main"
@@ -108,6 +164,10 @@ export default function Home() {
               >
                 {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
                 <br />
+                Возраст: {userAge}
+                <br />
+                Выбранная дата: {selectedDate?.toLocaleDateString()}
+                <br />
                 Здесь будет анкета и список мероприятий.
               </p>
               <button
@@ -115,6 +175,8 @@ export default function Home() {
                   setCurrentScreen("welcome");
                   setOnboardingStep(1);
                   setUserName("");
+                  setUserAge(25);
+                  setSelectedDate(null);
                 }}
                 className="px-8 py-3 rounded-full bg-[#E15859] text-white font-semibold"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
