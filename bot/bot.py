@@ -13,7 +13,7 @@ from database import init_db, save_user_profile, get_user_profile
 BOT_TOKEN = "8121198859:AAEY7nBbJjHBd7RZ4BbYOKHBBMCyNF3ydEg"  # Получите у @BotFather
 
 # URL вашего MiniApp
-MINIAPP_URL = "http://localhost:3000"  # Разверните на Vercel
+MINIAPP_URL = "https://orchids-networking-bot-app.vercel.app"  # Разверните на Vercel
 
 # Настройка
 logging.basicConfig(level=logging.INFO)
