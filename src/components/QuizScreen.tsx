@@ -7,9 +7,10 @@ import { User, ChevronLeft } from "lucide-react";
 interface QuizScreenProps {
   onNext: (name: string) => void;
   onBack: () => void;
+  progress: number;
 }
 
-export function QuizScreen({ onNext, onBack }: QuizScreenProps) {
+export function QuizScreen({ onNext, onBack, progress }: QuizScreenProps) {
   const [name, setName] = useState("");
 
   const handleContinue = () => {
@@ -26,8 +27,8 @@ export function QuizScreen({ onNext, onBack }: QuizScreenProps) {
       <div className="px-6 pt-16 pb-12">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>
           <div
-            className="h-full w-[10%] rounded-full transition-all duration-300"
-            style={{ backgroundColor: "#404243" }}
+            className="h-full rounded-full transition-all duration-300"
+            style={{ backgroundColor: "#404243", width: `${progress}%` }}
           />
         </div>
       </div>

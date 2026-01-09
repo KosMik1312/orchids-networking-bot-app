@@ -6,13 +6,15 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
+import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userName, setUserName] = useState("");
   const [userAge, setUserAge] = useState<number>(25);
+  const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -30,6 +32,11 @@ export default function Home() {
 
   const handleAgeComplete = (age: number) => {
     setUserAge(age);
+    setCurrentScreen("gender");
+  };
+
+  const handleGenderComplete = (gender: "male" | "female") => {
+    setUserGender(gender);
     setCurrentScreen("main");
   };
 
@@ -45,6 +52,10 @@ export default function Home() {
 
   const handleBackToQuiz = () => {
     setCurrentScreen("quiz");
+  };
+
+  const handleBackToAge = () => {
+    setCurrentScreen("age");
   };
 
   return (
@@ -92,6 +103,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
+              progress={33}
             />
           </motion.div>
         )}
@@ -108,7 +120,24 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={50}
+              progress={66}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "gender" && (
+          <motion.div
+            key="gender"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <GenderSelectionScreen 
+              onNext={handleGenderComplete} 
+              onBack={handleBackToAge}
+              progress={100}
             />
           </motion.div>
         )}
@@ -138,6 +167,8 @@ export default function Home() {
                 <br />
                 Возраст: {userAge}
                 <br />
+                Пол: {userGender === "male" ? "Мужской" : "Женский"}
+                <br />
                 Здесь будет анкета и список мероприятий.
               </p>
               <button
@@ -146,6 +177,7 @@ export default function Home() {
                   setOnboardingStep(1);
                   setUserName("");
                   setUserAge(25);
+                  setUserGender(null);
                 }}
                 className="px-8 py-3 rounded-full bg-[#E15859] text-white font-semibold"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
