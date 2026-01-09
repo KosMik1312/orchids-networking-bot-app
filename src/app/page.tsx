@@ -8,8 +8,9 @@ import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
+import { ChildrenSelectionScreen, type ChildrenStatus } from "@/components/ChildrenSelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -17,6 +18,7 @@ export default function Home() {
   const [userAge, setUserAge] = useState<number>(25);
   const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
   const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
+  const [userChildren, setUserChildren] = useState<ChildrenStatus | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -44,6 +46,11 @@ export default function Home() {
 
   const handleRelationshipComplete = (status: RelationshipStatus) => {
     setUserRelationship(status);
+    setCurrentScreen("children");
+  };
+
+  const handleChildrenComplete = (status: ChildrenStatus) => {
+    setUserChildren(status);
     setCurrentScreen("main");
   };
 
@@ -67,6 +74,10 @@ export default function Home() {
 
   const handleBackToGender = () => {
     setCurrentScreen("gender");
+  };
+
+  const handleBackToRelationship = () => {
+    setCurrentScreen("relationship");
   };
 
   return (
@@ -114,7 +125,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={25}
+              progress={20}
             />
           </motion.div>
         )}
@@ -131,7 +142,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={50}
+              progress={40}
             />
           </motion.div>
         )}
@@ -148,7 +159,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={75}
+              progress={60}
             />
           </motion.div>
         )}
@@ -165,6 +176,23 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
+              progress={80}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "children" && (
+          <motion.div
+            key="children"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <ChildrenSelectionScreen 
+              onNext={handleChildrenComplete} 
+              onBack={handleBackToRelationship}
               progress={100}
             />
           </motion.div>
@@ -203,6 +231,13 @@ export default function Home() {
                     "Не указано"
                   }
                 </p>
+                <p>
+                  Дети: {
+                    userChildren === "yes" ? "Есть" :
+                    userChildren === "no" ? "Нет" :
+                    "Не указано"
+                  }
+                </p>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
               <button
@@ -213,6 +248,7 @@ export default function Home() {
                   setUserAge(25);
                   setUserGender(null);
                   setUserRelationship(null);
+                  setUserChildren(null);
                 }}
                 className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
