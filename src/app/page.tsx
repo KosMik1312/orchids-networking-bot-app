@@ -10,8 +10,9 @@ import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
 import { ChildrenSelectionScreen, type ChildrenStatus } from "@/components/ChildrenSelectionScreen";
 import { OccupationSelectionScreen, type OccupationType } from "@/components/OccupationSelectionScreen";
+import { GoalSelectionScreen, type GoalType } from "@/components/GoalSelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -21,6 +22,7 @@ export default function Home() {
   const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
   const [userChildren, setUserChildren] = useState<ChildrenStatus | null>(null);
   const [userOccupation, setUserOccupation] = useState<OccupationType | null>(null);
+  const [userGoal, setUserGoal] = useState<GoalType | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -58,6 +60,11 @@ export default function Home() {
 
   const handleOccupationComplete = (occupation: OccupationType) => {
     setUserOccupation(occupation);
+    setCurrentScreen("goal");
+  };
+
+  const handleGoalComplete = (goal: GoalType) => {
+    setUserGoal(goal);
     setCurrentScreen("main");
   };
 
@@ -89,6 +96,10 @@ export default function Home() {
 
   const handleBackToChildren = () => {
     setCurrentScreen("children");
+  };
+
+  const handleBackToOccupation = () => {
+    setCurrentScreen("occupation");
   };
 
   return (
@@ -136,7 +147,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={15}
+              progress={12}
             />
           </motion.div>
         )}
@@ -153,7 +164,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={30}
+              progress={24}
             />
           </motion.div>
         )}
@@ -170,7 +181,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={45}
+              progress={36}
             />
           </motion.div>
         )}
@@ -187,7 +198,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={60}
+              progress={48}
             />
           </motion.div>
         )}
@@ -204,7 +215,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={75}
+              progress={60}
             />
           </motion.div>
         )}
@@ -221,7 +232,24 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={90}
+              progress={72}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "goal" && (
+          <motion.div
+            key="goal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <GoalSelectionScreen 
+              onNext={handleGoalComplete} 
+              onBack={handleBackToOccupation}
+              progress={84}
             />
           </motion.div>
         )}
@@ -283,6 +311,14 @@ export default function Home() {
                     "Не указано"
                   }
                 </p>
+                <p>
+                  Цель: {
+                    userGoal === "experience" ? "Новый опыт" :
+                    userGoal === "emotions" ? "Яркие эмоции" :
+                    userGoal === "friends" ? "Новые друзья" :
+                    "Не указано"
+                  }
+                </p>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
               <button
@@ -295,6 +331,7 @@ export default function Home() {
                   setUserRelationship(null);
                   setUserChildren(null);
                   setUserOccupation(null);
+                  setUserGoal(null);
                 }}
                 className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
