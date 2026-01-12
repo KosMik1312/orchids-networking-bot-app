@@ -18,8 +18,9 @@ import { CommunicationFormatScreen, type CommunicationFormat } from "@/component
 import { EveningScenarioScreen, type EveningScenario } from "@/components/EveningScenarioScreen";
 import { SocialLinksScreen } from "@/components/SocialLinksScreen";
 import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
+import { AboutMeScreen } from "@/components/AboutMeScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -37,6 +38,7 @@ export default function Home() {
   const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
   const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [userAboutMe, setUserAboutMe] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -114,6 +116,11 @@ export default function Home() {
 
   const handlePhotoUploadComplete = (photo: string) => {
     setUserPhoto(photo);
+    setCurrentScreen("about_me");
+  };
+
+  const handleAboutMeComplete = (about: string) => {
+    setUserAboutMe(about);
     setCurrentScreen("main");
   };
 
@@ -179,6 +186,10 @@ export default function Home() {
     setCurrentScreen("social_links");
   };
 
+  const handleBackToPhotoUpload = () => {
+    setCurrentScreen("photo_upload");
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
@@ -224,7 +235,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={7}
+              progress={6}
             />
           </motion.div>
         )}
@@ -241,7 +252,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={14}
+              progress={13}
             />
           </motion.div>
         )}
@@ -258,7 +269,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={21}
+              progress={20}
             />
           </motion.div>
         )}
@@ -275,7 +286,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={28}
+              progress={26}
             />
           </motion.div>
         )}
@@ -292,7 +303,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={35}
+              progress={33}
             />
           </motion.div>
         )}
@@ -309,7 +320,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={42}
+              progress={40}
             />
           </motion.div>
         )}
@@ -326,7 +337,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={49}
+              progress={46}
             />
           </motion.div>
         )}
@@ -343,7 +354,7 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
-              progress={56}
+              progress={53}
             />
           </motion.div>
         )}
@@ -360,7 +371,7 @@ export default function Home() {
             <ComfortSelectionScreen 
               onNext={handleComfortComplete} 
               onBack={handleBackToInterests}
-              progress={63}
+              progress={60}
             />
           </motion.div>
         )}
@@ -377,7 +388,7 @@ export default function Home() {
             <SocialFrequencyScreen 
               onNext={handleSocialFrequencyComplete} 
               onBack={handleBackToComfort}
-              progress={70}
+              progress={66}
             />
           </motion.div>
         )}
@@ -394,7 +405,7 @@ export default function Home() {
             <CommunicationFormatScreen 
               onNext={handleCommunicationFormatComplete} 
               onBack={handleBackToSocialFrequency}
-              progress={77}
+              progress={73}
             />
           </motion.div>
         )}
@@ -411,7 +422,7 @@ export default function Home() {
             <EveningScenarioScreen 
               onNext={handleEveningScenarioComplete} 
               onBack={handleBackToCommunicationFormat}
-              progress={84}
+              progress={80}
             />
           </motion.div>
         )}
@@ -428,7 +439,7 @@ export default function Home() {
             <SocialLinksScreen 
               onNext={handleSocialLinksComplete} 
               onBack={handleBackToEveningScenario}
-              progress={91}
+              progress={86}
             />
           </motion.div>
         )}
@@ -445,6 +456,23 @@ export default function Home() {
             <PhotoUploadScreen 
               onNext={handlePhotoUploadComplete} 
               onBack={handleBackToSocialLinks}
+              progress={93}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "about_me" && (
+          <motion.div
+            key="about_me"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <AboutMeScreen 
+              onNext={handleAboutMeComplete} 
+              onBack={handleBackToPhotoUpload}
               progress={100}
             />
           </motion.div>
@@ -468,7 +496,7 @@ export default function Home() {
                 Аллора Клаб
               </h1>
               <div
-                className="text-[#404243] text-lg mb-8 space-y-2"
+                className="text-[#404243] text-lg mb-8 space-y-2 text-left"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
                 {userPhoto && (
@@ -478,83 +506,98 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-                <p className="font-bold text-xl mb-4">
+                <p className="font-bold text-xl mb-4 text-center">
                   {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
                 </p>
-                <p>Возраст: {userAge}</p>
-                <p>Пол: {userGender === "male" ? "Мужской" : "Женский"}</p>
-                <p>
-                  Статус: {
-                    userRelationship === "in_relationship" ? "В отношениях / в браке" :
-                    userRelationship === "single" ? "Без партнера" :
-                    "Не указано"
-                  }
-                </p>
-                <p>
-                  Дети: {
-                    userChildren === "yes" ? "Есть" :
-                    userChildren === "no" ? "Нет" :
-                    "Не указано"
-                  }
-                </p>
-                <p>
-                  Сфера: {
-                    userOccupation === "unemployed" ? "Не работаю" :
-                    userOccupation === "it" ? "IT и технологии" :
-                    userOccupation === "retail" ? "Торговля и ритейл" :
-                    userOccupation === "education" ? "Образование и наука" :
-                    userOccupation === "government" ? "Госслужба и политика" :
-                    userOccupation === "transport" ? "Транспорт и логистика" :
-                    userOccupation === "finance" ? "Финансы и юриспруденция" :
-                    userOccupation === "services" ? "Сфера услуг" :
-                    userOccupation === "production" ? "Производство" :
-                    userOccupation === "hospitality" ? "Гостеприимство" :
-                    userOccupation === "marketing" ? "Маркетинг" :
-                    userOccupation === "other" ? "Другое" :
-                    "Не указано"
-                  }
-                </p>
-                <p>
-                  Цель: {
-                    userGoal === "experience" ? "Новый опыт" :
-                    userGoal === "emotions" ? "Яркие эмоции" :
-                    userGoal === "friends" ? "Новые друзья" :
-                    "Не указано"
-                  }
-                </p>
-                <p>
-                  Интерес: {
-                    userInterest === "sport" ? "Спорт" :
-                    userInterest === "culture" ? "Культурный отдых" :
-                    userInterest === "extreme" ? "Экстрим" :
-                    userInterest === "gatherings" ? "Душевные посиделки" :
-                    userInterest === "board_games" ? "Настольные игры" :
-                    userInterest === "excitement" ? "Азарт" :
-                    "Не указано"
-                  }
-                </p>
-                <div className="pt-2 border-t border-[#C8CACB] mt-2 space-y-1">
-                  <p>Комфорт в компании: {userComfort || "Не указано"}/5</p>
-                  <p>Частота знакомств: {userSocialFrequency || "Не указано"}/5</p>
+                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
+                  <p><b>Возраст:</b> {userAge}</p>
+                  <p><b>Пол:</b> {userGender === "male" ? "Мужской" : "Женский"}</p>
                   <p>
-                    Формат: {
+                    <b>Статус:</b> {
+                      userRelationship === "in_relationship" ? "В отношениях / в браке" :
+                      userRelationship === "single" ? "Без партнера" :
+                      "Не указано"
+                    }
+                  </p>
+                  <p>
+                    <b>Дети:</b> {
+                      userChildren === "yes" ? "Есть" :
+                      userChildren === "no" ? "Нет" :
+                      "Не указано"
+                    }
+                  </p>
+                  <p>
+                    <b>Сфера:</b> {
+                      userOccupation === "unemployed" ? "Не работаю" :
+                      userOccupation === "it" ? "IT и технологии" :
+                      userOccupation === "retail" ? "Торговля и ритейл" :
+                      userOccupation === "education" ? "Образование и наука" :
+                      userOccupation === "government" ? "Госслужба и политика" :
+                      userOccupation === "transport" ? "Транспорт и логистика" :
+                      userOccupation === "finance" ? "Финансы и юриспруденция" :
+                      userOccupation === "services" ? "Сфера услуг" :
+                      userOccupation === "production" ? "Производство" :
+                      userOccupation === "hospitality" ? "Гостеприимство" :
+                      userOccupation === "marketing" ? "Маркетинг" :
+                      userOccupation === "other" ? "Другое" :
+                      "Не указано"
+                    }
+                  </p>
+                </div>
+
+                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
+                  <p>
+                    <b>Цель:</b> {
+                      userGoal === "experience" ? "Новый опыт" :
+                      userGoal === "emotions" ? "Яркие эмоции" :
+                      userGoal === "friends" ? "Новые друзья" :
+                      "Не указано"
+                    }
+                  </p>
+                  <p>
+                    <b>Интерес:</b> {
+                      userInterest === "sport" ? "Спорт" :
+                      userInterest === "culture" ? "Культурный отдых" :
+                      userInterest === "extreme" ? "Экстрим" :
+                      userInterest === "gatherings" ? "Душевные посиделки" :
+                      userInterest === "board_games" ? "Настольные игры" :
+                      userInterest === "excitement" ? "Азарт" :
+                      "Не указано"
+                    }
+                  </p>
+                  <p><b>Комфорт:</b> {userComfort || "Не указано"}/5</p>
+                  <p><b>Знакомства:</b> {userSocialFrequency || "Не указано"}/5</p>
+                </div>
+
+                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
+                  <p>
+                    <b>Формат:</b> {
                       userCommunicationFormat === "light" ? "Лёгкое общение" :
                       userCommunicationFormat === "active" ? "Активный отдых" :
                       "Не указано"
                     }
                   </p>
                   <p>
-                    Вечер: {
+                    <b>Вечер:</b> {
                       userEveningScenario === "calm" ? "Спокойная встреча" :
                       userEveningScenario === "spontaneous" ? "Приключение" :
                       "Не указано"
                     }
                   </p>
-                  {userSocialLinks.telegram && <p>Telegram: {userSocialLinks.telegram}</p>}
-                  {userSocialLinks.instagram && <p>Instagram: {userSocialLinks.instagram}</p>}
+                  {userSocialLinks.telegram && <p><b>Telegram:</b> {userSocialLinks.telegram}</p>}
+                  {userSocialLinks.instagram && <p><b>Instagram:</b> {userSocialLinks.instagram}</p>}
                 </div>
-                <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
+
+                {userAboutMe && (
+                  <div className="bg-white p-4 rounded-2xl shadow-sm mb-4">
+                    <p className="font-bold mb-1">О себе:</p>
+                    <p className="italic text-sm leading-relaxed">&quot;{userAboutMe}&quot;</p>
+                  </div>
+                )}
+                
+                <p className="mt-6 text-sm opacity-70 text-center italic">Здесь будет анкета и список мероприятий.</p>
               </div>
+              <div className="flex justify-center">
                 <button
                   onClick={() => {
                     setCurrentScreen("welcome");
@@ -573,12 +616,14 @@ export default function Home() {
                     setUserEveningScenario(null);
                     setUserSocialLinks({ telegram: "", instagram: "" });
                     setUserPhoto(null);
+                    setUserAboutMe("");
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
                   Начать заново
                 </button>
+              </div>
 
             </div>
           </motion.div>
