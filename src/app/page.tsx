@@ -13,8 +13,9 @@ import { OccupationSelectionScreen, type OccupationType } from "@/components/Occ
 import { GoalSelectionScreen, type GoalType } from "@/components/GoalSelectionScreen";
 import { InterestsSelectionScreen, type InterestType } from "@/components/InterestsSelectionScreen";
 import { ComfortSelectionScreen } from "@/components/ComfortSelectionScreen";
+import { SocialFrequencyScreen } from "@/components/SocialFrequencyScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -27,6 +28,7 @@ export default function Home() {
   const [userGoal, setUserGoal] = useState<GoalType | null>(null);
   const [userInterest, setUserInterest] = useState<InterestType | null>(null);
   const [userComfort, setUserComfort] = useState<number | null>(null);
+  const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -79,6 +81,11 @@ export default function Home() {
 
   const handleComfortComplete = (level: number) => {
     setUserComfort(level);
+    setCurrentScreen("social_frequency");
+  };
+
+  const handleSocialFrequencyComplete = (level: number) => {
+    setUserSocialFrequency(level);
     setCurrentScreen("main");
   };
 
@@ -122,6 +129,10 @@ export default function Home() {
 
   const handleBackToInterests = () => {
     setCurrentScreen("interests");
+  };
+
+  const handleBackToComfort = () => {
+    setCurrentScreen("comfort");
   };
 
   return (
@@ -169,7 +180,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={11}
+              progress={10}
             />
           </motion.div>
         )}
@@ -186,7 +197,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={22}
+              progress={20}
             />
           </motion.div>
         )}
@@ -203,7 +214,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={33}
+              progress={30}
             />
           </motion.div>
         )}
@@ -220,7 +231,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={44}
+              progress={40}
             />
           </motion.div>
         )}
@@ -237,7 +248,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={55}
+              progress={50}
             />
           </motion.div>
         )}
@@ -254,7 +265,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={66}
+              progress={60}
             />
           </motion.div>
         )}
@@ -271,7 +282,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={77}
+              progress={70}
             />
           </motion.div>
         )}
@@ -288,7 +299,7 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
-              progress={88}
+              progress={80}
             />
           </motion.div>
         )}
@@ -305,6 +316,23 @@ export default function Home() {
             <ComfortSelectionScreen 
               onNext={handleComfortComplete} 
               onBack={handleBackToInterests}
+              progress={90}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "social_frequency" && (
+          <motion.div
+            key="social_frequency"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <SocialFrequencyScreen 
+              onNext={handleSocialFrequencyComplete} 
+              onBack={handleBackToComfort}
               progress={100}
             />
           </motion.div>
@@ -386,7 +414,10 @@ export default function Home() {
                     "Не указано"
                   }
                 </p>
-                <p>Комфорт в компании: {userComfort || "Не указано"}/5</p>
+                <div className="pt-2 border-t border-[#C8CACB] mt-2 space-y-1">
+                  <p>Комфорт в компании: {userComfort || "Не указано"}/5</p>
+                  <p>Частота знакомств: {userSocialFrequency || "Не указано"}/5</p>
+                </div>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
                 <button
@@ -402,6 +433,7 @@ export default function Home() {
                     setUserGoal(null);
                     setUserInterest(null);
                     setUserComfort(null);
+                    setUserSocialFrequency(null);
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
