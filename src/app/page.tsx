@@ -15,8 +15,9 @@ import { InterestsSelectionScreen, type InterestType } from "@/components/Intere
 import { ComfortSelectionScreen } from "@/components/ComfortSelectionScreen";
 import { SocialFrequencyScreen } from "@/components/SocialFrequencyScreen";
 import { CommunicationFormatScreen, type CommunicationFormat } from "@/components/CommunicationFormatScreen";
+import { EveningScenarioScreen, type EveningScenario } from "@/components/EveningScenarioScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -31,6 +32,7 @@ export default function Home() {
   const [userComfort, setUserComfort] = useState<number | null>(null);
   const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(null);
   const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>(null);
+  const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -93,6 +95,11 @@ export default function Home() {
 
   const handleCommunicationFormatComplete = (format: CommunicationFormat) => {
     setUserCommunicationFormat(format);
+    setCurrentScreen("evening_scenario");
+  };
+
+  const handleEveningScenarioComplete = (scenario: EveningScenario) => {
+    setUserEveningScenario(scenario);
     setCurrentScreen("main");
   };
 
@@ -146,6 +153,10 @@ export default function Home() {
     setCurrentScreen("social_frequency");
   };
 
+  const handleBackToCommunicationFormat = () => {
+    setCurrentScreen("communication_format");
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
@@ -191,7 +202,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={9}
+              progress={8}
             />
           </motion.div>
         )}
@@ -208,7 +219,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={18}
+              progress={16}
             />
           </motion.div>
         )}
@@ -225,7 +236,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={27}
+              progress={25}
             />
           </motion.div>
         )}
@@ -242,7 +253,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={36}
+              progress={33}
             />
           </motion.div>
         )}
@@ -259,7 +270,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={45}
+              progress={41}
             />
           </motion.div>
         )}
@@ -276,7 +287,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={54}
+              progress={50}
             />
           </motion.div>
         )}
@@ -293,7 +304,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={63}
+              progress={58}
             />
           </motion.div>
         )}
@@ -310,7 +321,7 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
-              progress={72}
+              progress={66}
             />
           </motion.div>
         )}
@@ -327,7 +338,7 @@ export default function Home() {
             <ComfortSelectionScreen 
               onNext={handleComfortComplete} 
               onBack={handleBackToInterests}
-              progress={81}
+              progress={75}
             />
           </motion.div>
         )}
@@ -344,7 +355,7 @@ export default function Home() {
             <SocialFrequencyScreen 
               onNext={handleSocialFrequencyComplete} 
               onBack={handleBackToComfort}
-              progress={90}
+              progress={83}
             />
           </motion.div>
         )}
@@ -361,6 +372,23 @@ export default function Home() {
             <CommunicationFormatScreen 
               onNext={handleCommunicationFormatComplete} 
               onBack={handleBackToSocialFrequency}
+              progress={91}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "evening_scenario" && (
+          <motion.div
+            key="evening_scenario"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <EveningScenarioScreen 
+              onNext={handleEveningScenarioComplete} 
+              onBack={handleBackToCommunicationFormat}
               progress={100}
             />
           </motion.div>
@@ -452,6 +480,13 @@ export default function Home() {
                       "Не указано"
                     }
                   </p>
+                  <p>
+                    Вечер: {
+                      userEveningScenario === "calm" ? "Спокойная встреча" :
+                      userEveningScenario === "spontaneous" ? "Приключение" :
+                      "Не указано"
+                    }
+                  </p>
                 </div>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
@@ -470,6 +505,7 @@ export default function Home() {
                     setUserComfort(null);
                     setUserSocialFrequency(null);
                     setUserCommunicationFormat(null);
+                    setUserEveningScenario(null);
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
