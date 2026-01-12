@@ -19,8 +19,9 @@ import { EveningScenarioScreen, type EveningScenario } from "@/components/Evenin
 import { SocialLinksScreen } from "@/components/SocialLinksScreen";
 import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
 import { AboutMeScreen } from "@/components/AboutMeScreen";
+import { CitySelectionScreen } from "@/components/CitySelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -39,6 +40,7 @@ export default function Home() {
   const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userAboutMe, setUserAboutMe] = useState("");
+  const [userCity, setUserCity] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -121,6 +123,11 @@ export default function Home() {
 
   const handleAboutMeComplete = (about: string) => {
     setUserAboutMe(about);
+    setCurrentScreen("city");
+  };
+
+  const handleCityComplete = (city: string) => {
+    setUserCity(city);
     setCurrentScreen("main");
   };
 
@@ -478,6 +485,22 @@ export default function Home() {
           </motion.div>
         )}
 
+        {currentScreen === "city" && (
+          <motion.div
+            key="city"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <CitySelectionScreen 
+              onNext={handleCityComplete} 
+              progress={100}
+            />
+          </motion.div>
+        )}
+
         {currentScreen === "main" && (
           <motion.div
             key="main"
@@ -512,6 +535,7 @@ export default function Home() {
                 <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
                   <p><b>Возраст:</b> {userAge}</p>
                   <p><b>Пол:</b> {userGender === "male" ? "Мужской" : "Женский"}</p>
+                  <p><b>Город:</b> {userCity || "Не указано"}</p>
                   <p>
                     <b>Статус:</b> {
                       userRelationship === "in_relationship" ? "В отношениях / в браке" :
@@ -617,6 +641,7 @@ export default function Home() {
                     setUserSocialLinks({ telegram: "", instagram: "" });
                     setUserPhoto(null);
                     setUserAboutMe("");
+                    setUserCity("");
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
