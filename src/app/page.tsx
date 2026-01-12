@@ -17,8 +17,9 @@ import { SocialFrequencyScreen } from "@/components/SocialFrequencyScreen";
 import { CommunicationFormatScreen, type CommunicationFormat } from "@/components/CommunicationFormatScreen";
 import { EveningScenarioScreen, type EveningScenario } from "@/components/EveningScenarioScreen";
 import { SocialLinksScreen } from "@/components/SocialLinksScreen";
+import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -35,6 +36,7 @@ export default function Home() {
   const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>(null);
   const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
   const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -107,6 +109,11 @@ export default function Home() {
 
   const handleSocialLinksComplete = (socials: { telegram: string; instagram: string }) => {
     setUserSocialLinks(socials);
+    setCurrentScreen("photo_upload");
+  };
+
+  const handlePhotoUploadComplete = (photo: string) => {
+    setUserPhoto(photo);
     setCurrentScreen("main");
   };
 
@@ -166,6 +173,10 @@ export default function Home() {
 
   const handleBackToEveningScenario = () => {
     setCurrentScreen("evening_scenario");
+  };
+
+  const handleBackToSocialLinks = () => {
+    setCurrentScreen("social_links");
   };
 
   return (
@@ -230,7 +241,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={15}
+              progress={14}
             />
           </motion.div>
         )}
@@ -247,7 +258,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={23}
+              progress={21}
             />
           </motion.div>
         )}
@@ -264,7 +275,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={30}
+              progress={28}
             />
           </motion.div>
         )}
@@ -281,7 +292,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={38}
+              progress={35}
             />
           </motion.div>
         )}
@@ -298,7 +309,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={46}
+              progress={42}
             />
           </motion.div>
         )}
@@ -315,7 +326,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={53}
+              progress={49}
             />
           </motion.div>
         )}
@@ -332,7 +343,7 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
-              progress={61}
+              progress={56}
             />
           </motion.div>
         )}
@@ -349,7 +360,7 @@ export default function Home() {
             <ComfortSelectionScreen 
               onNext={handleComfortComplete} 
               onBack={handleBackToInterests}
-              progress={69}
+              progress={63}
             />
           </motion.div>
         )}
@@ -366,7 +377,7 @@ export default function Home() {
             <SocialFrequencyScreen 
               onNext={handleSocialFrequencyComplete} 
               onBack={handleBackToComfort}
-              progress={76}
+              progress={70}
             />
           </motion.div>
         )}
@@ -383,7 +394,7 @@ export default function Home() {
             <CommunicationFormatScreen 
               onNext={handleCommunicationFormatComplete} 
               onBack={handleBackToSocialFrequency}
-              progress={84}
+              progress={77}
             />
           </motion.div>
         )}
@@ -400,7 +411,7 @@ export default function Home() {
             <EveningScenarioScreen 
               onNext={handleEveningScenarioComplete} 
               onBack={handleBackToCommunicationFormat}
-              progress={92}
+              progress={84}
             />
           </motion.div>
         )}
@@ -417,6 +428,23 @@ export default function Home() {
             <SocialLinksScreen 
               onNext={handleSocialLinksComplete} 
               onBack={handleBackToEveningScenario}
+              progress={91}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "photo_upload" && (
+          <motion.div
+            key="photo_upload"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <PhotoUploadScreen 
+              onNext={handlePhotoUploadComplete} 
+              onBack={handleBackToSocialLinks}
               progress={100}
             />
           </motion.div>
@@ -443,6 +471,13 @@ export default function Home() {
                 className="text-[#404243] text-lg mb-8 space-y-2"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
+                {userPhoto && (
+                  <div className="flex justify-center mb-6">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#E15859]">
+                      <img src={userPhoto} alt="User" className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                )}
                 <p className="font-bold text-xl mb-4">
                   {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
                 </p>
@@ -537,6 +572,7 @@ export default function Home() {
                     setUserCommunicationFormat(null);
                     setUserEveningScenario(null);
                     setUserSocialLinks({ telegram: "", instagram: "" });
+                    setUserPhoto(null);
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
