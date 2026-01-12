@@ -16,8 +16,9 @@ import { ComfortSelectionScreen } from "@/components/ComfortSelectionScreen";
 import { SocialFrequencyScreen } from "@/components/SocialFrequencyScreen";
 import { CommunicationFormatScreen, type CommunicationFormat } from "@/components/CommunicationFormatScreen";
 import { EveningScenarioScreen, type EveningScenario } from "@/components/EveningScenarioScreen";
+import { SocialLinksScreen } from "@/components/SocialLinksScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -33,6 +34,7 @@ export default function Home() {
   const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(null);
   const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>(null);
   const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
+  const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -100,6 +102,11 @@ export default function Home() {
 
   const handleEveningScenarioComplete = (scenario: EveningScenario) => {
     setUserEveningScenario(scenario);
+    setCurrentScreen("social_links");
+  };
+
+  const handleSocialLinksComplete = (socials: { telegram: string; instagram: string }) => {
+    setUserSocialLinks(socials);
     setCurrentScreen("main");
   };
 
@@ -157,6 +164,10 @@ export default function Home() {
     setCurrentScreen("communication_format");
   };
 
+  const handleBackToEveningScenario = () => {
+    setCurrentScreen("evening_scenario");
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
@@ -202,7 +213,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={8}
+              progress={7}
             />
           </motion.div>
         )}
@@ -219,7 +230,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={16}
+              progress={15}
             />
           </motion.div>
         )}
@@ -236,7 +247,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={25}
+              progress={23}
             />
           </motion.div>
         )}
@@ -253,7 +264,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={33}
+              progress={30}
             />
           </motion.div>
         )}
@@ -270,7 +281,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={41}
+              progress={38}
             />
           </motion.div>
         )}
@@ -287,7 +298,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={50}
+              progress={46}
             />
           </motion.div>
         )}
@@ -304,7 +315,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={58}
+              progress={53}
             />
           </motion.div>
         )}
@@ -321,7 +332,7 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
-              progress={66}
+              progress={61}
             />
           </motion.div>
         )}
@@ -338,7 +349,7 @@ export default function Home() {
             <ComfortSelectionScreen 
               onNext={handleComfortComplete} 
               onBack={handleBackToInterests}
-              progress={75}
+              progress={69}
             />
           </motion.div>
         )}
@@ -355,7 +366,7 @@ export default function Home() {
             <SocialFrequencyScreen 
               onNext={handleSocialFrequencyComplete} 
               onBack={handleBackToComfort}
-              progress={83}
+              progress={76}
             />
           </motion.div>
         )}
@@ -372,7 +383,7 @@ export default function Home() {
             <CommunicationFormatScreen 
               onNext={handleCommunicationFormatComplete} 
               onBack={handleBackToSocialFrequency}
-              progress={91}
+              progress={84}
             />
           </motion.div>
         )}
@@ -389,6 +400,23 @@ export default function Home() {
             <EveningScenarioScreen 
               onNext={handleEveningScenarioComplete} 
               onBack={handleBackToCommunicationFormat}
+              progress={92}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "social_links" && (
+          <motion.div
+            key="social_links"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <SocialLinksScreen 
+              onNext={handleSocialLinksComplete} 
+              onBack={handleBackToEveningScenario}
               progress={100}
             />
           </motion.div>
@@ -487,6 +515,8 @@ export default function Home() {
                       "Не указано"
                     }
                   </p>
+                  {userSocialLinks.telegram && <p>Telegram: {userSocialLinks.telegram}</p>}
+                  {userSocialLinks.instagram && <p>Instagram: {userSocialLinks.instagram}</p>}
                 </div>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
@@ -506,6 +536,7 @@ export default function Home() {
                     setUserSocialFrequency(null);
                     setUserCommunicationFormat(null);
                     setUserEveningScenario(null);
+                    setUserSocialLinks({ telegram: "", instagram: "" });
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
