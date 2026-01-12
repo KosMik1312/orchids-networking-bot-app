@@ -20,8 +20,9 @@ import { SocialLinksScreen } from "@/components/SocialLinksScreen";
 import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
 import { AboutMeScreen } from "@/components/AboutMeScreen";
 import { CitySelectionScreen } from "@/components/CitySelectionScreen";
+import { BookingFlow, type BookingData } from "@/components/BookingFlow";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -41,6 +42,7 @@ export default function Home() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userAboutMe, setUserAboutMe] = useState("");
   const [userCity, setUserCity] = useState("");
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -128,6 +130,11 @@ export default function Home() {
 
   const handleCityComplete = (city: string) => {
     setUserCity(city);
+    setCurrentScreen("booking");
+  };
+
+  const handleBookingComplete = (data: BookingData) => {
+    setBookingData(data);
     setCurrentScreen("main");
   };
 
@@ -501,6 +508,22 @@ export default function Home() {
           </motion.div>
         )}
 
+        {currentScreen === "booking" && (
+          <motion.div
+            key="booking"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <BookingFlow 
+              onComplete={handleBookingComplete} 
+              userCity={userCity}
+            />
+          </motion.div>
+        )}
+
         {currentScreen === "main" && (
           <motion.div
             key="main"
@@ -618,6 +641,15 @@ export default function Home() {
                     <p className="italic text-sm leading-relaxed">&quot;{userAboutMe}&quot;</p>
                   </div>
                 )}
+
+                {bookingData && (
+                  <div className="bg-white p-4 rounded-2xl shadow-sm mb-4 border-2 border-[#E15859]">
+                    <p className="font-bold mb-2 text-[#E15859]">Бронирование:</p>
+                    <p><b>Дата:</b> {bookingData.date}</p>
+                    <p><b>Время:</b> {bookingData.time}</p>
+                    <p><b>Город:</b> {bookingData.city}</p>
+                  </div>
+                )}
                 
                 <p className="mt-6 text-sm opacity-70 text-center italic">Здесь будет анкета и список мероприятий.</p>
               </div>
@@ -642,6 +674,7 @@ export default function Home() {
                     setUserPhoto(null);
                     setUserAboutMe("");
                     setUserCity("");
+                    setBookingData(null);
                   }}
                   className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
