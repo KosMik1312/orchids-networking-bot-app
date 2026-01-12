@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Settings, Clock, Check, Home, MessageCircle, User } from "lucide-react";
+import { MapPin, Settings, Clock, Check, ChevronLeft } from "lucide-react";
 
 interface BookingFlowProps {
   onComplete: (bookingData: BookingData) => void;
+  onBack: () => void;
   userCity: string;
 }
 
@@ -19,7 +20,7 @@ export interface BookingData {
 
 type Step = "slots" | "payment" | "success";
 
-export function BookingFlow({ onComplete, userCity }: BookingFlowProps) {
+export function BookingFlow({ onComplete, onBack, userCity }: BookingFlowProps) {
   const [step, setStep] = useState<Step>("slots");
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -62,6 +63,17 @@ export function BookingFlow({ onComplete, userCity }: BookingFlowProps) {
     <div className="flex h-screen flex-col overflow-hidden" style={{ backgroundColor: "#E9E9E9" }}>
       {/* Top Header (Shared) */}
       <div className="flex items-center justify-between px-6 pt-12 shrink-0 z-10">
+        <button 
+          onClick={() => {
+            if (step === "slots") onBack();
+            else if (step === "payment") setStep("slots");
+          }}
+          className={`flex items-center gap-1 text-[#404243] opacity-60 font-medium ${step === "success" ? "invisible" : ""}`}
+          style={{ fontFamily: "'Montserrat', sans-serif" }}
+        >
+          <ChevronLeft size={20} />
+          <span>Назад</span>
+        </button>
         <div className="flex items-center gap-2 bg-[#F3B7B8] bg-opacity-30 rounded-full px-4 py-2">
           <MapPin size={18} className="text-[#E15859]" />
           <span 
@@ -150,37 +162,21 @@ export function BookingFlow({ onComplete, userCity }: BookingFlowProps) {
               ))}
             </div>
 
-            {/* Bottom Button and Navigation */}
-            <div className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-gradient-to-t from-[#E9E9E9] via-[#E9E9E9] to-transparent">
-              <button
-                onClick={handleBook}
-                className="h-[64px] w-full rounded-full text-[18px] font-bold transition-all active:scale-[0.98] mb-6 shadow-lg"
-                style={{
-                  backgroundColor: selectedSlot === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
-                  color: "white",
-                  fontFamily: "'Montserrat', sans-serif",
-                }}
-                disabled={selectedSlot === null}
-              >
-                Забронировать
-              </button>
-
-              {/* Bottom Nav Bar */}
-              <div className="flex justify-around items-center bg-white rounded-full py-3 shadow-sm">
-                <div className="flex flex-col items-center gap-1 text-[#E15859]">
-                  <Home size={20} />
-                  <span className="text-[10px] font-medium">Главная</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-[#404243] opacity-40">
-                  <MessageCircle size={20} />
-                  <span className="text-[10px] font-medium">Контакты</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-[#404243] opacity-40">
-                  <User size={20} />
-                  <span className="text-[10px] font-medium">Профиль</span>
-                </div>
+              {/* Bottom Button */}
+              <div className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-gradient-to-t from-[#E9E9E9] via-[#E9E9E9] to-transparent">
+                <button
+                  onClick={handleBook}
+                  className="h-[64px] w-full rounded-full text-[18px] font-bold transition-all active:scale-[0.98] shadow-lg"
+                  style={{
+                    backgroundColor: selectedSlot === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
+                    color: "white",
+                    fontFamily: "'Montserrat', sans-serif",
+                  }}
+                  disabled={selectedSlot === null}
+                >
+                  Забронировать
+                </button>
               </div>
-            </div>
           </motion.div>
         )}
 

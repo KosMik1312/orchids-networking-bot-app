@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Settings } from "lucide-react";
+import { MapPin, Settings, ChevronLeft } from "lucide-react";
 
 interface CitySelectionScreenProps {
   onNext: (city: string) => void;
+  onBack: () => void;
   progress: number;
 }
 
 export type City = "spb" | "dubai" | "moscow";
 
-export function CitySelectionScreen({ onNext, progress }: CitySelectionScreenProps) {
+export function CitySelectionScreen({ onNext, onBack, progress }: CitySelectionScreenProps) {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
   const cities = [
@@ -29,6 +30,14 @@ export function CitySelectionScreen({ onNext, progress }: CitySelectionScreenPro
     <div className="flex h-screen flex-col overflow-hidden" style={{ backgroundColor: "#E9E9E9" }}>
       {/* Top Header */}
       <div className="flex items-center justify-between px-6 pt-12 shrink-0">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-1 text-[#404243] opacity-60 font-medium"
+          style={{ fontFamily: "'Montserrat', sans-serif" }}
+        >
+          <ChevronLeft size={20} />
+          <span>Назад</span>
+        </button>
         <div className="flex items-center gap-2 bg-[#F3B7B8] bg-opacity-30 rounded-full px-4 py-2">
           <MapPin size={18} className="text-[#E15859]" />
           <span 

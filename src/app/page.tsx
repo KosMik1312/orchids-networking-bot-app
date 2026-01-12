@@ -503,6 +503,7 @@ export default function Home() {
           >
             <CitySelectionScreen 
               onNext={handleCityComplete} 
+              onBack={() => setCurrentScreen("about_me")}
               progress={100}
             />
           </motion.div>
@@ -519,6 +520,7 @@ export default function Home() {
           >
             <BookingFlow 
               onComplete={handleBookingComplete} 
+              onBack={() => setCurrentScreen("city")}
               userCity={userCity}
             />
           </motion.div>
