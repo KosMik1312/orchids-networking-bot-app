@@ -12,8 +12,9 @@ import { ChildrenSelectionScreen, type ChildrenStatus } from "@/components/Child
 import { OccupationSelectionScreen, type OccupationType } from "@/components/OccupationSelectionScreen";
 import { GoalSelectionScreen, type GoalType } from "@/components/GoalSelectionScreen";
 import { InterestsSelectionScreen, type InterestType } from "@/components/InterestsSelectionScreen";
+import { ComfortSelectionScreen } from "@/components/ComfortSelectionScreen";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -25,6 +26,7 @@ export default function Home() {
   const [userOccupation, setUserOccupation] = useState<OccupationType | null>(null);
   const [userGoal, setUserGoal] = useState<GoalType | null>(null);
   const [userInterest, setUserInterest] = useState<InterestType | null>(null);
+  const [userComfort, setUserComfort] = useState<number | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
@@ -72,6 +74,11 @@ export default function Home() {
 
   const handleInterestsComplete = (interest: InterestType) => {
     setUserInterest(interest);
+    setCurrentScreen("comfort");
+  };
+
+  const handleComfortComplete = (level: number) => {
+    setUserComfort(level);
     setCurrentScreen("main");
   };
 
@@ -111,6 +118,10 @@ export default function Home() {
 
   const handleBackToGoal = () => {
     setCurrentScreen("goal");
+  };
+
+  const handleBackToInterests = () => {
+    setCurrentScreen("interests");
   };
 
   return (
@@ -158,7 +169,7 @@ export default function Home() {
             <QuizScreen 
               onNext={handleQuizComplete} 
               onBack={handleBackToOnboarding} 
-              progress={12}
+              progress={11}
             />
           </motion.div>
         )}
@@ -175,7 +186,7 @@ export default function Home() {
             <AgeSelectionScreen 
               onNext={handleAgeComplete} 
               onBack={handleBackToQuiz}
-              progress={25}
+              progress={22}
             />
           </motion.div>
         )}
@@ -192,7 +203,7 @@ export default function Home() {
             <GenderSelectionScreen 
               onNext={handleGenderComplete} 
               onBack={handleBackToAge}
-              progress={37}
+              progress={33}
             />
           </motion.div>
         )}
@@ -209,7 +220,7 @@ export default function Home() {
             <RelationshipStatusScreen 
               onNext={handleRelationshipComplete} 
               onBack={handleBackToGender}
-              progress={50}
+              progress={44}
             />
           </motion.div>
         )}
@@ -226,7 +237,7 @@ export default function Home() {
             <ChildrenSelectionScreen 
               onNext={handleChildrenComplete} 
               onBack={handleBackToRelationship}
-              progress={62}
+              progress={55}
             />
           </motion.div>
         )}
@@ -243,7 +254,7 @@ export default function Home() {
             <OccupationSelectionScreen 
               onNext={handleOccupationComplete} 
               onBack={handleBackToChildren}
-              progress={75}
+              progress={66}
             />
           </motion.div>
         )}
@@ -260,7 +271,7 @@ export default function Home() {
             <GoalSelectionScreen 
               onNext={handleGoalComplete} 
               onBack={handleBackToOccupation}
-              progress={87}
+              progress={77}
             />
           </motion.div>
         )}
@@ -277,6 +288,23 @@ export default function Home() {
             <InterestsSelectionScreen 
               onNext={handleInterestsComplete} 
               onBack={handleBackToGoal}
+              progress={88}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "comfort" && (
+          <motion.div
+            key="comfort"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <ComfortSelectionScreen 
+              onNext={handleComfortComplete} 
+              onBack={handleBackToInterests}
               progress={100}
             />
           </motion.div>
@@ -358,26 +386,29 @@ export default function Home() {
                     "Не указано"
                   }
                 </p>
+                <p>Комфорт в компании: {userComfort || "Не указано"}/5</p>
                 <p className="mt-6 text-sm opacity-70">Здесь будет анкета и список мероприятий.</p>
               </div>
-              <button
-                onClick={() => {
-                  setCurrentScreen("welcome");
-                  setOnboardingStep(1);
-                  setUserName("");
-                  setUserAge(25);
-                  setUserGender(null);
-                  setUserRelationship(null);
-                  setUserChildren(null);
-                  setUserOccupation(null);
-                  setUserGoal(null);
-                  setUserInterest(null);
-                }}
-                className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
-              >
-                Начать заново
-              </button>
+                <button
+                  onClick={() => {
+                    setCurrentScreen("welcome");
+                    setOnboardingStep(1);
+                    setUserName("");
+                    setUserAge(25);
+                    setUserGender(null);
+                    setUserRelationship(null);
+                    setUserChildren(null);
+                    setUserOccupation(null);
+                    setUserGoal(null);
+                    setUserInterest(null);
+                    setUserComfort(null);
+                  }}
+                  className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  Начать заново
+                </button>
+
             </div>
           </motion.div>
         )}
