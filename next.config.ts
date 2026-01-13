@@ -5,13 +5,10 @@ import path from "node:path";
 const loaderPath = require.resolve('orchids-visual-edits/loader.js');
 
 const nextConfig: NextConfig = {
-  output: 'export',  // Для статического экспорта на Vercel
-  trailingSlash: true,  // Для Vercel
   env: {
     NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || '',
   },
   images: {
-    unoptimized: true,  // Для static export
     remotePatterns: [
       {
         protocol: 'https',
