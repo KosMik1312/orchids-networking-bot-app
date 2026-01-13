@@ -19,10 +19,11 @@ type BookingStep = "booking" | "payment" | "success";
 interface BookingFlowProps {
   city: string;
   onBack: () => void;
+  onComplete?: () => void;
   onTabChange?: (tab: "home" | "contacts" | "profile") => void;
 }
 
-export function BookingFlow({ city, onBack, onTabChange }: BookingFlowProps) {
+export function BookingFlow({ city, onBack, onComplete, onTabChange }: BookingFlowProps) {
   const [step, setStep] = useState<BookingStep>("booking");
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -258,7 +259,7 @@ export function BookingFlow({ city, onBack, onTabChange }: BookingFlowProps) {
             </div>
 
             <button
-              onClick={onBack}
+              onClick={onComplete || onBack}
               className="w-full py-[22px] rounded-[32px] bg-[#E15859] text-white text-[20px] font-bold shadow-lg hover:bg-[#d14849] transition-all"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
