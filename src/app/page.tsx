@@ -20,8 +20,9 @@ import { SocialLinksScreen } from "@/components/SocialLinksScreen";
 import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
 import { AboutMeScreen } from "@/components/AboutMeScreen";
 import { CitySelectionScreen } from "@/components/CitySelectionScreen";
+import { BookingFlow } from "@/components/BookingFlow";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -128,7 +129,7 @@ export default function Home() {
 
   const handleCityComplete = (city: string) => {
     setUserCity(city);
-    setCurrentScreen("main");
+    setCurrentScreen("booking");
   };
 
   const handleBackToWelcome = () => {
@@ -498,6 +499,22 @@ export default function Home() {
               onNext={handleCityComplete} 
               onBack={() => setCurrentScreen("about_me")}
               progress={100}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "booking" && (
+          <motion.div
+            key="booking"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <BookingFlow 
+              city={userCity} 
+              onBack={() => setCurrentScreen("city")}
             />
           </motion.div>
         )}
