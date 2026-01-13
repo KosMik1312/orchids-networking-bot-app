@@ -42,7 +42,7 @@
 
 > В `next.config.ts` сейчас стоят `typescript.ignoreBuildErrors: true` и `eslint.ignoreDuringBuilds: true` — оставляем так временно.
 
-### Backend (Telegram бот)
+### Backend (Telegram бот + API сервер)
 1. Перейти в папку `bot/`:
    ```bash
    cd bot
@@ -61,13 +61,36 @@
 5. Настроить конфигурацию:
    - В проекте сейчас используется `config.py` — пока оставляем его.
    - Обязательные параметры: `BOT_TOKEN`, `MINIAPP_URL`, `DATABASE_NAME` (они должны быть в `config.py` или в переменных окружения).
-6. Запустить:
+6. Запустить (2 варианта):
+   
+   **Вариант 1 - Все вместе:**
    ```bash
+   python start_all.py
+   ```
+   
+   **Вариант 2 - Раздельно:**
+   ```bash
+   # Терминал 1 - API сервер
+   python api_server.py
+   
+   # Терминал 2 - Telegram бот
    python bot.py
    ```
 
-## База данных
-- Пока используется SQLite (aiosqlite). Это нормально для разработки и небольших нагрузок.
+## Архитектура
+
+### Новая архитектура (FastAPI + Aiogram)
+- **Python Backend**: Единая база данных SQLite
+- **FastAPI Server**: HTTP API для связи с MiniApp (`bot/api_server.py`)
+- **Aiogram Bot**: Telegram бот для админки (`bot/bot.py`)
+- **Next.js MiniApp**: Фронтенд через HTTP API (`src/`)
+
+### Поток данных
+1. Админ создает слоты через Telegram бот
+2. Данные сохраняются в Python базу
+3. MiniApp получает данные через FastAPI
+4. Пользователи заполняют профили в MiniApp
+5. Бот может получать данные пользователей
 
 ## Развертывание
 - Frontend: Vercel/другой хостинг для Next.js (необходимо настроить `MINIAPP_URL`).
@@ -80,6 +103,11 @@
 - `BOT_TOKEN` — токен Telegram бота
 - `MINIAPP_URL` — публичный URL MiniApp
 - `DATABASE_NAME` — файл SQLite (по умолчанию)
+- `NEXT_PUBLIC_API_BASE` — URL Python API сервера (по умолчанию: http://localhost:8000)
+
+## База данных
+- Пока используется SQLite (aiosqlite). Это нормально для разработки и небольших нагрузок.
+- Единая база данных для бота и MiniApp
 
 ## Примечания
 - Папку виртуального окружения внутри `bot/` удалили; добавьте venv и .env в `.gitignore`.

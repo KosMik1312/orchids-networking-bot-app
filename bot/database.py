@@ -10,7 +10,21 @@ async def init_db():
                 user_id INTEGER PRIMARY KEY,
                 name TEXT,
                 age INTEGER,
+                gender TEXT,
+                relationship_status TEXT,
+                children TEXT,
+                occupation TEXT,
+                goal TEXT,
                 interests TEXT,
+                comfort_level INTEGER,
+                social_frequency INTEGER,
+                communication_format TEXT,
+                evening_scenario TEXT,
+                telegram TEXT,
+                instagram TEXT,
+                photo TEXT,
+                about_me TEXT,
+                city TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -48,10 +62,21 @@ async def init_db():
 async def save_user_profile(user_id: int, profile: dict):
     """Сохранение профиля пользователя"""
     async with aiosqlite.connect(DATABASE_NAME) as db:
-        await db.execute(
-            "INSERT OR REPLACE INTO users (user_id, name, age, interests) VALUES (?, ?, ?, ?)",
-            (user_id, profile["name"], profile["age"], profile["interests"])
-        )
+        await db.execute("""
+            INSERT OR REPLACE INTO users (
+                user_id, name, age, gender, relationship_status, children,
+                occupation, goal, interests, comfort_level, social_frequency,
+                communication_format, evening_scenario, telegram, instagram,
+                photo, about_me, city
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, profile.get("name"), profile.get("age"), profile.get("gender"),
+            profile.get("relationship_status"), profile.get("children"), profile.get("occupation"),
+            profile.get("goal"), profile.get("interests"), profile.get("comfort_level"),
+            profile.get("social_frequency"), profile.get("communication_format"),
+            profile.get("evening_scenario"), profile.get("telegram"), profile.get("instagram"),
+            profile.get("photo"), profile.get("about_me"), profile.get("city")
+        ))
         await db.commit()
 
 async def get_user_profile(user_id: int):

@@ -2,3 +2,5 @@ SQLAlchemy
 aiogram
 aiosqlite
 pydantic
+fastapi
+uvicorn[standard]

@@ -1,0 +1,182 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List
+import asyncio
+from database import (
+    init_db, save_user_profile, get_user_profile,
+    create_slot, get_all_slots, get_users_count,
+    get_active_slots_count, get_total_bookings_count
+)
+import aiosqlite
+from config import DATABASE_NAME
+
+app = FastAPI(title="Orchids Networking Bot API")
+
+# CORS для MiniApp
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # В продакшене указать конкретные домены
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Pydantic модели
+class UserProfile(BaseModel):
+    name: str
+    age: int
+    gender: Optional[str] = None
+    relationship_status: Optional[str] = None
+    children: Optional[str] = None
+    occupation: Optional[str] = None
+    goal: Optional[str] = None
+    interests: Optional[str] = None
+    comfort_level: Optional[int] = None
+    social_frequency: Optional[int] = None
+    communication_format: Optional[str] = None
+    evening_scenario: Optional[str] = None
+    telegram: Optional[str] = None
+    instagram: Optional[str] = None
+    photo: Optional[str] = None
+    about_me: Optional[str] = None
+    city: Optional[str] = None
+
+class ProfileRequest(BaseModel):
+    userId: int
+    profile: UserProfile
+
+class BookingRequest(BaseModel):
+    userId: int
+    slotId: int
+
+# API эндпоинты
+@app.on_event("startup")
+async def startup():
+    await init_db()
+
+@app.post("/api/profile")
+async def save_profile_endpoint(request: ProfileRequest):
+    try:
+        await save_user_profile(request.userId, request.profile.dict())
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profile")
+async def get_profile_endpoint(userId: int):
+    try:
+        profile = await get_user_profile(userId)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Конвертируем tuple в dict
+        profile_dict = {
+            "name": profile[1],
+            "age": profile[2],
+            "interests": profile[3]
+        }
+        return {"profile": profile_dict}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/slots")
+async def get_slots_endpoint(city: Optional[str] = None):
+    try:
+        slots = await get_all_slots()
+        if city:
+            slots = [slot for slot in slots if slot['city'].lower() == city.lower()]
+        return {"slots": slots}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/bookings")
+async def get_user_bookings_endpoint(userId: int):
+    try:
+        async with aiosqlite.connect(DATABASE_NAME) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("""
+                SELECT b.*, s.date, s.time, s.city, s.restaurant, s.max_people, s.current_bookings
+                FROM bookings b
+                JOIN dinner_slots s ON b.slot_id = s.id
+                WHERE b.user_id = ? AND b.status = 'active'
+                ORDER BY s.date, s.time
+            """, (userId,))
+            rows = await cursor.fetchall()
+            bookings = [dict(row) for row in rows]
+        return {"bookings": bookings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/bookings")
+async def create_booking_endpoint(request: BookingRequest):
+    try:
+        async with aiosqlite.connect(DATABASE_NAME) as db:
+            # Проверяем доступность слота
+            cursor = await db.execute(
+                "SELECT current_bookings, max_people FROM dinner_slots WHERE id = ? AND is_active = 1",
+                (request.slotId,)
+            )
+            slot = await cursor.fetchone()
+            
+            if not slot:
+                raise HTTPException(status_code=404, detail="Slot not found or inactive")
+            
+            if slot[0] >= slot[1]:
+                raise HTTPException(status_code=400, detail="Slot is full")
+            
+            # Создаем бронирование
+            await db.execute(
+                "INSERT INTO bookings (user_id, slot_id) VALUES (?, ?)",
+                (request.userId, request.slotId)
+            )
+            
+            # Обновляем счетчик бронирований
+            await db.execute(
+                "UPDATE dinner_slots SET current_bookings = current_bookings + 1 WHERE id = ?",
+                (request.slotId,)
+            )
+            
+            await db.commit()
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/contacts")
+async def get_contacts_endpoint(slotId: int, userId: int):
+    try:
+        async with aiosqlite.connect(DATABASE_NAME) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("""
+                SELECT u.name, u.age, u.interests, u.user_id
+                FROM bookings b
+                JOIN users u ON b.user_id = u.user_id
+                WHERE b.slot_id = ? AND b.status = 'active' AND b.user_id != ?
+            """, (slotId, userId))
+            rows = await cursor.fetchall()
+            
+            contacts = []
+            for row in rows:
+                contacts.append({
+                    "name": row["name"],
+                    "age": row["age"],
+                    "interests": row["interests"],
+                    "telegram": f"@user{row['user_id']}"  # Заглушка
+                })
+            
+            # Добавляем контакт поддержки
+            contacts.append({
+                "name": "Поддержка Allora",
+                "id": "support",
+                "isSupport": True,
+                "telegram": "@allora_support"
+            })
+            
+        return {"contacts": contacts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
