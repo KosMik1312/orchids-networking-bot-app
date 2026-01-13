@@ -74,11 +74,11 @@ export function BookingFlow({ city, onBack, onTabChange }: BookingFlowProps) {
             {/* Dining Image */}
             <div className="px-6 mb-8">
               <div className="rounded-[32px] overflow-hidden shadow-lg h-[240px] relative">
-                <img 
-                  src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/project-uploads/eca39e85-e059-4463-8b02-d72196908069/55-resized-1768289316561.webp?width=8000&height=8000&resize=contain" 
-                  alt="Dining" 
-                  className="w-full h-full object-cover"
-                />
+                  <img 
+                    src="/images/dining.png" 
+                    alt="Dining" 
+                    className="w-full h-full object-cover"
+                  />
               </div>
             </div>
 
@@ -142,7 +142,7 @@ export function BookingFlow({ city, onBack, onTabChange }: BookingFlowProps) {
             {/* Blurred background image */}
             <div className="absolute inset-0 z-0">
                <img 
-                  src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/project-uploads/eca39e85-e059-4463-8b02-d72196908069/55-resized-1768289316561.webp?width=8000&height=8000&resize=contain" 
+                  src="/images/dining.png" 
                   alt="Dining" 
                   className="w-full h-1/2 object-cover opacity-30 blur-sm"
                 />
