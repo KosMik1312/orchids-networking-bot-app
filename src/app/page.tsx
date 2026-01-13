@@ -22,9 +22,12 @@ import { AboutMeScreen } from "@/components/AboutMeScreen";
 import { CitySelectionScreen } from "@/components/CitySelectionScreen";
 import { BookingFlow } from "@/components/BookingFlow";
 import { ContactsScreen } from "@/components/ContactsScreen";
+import { ProfileScreen } from "@/components/ProfileScreen";
+import { MyBookingsScreen } from "@/components/MyBookingsScreen";
+import { EditProfileScreen } from "@/components/EditProfileScreen";
 import { BottomNav } from "@/components/BottomNav";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main" | "contacts" | "profile";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -203,7 +206,35 @@ export default function Home() {
   const handleTabChange = (tab: "home" | "contacts" | "profile") => {
     if (tab === "home") setCurrentScreen("booking");
     else if (tab === "contacts") setCurrentScreen("contacts");
-    else if (tab === "profile") setCurrentScreen("main"); // Summary screen acts as profile for now
+    else if (tab === "profile") setCurrentScreen("profile");
+  };
+
+  const handleSaveProfile = (newData: any) => {
+    setUserName(newData.name);
+    setUserAboutMe(newData.aboutMe);
+    setUserSocialLinks(newData.socialLinks);
+    setCurrentScreen("profile");
+  };
+
+  const handleSelectField = (field: string) => {
+    // Mapping edit fields to onboarding screens
+    const fieldToScreen: Record<string, Screen> = {
+      age: "age",
+      gender: "gender",
+      relationship: "relationship",
+      children: "children",
+      occupation: "occupation",
+      interest: "interests",
+      communicationFormat: "communication_format",
+      eveningScenario: "evening_scenario",
+      comfort: "comfort",
+      socialFrequency: "social_frequency"
+    };
+    
+    const targetScreen = fieldToScreen[field];
+    if (targetScreen) {
+      setCurrentScreen(targetScreen);
+    }
   };
 
   return (
@@ -544,159 +575,79 @@ export default function Home() {
           </motion.div>
         )}
 
-        {currentScreen === "main" && (
+        {currentScreen === "profile" && (
           <motion.div
-            key="main"
+            key="profile"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="min-h-screen flex flex-col items-center justify-center px-6 text-center overflow-y-auto py-12 pb-24"
-            style={{ backgroundColor: "#E9E9E9" }}
+            className="min-h-screen"
           >
-            <div className="max-w-md w-full">
-              <h1
-                className="font-serif text-4xl italic text-[#E15859] mb-6"
-                style={{ fontFamily: "'Cormorant Garamond', serif" }}
-              >
-                Аллора Клаб
-              </h1>
-              <div
-                className="text-[#404243] text-lg mb-8 space-y-2 text-left"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
-              >
-                {userPhoto && (
-                  <div className="flex justify-center mb-6">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#E15859]">
-                      <img src={userPhoto} alt="User" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-                <p className="font-bold text-xl mb-4 text-center">
-                  {userName ? `${userName}, онбординг завершён!` : "Онбординг завершён!"}
-                </p>
-                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
-                  <p><b>Возраст:</b> {userAge}</p>
-                  <p><b>Пол:</b> {userGender === "male" ? "Мужской" : "Женский"}</p>
-                  <p><b>Город:</b> {userCity || "Не указано"}</p>
-                  <p>
-                    <b>Статус:</b> {
-                      userRelationship === "in_relationship" ? "В отношениях / в браке" :
-                      userRelationship === "single" ? "Без партнера" :
-                      "Не указано"
-                    }
-                  </p>
-                  <p>
-                    <b>Дети:</b> {
-                      userChildren === "yes" ? "Есть" :
-                      userChildren === "no" ? "Нет" :
-                      "Не указано"
-                    }
-                  </p>
-                  <p>
-                    <b>Сфера:</b> {
-                      userOccupation === "unemployed" ? "Не работаю" :
-                      userOccupation === "it" ? "IT и технологии" :
-                      userOccupation === "retail" ? "Торговля и ритейл" :
-                      userOccupation === "education" ? "Образование и наука" :
-                      userOccupation === "government" ? "Госслужба и политика" :
-                      userOccupation === "transport" ? "Транспорт и логистика" :
-                      userOccupation === "finance" ? "Финансы и юриспруденция" :
-                      userOccupation === "services" ? "Сфера услуг" :
-                      userOccupation === "production" ? "Производство" :
-                      userOccupation === "hospitality" ? "Гостеприимство" :
-                      userOccupation === "marketing" ? "Маркетинг" :
-                      userOccupation === "other" ? "Другое" :
-                      "Не указано"
-                    }
-                  </p>
-                </div>
+            <ProfileScreen 
+              userName={userName}
+              userPhoto={userPhoto}
+              city={userCity}
+              onEditProfile={() => setCurrentScreen("edit_profile")}
+              onMyBookings={() => setCurrentScreen("my_bookings")}
+              onTabChange={handleTabChange}
+            />
+          </motion.div>
+        )}
 
-                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
-                  <p>
-                    <b>Цель:</b> {
-                      userGoal === "experience" ? "Новый опыт" :
-                      userGoal === "emotions" ? "Яркие эмоции" :
-                      userGoal === "friends" ? "Новые друзья" :
-                      "Не указано"
-                    }
-                  </p>
-                  <p>
-                    <b>Интерес:</b> {
-                      userInterest === "sport" ? "Спорт" :
-                      userInterest === "culture" ? "Культурный отдых" :
-                      userInterest === "extreme" ? "Экстрим" :
-                      userInterest === "gatherings" ? "Душевные посиделки" :
-                      userInterest === "board_games" ? "Настольные игры" :
-                      userInterest === "excitement" ? "Азарт" :
-                      "Не указано"
-                    }
-                  </p>
-                  <p><b>Комфорт:</b> {userComfort || "Не указано"}/5</p>
-                  <p><b>Знакомства:</b> {userSocialFrequency || "Не указано"}/5</p>
-                </div>
+        {currentScreen === "my_bookings" && (
+          <motion.div
+            key="my_bookings"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <MyBookingsScreen 
+              city={userCity}
+              onBack={() => setCurrentScreen("profile")}
+              onTabChange={handleTabChange}
+            />
+          </motion.div>
+        )}
 
-                <div className="space-y-1 bg-white p-4 rounded-2xl shadow-sm mb-4">
-                  <p>
-                    <b>Формат:</b> {
-                      userCommunicationFormat === "light" ? "Лёгкое общение" :
-                      userCommunicationFormat === "active" ? "Активный отдых" :
-                      "Не указано"
-                    }
-                  </p>
-                  <p>
-                    <b>Вечер:</b> {
-                      userEveningScenario === "calm" ? "Спокойная встреча" :
-                      userEveningScenario === "spontaneous" ? "Приключение" :
-                      "Не указано"
-                    }
-                  </p>
-                  {userSocialLinks.telegram && <p><b>Telegram:</b> {userSocialLinks.telegram}</p>}
-                  {userSocialLinks.instagram && <p><b>Instagram:</b> {userSocialLinks.instagram}</p>}
-                </div>
-
-                {userAboutMe && (
-                  <div className="bg-white p-4 rounded-2xl shadow-sm mb-4">
-                    <p className="font-bold mb-1">О себе:</p>
-                    <p className="italic text-sm leading-relaxed">&quot;{userAboutMe}&quot;</p>
-                  </div>
-                )}
-                
-                <p className="mt-6 text-sm opacity-70 text-center italic">Здесь будет анкета и список мероприятий.</p>
-              </div>
-              <div className="flex justify-center">
-                <button
-                  onClick={() => {
-                    setCurrentScreen("welcome");
-                    setOnboardingStep(1);
-                    setUserName("");
-                    setUserAge(25);
-                    setUserGender(null);
-                    setUserRelationship(null);
-                    setUserChildren(null);
-                    setUserOccupation(null);
-                    setUserGoal(null);
-                    setUserInterest(null);
-                    setUserComfort(null);
-                    setUserSocialFrequency(null);
-                    setUserCommunicationFormat(null);
-                    setUserEveningScenario(null);
-                    setUserSocialLinks({ telegram: "", instagram: "" });
-                    setUserPhoto(null);
-                    setUserAboutMe("");
-                    setUserCity("");
-                  }}
-                  className="px-8 py-4 rounded-full bg-[#E15859] text-white font-semibold text-lg shadow-lg hover:bg-[#d14849] transition-all"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
-                >
-                  Начать заново
-                </button>
-              </div>
-            </div>
-            <BottomNav activeTab="profile" onTabChange={handleTabChange} />
+        {currentScreen === "edit_profile" && (
+          <motion.div
+            key="edit_profile"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <EditProfileScreen 
+              userData={{
+                name: userName,
+                age: userAge,
+                gender: userGender,
+                relationship: userRelationship,
+                children: userChildren,
+                occupation: userOccupation,
+                goal: userGoal,
+                interest: userInterest,
+                comfort: userComfort,
+                socialFrequency: userSocialFrequency,
+                communicationFormat: userCommunicationFormat,
+                eveningScenario: userEveningScenario,
+                socialLinks: userSocialLinks,
+                photo: userPhoto,
+                aboutMe: userAboutMe,
+                city: userCity,
+              }}
+              onSave={handleSaveProfile}
+              onBack={() => setCurrentScreen("profile")}
+              onSelectField={handleSelectField}
+            />
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
+
