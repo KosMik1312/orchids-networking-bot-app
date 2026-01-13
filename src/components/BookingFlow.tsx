@@ -46,24 +46,6 @@ export function BookingFlow({ city, onBack }: BookingFlowProps) {
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
-      {/* Header */}
-      <div className="flex justify-between items-center px-6 pt-12 pb-4">
-        <button onClick={handleBack} className="text-[#2A2021] flex items-center gap-1 font-medium text-lg">
-          <span className="text-sm">Cancel</span>
-        </button>
-        <div className="flex flex-col items-center">
-          <span className="font-serif text-xl italic leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Allora</span>
-          <span className="text-[10px] text-[#8E8E93] uppercase tracking-widest">bot</span>
-        </div>
-        <button className="w-8 h-8 flex items-center justify-center rounded-full bg-black">
-          <div className="flex gap-0.5">
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-          </div>
-        </button>
-      </div>
-
       <AnimatePresence mode="wait">
         {step === "booking" && (
           <motion.div
@@ -79,7 +61,9 @@ export function BookingFlow({ city, onBack }: BookingFlowProps) {
                 <div className="w-10 h-10 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={20} fill="white" />
                 </div>
-                <span className="font-semibold text-[#404243] pr-2">г. {city || "Москва"}</span>
+                  <span className="font-semibold text-[#404243] pr-2">
+                    {city ? (city.startsWith("г.") ? city : `г. ${city}`) : "г. Москва"}
+                  </span>
               </div>
               <button className="w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
                 <Settings className="text-[#E15859]" size={24} />
