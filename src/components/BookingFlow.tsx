@@ -19,9 +19,10 @@ type BookingStep = "booking" | "payment" | "success";
 interface BookingFlowProps {
   city: string;
   onBack: () => void;
+  onTabChange?: (tab: "home" | "contacts" | "profile") => void;
 }
 
-export function BookingFlow({ city, onBack }: BookingFlowProps) {
+export function BookingFlow({ city, onBack, onTabChange }: BookingFlowProps) {
   const [step, setStep] = useState<BookingStep>("booking");
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -265,9 +266,10 @@ export function BookingFlow({ city, onBack }: BookingFlowProps) {
             </button>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+  
+        <BottomNav activeTab="home" onTabChange={onTabChange} />
+      </div>
+    );
+  }
 
-      <BottomNav activeTab="home" />
-    </div>
-  );
-}

@@ -21,8 +21,10 @@ import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
 import { AboutMeScreen } from "@/components/AboutMeScreen";
 import { CitySelectionScreen } from "@/components/CitySelectionScreen";
 import { BookingFlow } from "@/components/BookingFlow";
+import { ContactsScreen } from "@/components/ContactsScreen";
+import { BottomNav } from "@/components/BottomNav";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main";
+type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main" | "contacts" | "profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -196,6 +198,12 @@ export default function Home() {
 
   const handleBackToPhotoUpload = () => {
     setCurrentScreen("photo_upload");
+  };
+
+  const handleTabChange = (tab: "home" | "contacts" | "profile") => {
+    if (tab === "home") setCurrentScreen("booking");
+    else if (tab === "contacts") setCurrentScreen("contacts");
+    else if (tab === "profile") setCurrentScreen("main"); // Summary screen acts as profile for now
   };
 
   return (
@@ -515,6 +523,23 @@ export default function Home() {
             <BookingFlow 
               city={userCity} 
               onBack={() => setCurrentScreen("city")}
+              onTabChange={handleTabChange}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === "contacts" && (
+          <motion.div
+            key="contacts"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <ContactsScreen 
+              city={userCity} 
+              onTabChange={handleTabChange}
             />
           </motion.div>
         )}
@@ -526,7 +551,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="min-h-screen flex flex-col items-center justify-center px-6 text-center overflow-y-auto py-12"
+            className="min-h-screen flex flex-col items-center justify-center px-6 text-center overflow-y-auto py-12 pb-24"
             style={{ backgroundColor: "#E9E9E9" }}
           >
             <div className="max-w-md w-full">
@@ -667,8 +692,8 @@ export default function Home() {
                   Начать заново
                 </button>
               </div>
-
             </div>
+            <BottomNav activeTab="profile" onTabChange={handleTabChange} />
           </motion.div>
         )}
       </AnimatePresence>
