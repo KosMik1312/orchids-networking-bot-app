@@ -1,3 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+env/
+venv/
+.venv/
+bot/venv/
+# Virtual environment configs
+.Python
+
+# Pipenv / Poetry / pip
+pip-wheel-metadata/
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Next.js / Bun
+node_modules/
+.next/
+out/
+bun.lockb
+package-lock.json
+yarn.lock
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pip-log.txt
+
+# Static caches
+.cache/
+coverage/
+reports/
+
+# Misc
+*.log
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
