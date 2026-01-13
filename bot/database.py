@@ -59,3 +59,41 @@ async def get_user_profile(user_id: int):
     async with aiosqlite.connect(DATABASE_NAME) as db:
         cursor = await db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         return await cursor.fetchone()
+
+async def create_slot(date: str, time: str, city: str, restaurant: str, max_people: int):
+    """Создание нового слота ужина"""
+    async with aiosqlite.connect(DATABASE_NAME) as db:
+        await db.execute(
+            "INSERT INTO dinner_slots (date, time, city, restaurant, max_people) VALUES (?, ?, ?, ?, ?)",
+            (date, time, city, restaurant, max_people)
+        )
+        await db.commit()
+
+async def get_all_slots():
+    """Получение всех слотов ужинов"""
+    async with aiosqlite.connect(DATABASE_NAME) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM dinner_slots ORDER BY date, time")
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+async def get_users_count():
+    """Получение общего количества пользователей"""
+    async with aiosqlite.connect(DATABASE_NAME) as db:
+        cursor = await db.execute("SELECT COUNT(*) FROM users")
+        result = await cursor.fetchone()
+        return result[0] if result else 0
+
+async def get_active_slots_count():
+    """Получение количества активных слотов"""
+    async with aiosqlite.connect(DATABASE_NAME) as db:
+        cursor = await db.execute("SELECT COUNT(*) FROM dinner_slots WHERE is_active = 1")
+        result = await cursor.fetchone()
+        return result[0] if result else 0
+
+async def get_total_bookings_count():
+    """Получение общего количества бронирований"""
+    async with aiosqlite.connect(DATABASE_NAME) as db:
+        cursor = await db.execute("SELECT COUNT(*) FROM bookings WHERE status = 'active'")
+        result = await cursor.fetchone()
+        return result[0] if result else 0
