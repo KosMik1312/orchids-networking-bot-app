@@ -11,14 +11,33 @@ from aiogram.types import Message
 # Импорты из нашей структуры
 from config import BOT_TOKEN
 from database import init_db, save_user_profile, get_user_profile
+from middleware.admin_middleware import AdminMiddleware
+from commands.user_commands import user_router
+from commands.admin_commands import admin_router
+from menu_setup import set_bot_commands
 
-...
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# --- Инициализация бота и диспетчера ---
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+dp = Dispatcher()
+
+# --- Функции жизненного цикла ---
+async def on_startup(bot: Bot):
+    """Выполняется при старте бота."""
+    logger.info("Initializing database...")
+    await init_db()
+    logger.info("Setting bot commands...")
+    await set_bot_commands(bot)
+    logger.info("Bot started successfully.")
 
 async def on_shutdown(dispatcher):
     """Выполняется при остановке бота."""
-    # Соединение с БД закрывается автоматически благодаря context manager в сессиях
     logger.info("Bot stopped. Database connections are managed automatically.")
 
+# --- Регистрация компонентов ---
 dp.startup.register(on_startup)
 dp.shutdown.register(on_shutdown)
 
@@ -30,35 +49,51 @@ dp.callback_query.middleware(AdminMiddleware())
 dp.include_router(user_router)
 dp.include_router(admin_router)
 
-# Состояния FSM (оставляем для совместимости)
+# --- Обработчики (если есть глобальные) ---
+
+# Состояния FSM (оставляем для совместимости, если где-то используются)
 class ProfileStates(StatesGroup):
     waiting_for_profile = State()
 
 # Заглушка для сохранения профиля из MiniApp
 @dp.message(Command("save_profile"))
 async def save_profile(message: Message) -> None:
-    """Сохранение профиля из MiniApp (webhook/API)"""
+    """
+    Сохранение профиля из MiniApp. 
+    В реальном приложении этот эндпоинт будет вызываться не пользователем,
+    а через API-запрос от фронтенда.
+    """
     user_id = message.from_user.id
     # Для примера: данные профиля приходят тут в виде dict.
+    # В реальности, эти данные должен присылать фронтенд.
     profile_data = {"name": "Пример", "age": 25, "interests": "ужины"}
 
-    # Валидация через pydantic (UserProfile). Исключение поймается aiogram/логером.
     try:
-        validated = UserProfile(**profile_data)
+        await save_user_profile(user_id, profile_data)
+        await message.answer("Профиль сохранён! Теперь можешь искать компанию.")
     except Exception as e:
-        await message.answer(f"Ошибка в данных профиля: {e}")
-        return
-
-    await save_user_profile(user_id, validated)
-    await message.answer("Профиль сохранён! Теперь можешь искать компанию.")
+        logger.error(f"Profile save failed for user {user_id}: {e}")
+        await message.answer(f"Ошибка при сохранении профиля: {e}")
 
 async def main() -> None:
     """Главная функция запуска бота"""
-    logger.info("Starting bot...")
     try:
+        # Инициализация базы данных
+        await init_db()
+        logger.info("Database initialized")
+        
+        # Настройка команд бота
+        await set_bot_commands(bot)
+        logger.info("Bot commands configured")
+        
+        # Запуск бота
+        logger.info("Starting bot...")
         await dp.start_polling(bot)
+        
     except Exception as e:
-        logger.error(f"Error starting bot: {e}", exc_info=True)
+        logger.error(f"Error starting bot: {e}")
+    finally:
+        await bot.session.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

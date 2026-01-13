@@ -1,9 +1,9 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from . import models
-from bot.schemas import UserProfile
+from ..schemas import UserProfile
 
 class BaseRepo:
     """
@@ -44,6 +44,11 @@ class UserRepo(BaseRepo):
         await self.session.commit()
         await self.session.refresh(user)
         return user
+    
+    async def get_total_count(self) -> int:
+        """Возвращает общее количество пользователей."""
+        result = await self.session.execute(select(func.count(models.User.user_id)))
+        return result.scalar_one()
 
 
 class SlotRepo(BaseRepo):
@@ -99,6 +104,18 @@ class SlotRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def get_active_count(self) -> int:
+        """Возвращает количество активных слотов."""
+        result = await self.session.execute(
+            select(func.count(models.DinnerSlot.id)).where(models.DinnerSlot.is_active == True)
+        )
+        return result.scalar_one()
+
+    async def get_total_bookings_sum(self) -> int:
+        """Возвращает сумму всех текущих бронирований."""
+        result = await self.session.execute(select(func.sum(models.DinnerSlot.current_bookings)))
+        return result.scalar_one() or 0
 
 
 class BookingRepo(BaseRepo):
