@@ -16,7 +16,13 @@ app = FastAPI(title="Orchids Networking Bot API")
 # CORS для MiniApp
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене указать конкретные домены
+    allow_origins=[
+        "https://orchids-networking-bot-app.vercel.app",
+        "https://*.ngrok.io",
+        "https://*.loca.lt",
+        "http://localhost:3000",
+        "*"  # Временно для отладки
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,10 +63,14 @@ async def startup():
 
 @app.post("/api/profile")
 async def save_profile_endpoint(request: ProfileRequest):
+    print(f"💾 Сохранение профиля пользователя {request.userId}")
+    print(f"📄 Данные: {request.profile.dict()}")
     try:
         await save_user_profile(request.userId, request.profile.dict())
+        print(f"✅ Профиль сохранен")
         return {"success": True}
     except Exception as e:
+        print(f"❌ Ошибка сохранения профиля: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profile")
@@ -82,12 +92,16 @@ async def get_profile_endpoint(userId: int):
 
 @app.get("/api/slots")
 async def get_slots_endpoint(city: Optional[str] = None):
+    print(f"🔍 Запрос слотов, город: {city}")
     try:
         slots = await get_all_slots()
+        print(f"📋 Найдено слотов: {len(slots)}")
         if city:
             slots = [slot for slot in slots if slot['city'].lower() == city.lower()]
+            print(f"🏙️ После фильтрации по городу: {len(slots)}")
         return {"slots": slots}
     except Exception as e:
+        print(f"❌ Ошибка получения слотов: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/bookings")

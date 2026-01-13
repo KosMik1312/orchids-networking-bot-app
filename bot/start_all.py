@@ -5,6 +5,29 @@ import os
 # Переходим в папку bot
 os.chdir(os.path.join(os.path.dirname(__file__)))
 
+async def run_tunnel():
+    """Запуск localtunnel"""
+    print("🌐 Запускаю localtunnel...")
+    process = await asyncio.create_subprocess_exec(
+        "lt", "--port", "8000", "--subdomain", "orchids-api",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT
+    )
+    
+    # Читаем вывод
+    while True:
+        line = await process.stdout.readline()
+        if not line:
+            break
+        output = line.decode().strip()
+        if "your url is:" in output:
+            print(f"🌐 [TUNNEL] {output}")
+        else:
+            print(f"[TUNNEL] {output}")
+    
+    await process.wait()
+    return process
+
 async def run_bot():
     """Запуск Telegram бота"""
     print("🤖 Запускаю Telegram бота...")
@@ -45,15 +68,19 @@ async def run_api():
     return process
 
 async def main():
-    print("🌸 Запуск Orchids Networking Bot + API Server")
-    print("=" * 50)
+    print("🌸 Запуск Orchids Networking Bot + API Server + Tunnel")
+    print("=" * 60)
     print(f"📁 Рабочая папка: {os.getcwd()}")
+    print("🌐 Tunnel URL: https://orchids-api.loca.lt")
+    print("📄 Обновите NEXT_PUBLIC_API_BASE в Vercel!")
+    print()
     
     try:
-        # Запускаем оба процесса параллельно
+        # Запускаем все сервисы параллельно
         await asyncio.gather(
-            run_bot(),
-            run_api()
+            run_tunnel(),
+            run_api(),
+            run_bot()
         )
     except KeyboardInterrupt:
         print("\n⏹️  Остановка сервисов...")
