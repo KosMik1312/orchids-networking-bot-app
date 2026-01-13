@@ -25,23 +25,23 @@ import { BookingFlow } from "@/components/BookingFlow";
 type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "main";
 
 export default function Home() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("booking");
-  const [userName, setUserName] = useState("Александр");
+  const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
+  const [userName, setUserName] = useState("");
   const [userAge, setUserAge] = useState<number>(25);
-  const [userGender, setUserGender] = useState<"male" | "female" | null>("male");
-  const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>("single");
-  const [userChildren, setUserChildren] = useState<ChildrenStatus | null>("no");
-  const [userOccupation, setUserOccupation] = useState<OccupationType | null>("it");
-  const [userGoal, setUserGoal] = useState<GoalType | null>("friends");
-  const [userInterest, setUserInterest] = useState<InterestType | null>("sport");
-  const [userComfort, setUserComfort] = useState<number | null>(5);
-  const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(5);
-  const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>("active");
-  const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>("spontaneous");
-  const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "@test", instagram: "@test" });
+  const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
+  const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
+  const [userChildren, setUserChildren] = useState<ChildrenStatus | null>(null);
+  const [userOccupation, setUserOccupation] = useState<OccupationType | null>(null);
+  const [userGoal, setUserGoal] = useState<GoalType | null>(null);
+  const [userInterest, setUserInterest] = useState<InterestType | null>(null);
+  const [userComfort, setUserComfort] = useState<number | null>(null);
+  const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(null);
+  const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>(null);
+  const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
+  const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  const [userAboutMe, setUserAboutMe] = useState("Люблю нетворкинг!");
-  const [userCity, setUserCity] = useState("Москва");
+  const [userAboutMe, setUserAboutMe] = useState("");
+  const [userCity, setUserCity] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
 
   const handleStartOnboarding = () => {
