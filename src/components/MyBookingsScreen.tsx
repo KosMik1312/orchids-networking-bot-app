@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   MapPin, 
@@ -8,18 +9,29 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { getUserBookings, type Booking } from "@/lib/api";
 
 interface MyBookingsScreenProps {
   city: string;
+  userId?: number;
   onBack: () => void;
   onTabChange: (tab: "home" | "contacts" | "profile") => void;
 }
 
-export function MyBookingsScreen({ city, onBack, onTabChange }: MyBookingsScreenProps) {
-  const bookings = [
-    { id: "dinner", name: "Ужин", count: 12 },
-    { id: "meetings", name: "Знакомства", count: 5 },
-  ];
+export function MyBookingsScreen({ city, userId, onBack, onTabChange }: MyBookingsScreenProps) {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      if (userId) {
+        const userBookings = await getUserBookings(userId);
+        setBookings(userBookings);
+      }
+      setIsLoading(false);
+    };
+    loadBookings();
+  }, [userId]);
 
   return (
     <div className="min-h-screen flex flex-col pb-24" style={{ backgroundColor: "#E9E9E9" }}>
@@ -56,24 +68,37 @@ export function MyBookingsScreen({ city, onBack, onTabChange }: MyBookingsScreen
 
       {/* Bookings List */}
       <div className="px-6 space-y-4 flex-1">
-        {bookings.map((item) => (
-          <div
-            key={item.id}
-            className="w-full bg-white rounded-[24px] px-6 py-5 flex items-center justify-between shadow-sm"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#E15859] rounded-xl flex items-center justify-center">
-                <Calendar className="text-white" size={20} />
+        {isLoading ? (
+          <div className="text-center py-8">Загрузка бронирований...</div>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">У вас нет бронирований</div>
+        ) : (
+          bookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="w-full bg-white rounded-[24px] px-6 py-5 flex items-center justify-between shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-[#E15859] rounded-xl flex items-center justify-center">
+                  <Calendar className="text-white" size={20} />
+                </div>
+                <div>
+                  <span className="text-[#404243] text-lg font-bold block" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                    {booking.restaurant}
+                  </span>
+                  <span className="text-[#404243]/70 text-sm">
+                    {booking.date} в {booking.time}
+                  </span>
+                </div>
               </div>
-              <span className="text-[#404243] text-lg font-bold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                {item.name}
-              </span>
+              <div className="text-right">
+                <span className="text-[#E15859] font-bold text-lg">
+                  {booking.max_people - (booking.current_bookings || 0)} мест
+                </span>
+              </div>
             </div>
-            <span className="text-[#8E8E93] text-xl font-bold">
-              {item.count}
-            </span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <BottomNav activeTab="profile" onTabChange={onTabChange} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, 
@@ -13,28 +13,46 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { getSlots, createBooking, type Slot } from "@/lib/api";
 
 type BookingStep = "booking" | "payment" | "success";
 
 interface BookingFlowProps {
   city: string;
+  userId?: number;
   onBack: () => void;
   onComplete?: () => void;
   onTabChange?: (tab: "home" | "contacts" | "profile") => void;
 }
 
-export function BookingFlow({ city, onBack, onComplete, onTabChange }: BookingFlowProps) {
+export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: BookingFlowProps) {
   const [step, setStep] = useState<BookingStep>("booking");
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [acceptedOffer, setAcceptedOffer] = useState(false);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const slots = [
-    { id: 1, date: "7 января", day: "Понедельник", time: "18:00" },
-    { id: 2, date: "7 января", day: "Понедельник", time: "18:00" },
-    { id: 3, date: "7 января", day: "Понедельник", time: "18:00" },
-    { id: 4, date: "7 января", day: "Понедельник", time: "18:00" },
-  ];
+  useEffect(() => {
+    const loadSlots = async () => {
+      const availableSlots = await getSlots(city);
+      setSlots(availableSlots);
+      setIsLoading(false);
+    };
+    loadSlots();
+  }, [city]);
+
+  const handleBookSlot = async () => {
+    if (!selectedSlot || !userId) return;
+    
+    const success = await createBooking(userId, selectedSlot);
+    if (success) {
+      setStep("payment");
+    } else {
+      // Handle booking failure
+      alert("Не удалось забронировать слот");
+    }
+  };
 
   const handleBack = () => {
     if (step === "booking") {
@@ -92,41 +110,49 @@ export function BookingFlow({ city, onBack, onComplete, onTabChange }: BookingFl
 
             {/* Slots List */}
             <div className="px-6 space-y-3 overflow-y-auto max-h-[40vh] mb-4">
-              {slots.map((slot) => (
-                <button
-                  key={slot.id}
-                  onClick={() => setSelectedSlot(slot.id)}
-                  className={`w-full flex items-center justify-between px-6 py-4 rounded-full transition-all ${
-                    selectedSlot === slot.id 
-                      ? "bg-[#E15859] text-white shadow-md scale-[1.02]" 
-                      : "bg-white text-[#404243] shadow-sm"
-                  }`}
-                >
-                  <div className="flex items-center gap-8 flex-1">
-                    <span className="font-medium min-w-[80px] text-left">{slot.date}</span>
-                    <span className="text-sm opacity-80">{slot.day}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedSlot === slot.id ? "bg-white/20" : "border border-[#E15859]/20"}`}>
-                      <Clock size={16} className={selectedSlot === slot.id ? "text-white" : "text-[#E15859]"} />
+              {isLoading ? (
+                <div className="text-center py-8">Загрузка слотов...</div>
+              ) : slots.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">Нет доступных слотов</div>
+              ) : (
+                slots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    onClick={() => setSelectedSlot(slot.id)}
+                    className={`w-full flex items-center justify-between px-6 py-4 rounded-full transition-all ${
+                      selectedSlot === slot.id 
+                        ? "bg-[#E15859] text-white shadow-md scale-[1.02]" 
+                        : "bg-white text-[#404243] shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{slot.date}</span>
+                        <span className="text-sm opacity-80">{slot.restaurant}</span>
+                      </div>
                     </div>
-                    <span className="font-bold">{slot.time}</span>
-                  </div>
-                </button>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedSlot === slot.id ? "bg-white/20" : "border border-[#E15859]/20"}`}>
+                        <Clock size={16} className={selectedSlot === slot.id ? "text-white" : "text-[#E15859]"} />
+                      </div>
+                      <span className="font-bold">{slot.time}</span>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
 
             {/* Action Button */}
             <div className="px-10 mt-auto mb-4">
               <button
-                disabled={selectedSlot === null}
-                onClick={() => setStep("payment")}
+                disabled={selectedSlot === null || isLoading}
+                onClick={handleBookSlot}
                 className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all ${
-                  selectedSlot !== null ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
+                  selectedSlot !== null && !isLoading ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
                 }`}
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
-                Забронировать
+                {isLoading ? "Загрузка..." : "Забронировать"}
               </button>
             </div>
           </motion.div>

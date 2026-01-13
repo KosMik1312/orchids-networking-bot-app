@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
@@ -26,11 +26,13 @@ import { ProfileScreen } from "@/components/ProfileScreen";
 import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { EditProfileScreen } from "@/components/EditProfileScreen";
 import { BottomNav } from "@/components/BottomNav";
+import { getProfile, saveProfile, ApiError } from "@/lib/api";
 
 type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
+  const [userId, setUserId] = useState<number | undefined>(undefined);
   const [userName, setUserName] = useState("");
   const [userAge, setUserAge] = useState<number>(25);
   const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
@@ -48,6 +50,49 @@ export default function Home() {
   const [userAboutMe, setUserAboutMe] = useState("");
   const [userCity, setUserCity] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load user data on mount
+  useEffect(() => {
+    const initUser = async () => {
+      // In Telegram WebApp, get user ID from WebApp.initDataUnsafe
+      const webApp = (window as any).Telegram?.WebApp;
+      if (webApp?.initDataUnsafe?.user?.id) {
+        const id = webApp.initDataUnsafe.user.id;
+        setUserId(id);
+        
+        // Load existing profile
+        const profile = await getProfile(id);
+        if (profile) {
+          setUserName(profile.name || "");
+          setUserAge(profile.age || 25);
+          setUserGender(profile.gender as "male" | "female" || null);
+          setUserRelationship(profile.relationship_status as RelationshipStatus || null);
+          setUserChildren(profile.children as ChildrenStatus || null);
+          setUserOccupation(profile.occupation as OccupationType || null);
+          setUserGoal(profile.goal as GoalType || null);
+          setUserInterest(profile.interests as InterestType || null);
+          setUserComfort(profile.comfort_level || null);
+          setUserSocialFrequency(profile.social_frequency || null);
+          setUserCommunicationFormat(profile.communication_format as CommunicationFormat || null);
+          setUserEveningScenario(profile.evening_scenario as EveningScenario || null);
+          setUserSocialLinks({
+            telegram: profile.telegram || "",
+            instagram: profile.instagram || ""
+          });
+          setUserPhoto(profile.photo || null);
+          setUserAboutMe(profile.about_me || "");
+          setUserCity(profile.city || "");
+        }
+      } else {
+        // For development, use mock user ID
+        setUserId(123456789);
+      }
+      setIsLoading(false);
+    };
+    
+    initUser();
+  }, []);
 
   const handleStartOnboarding = () => {
     setCurrentScreen("onboarding");
@@ -209,11 +254,40 @@ export default function Home() {
     else if (tab === "profile") setCurrentScreen("profile");
   };
 
-  const handleSaveProfile = (newData: any) => {
-    setUserName(newData.name);
-    setUserAboutMe(newData.aboutMe);
-    setUserSocialLinks(newData.socialLinks);
-    setCurrentScreen("profile");
+  const handleSaveProfile = async (newData: any) => {
+    if (!userId) return;
+    
+    const profileData = {
+      name: newData.name || userName,
+      age: newData.age || userAge,
+      gender: newData.gender || userGender,
+      relationship_status: newData.relationship || userRelationship,
+      children: newData.children || userChildren,
+      occupation: newData.occupation || userOccupation,
+      goal: newData.goal || userGoal,
+      interests: newData.interest || userInterest,
+      comfort_level: newData.comfort || userComfort,
+      social_frequency: newData.socialFrequency || userSocialFrequency,
+      communication_format: newData.communicationFormat || userCommunicationFormat,
+      evening_scenario: newData.eveningScenario || userEveningScenario,
+      telegram: newData.socialLinks?.telegram || userSocialLinks.telegram,
+      instagram: newData.socialLinks?.instagram || userSocialLinks.instagram,
+      photo: newData.photo || userPhoto,
+      about_me: newData.aboutMe || userAboutMe,
+      city: newData.city || userCity,
+    };
+    
+    const success = await saveProfile(userId, profileData);
+    if (success) {
+      // Update local state
+      setUserName(profileData.name);
+      setUserAboutMe(profileData.about_me);
+      setUserSocialLinks({
+        telegram: profileData.telegram,
+        instagram: profileData.instagram
+      });
+      setCurrentScreen("profile");
+    }
   };
 
   const handleSelectField = (field: string) => {
@@ -552,7 +626,8 @@ export default function Home() {
             className="min-h-screen"
           >
             <BookingFlow 
-              city={userCity} 
+              city={userCity}
+              userId={userId}
               onBack={() => setCurrentScreen("city")}
               onTabChange={handleTabChange}
             />
@@ -606,6 +681,7 @@ export default function Home() {
           >
             <MyBookingsScreen 
               city={userCity}
+              userId={userId}
               onBack={() => setCurrentScreen("profile")}
               onTabChange={handleTabChange}
             />

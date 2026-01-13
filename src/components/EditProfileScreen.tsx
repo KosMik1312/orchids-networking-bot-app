@@ -11,7 +11,7 @@ import {
   Camera
 } from "lucide-react";
 import { RelationshipStatus } from "./RelationshipStatusScreen";
-import { ChildrenStatus } from "./ChildrenStatusScreen";
+import { ChildrenStatus } from "./ChildrenSelectionScreen";
 import { OccupationType } from "./OccupationSelectionScreen";
 import { GoalType } from "./GoalSelectionScreen";
 import { InterestType } from "./InterestsSelectionScreen";

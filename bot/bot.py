@@ -11,22 +11,16 @@ from aiogram.types import Message
 # Импорты из нашей структуры
 from config import BOT_TOKEN
 from database import init_db, save_user_profile, get_user_profile
-from schemas import UserProfile
-from middleware.admin_middleware import AdminMiddleware
-from commands.user_commands import user_router
-from commands.admin_commands import admin_router
-from menu_setup import set_bot_commands
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+...
 
-# Инициализация бота и диспетчера
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()
+async def on_shutdown(dispatcher):
+    """Выполняется при остановке бота."""
+    # Соединение с БД закрывается автоматически благодаря context manager в сессиях
+    logger.info("Bot stopped. Database connections are managed automatically.")
+
+dp.startup.register(on_startup)
+dp.shutdown.register(on_shutdown)
 
 # Подключение middleware
 dp.message.middleware(AdminMiddleware())
@@ -60,23 +54,11 @@ async def save_profile(message: Message) -> None:
 
 async def main() -> None:
     """Главная функция запуска бота"""
+    logger.info("Starting bot...")
     try:
-        # Инициализация базы данных
-        await init_db()
-        logger.info("Database initialized")
-        
-        # Настройка команд бота
-        await set_bot_commands(bot)
-        logger.info("Bot commands configured")
-        
-        # Запуск бота
-        logger.info("Starting bot...")
         await dp.start_polling(bot)
-        
     except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-    finally:
-        await bot.session.close()
+        logger.error(f"Error starting bot: {e}", exc_info=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
