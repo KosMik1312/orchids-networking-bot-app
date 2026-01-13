@@ -14,24 +14,24 @@ export function AgeSelectionScreen({ onNext, onBack, progress }: AgeSelectionScr
   const ages = Array.from({ length: 83 }, (_, i) => i + 18); // 18 to 100
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      const index = ages.indexOf(selectedAge);
-      const itemHeight = 60; // Approximate height of each age item
-      scrollRef.current.scrollTop = index * itemHeight - (scrollRef.current.clientHeight / 2) + (itemHeight / 2);
-    }
-  }, []);
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const scrollTop = scrollRef.current.scrollTop;
-      const itemHeight = 60;
-      const centerIndex = Math.round((scrollTop + scrollRef.current.clientHeight / 2 - itemHeight / 2) / itemHeight);
-      if (ages[centerIndex]) {
-        setSelectedAge(ages[centerIndex]);
+    useEffect(() => {
+      if (scrollRef.current) {
+        const index = ages.indexOf(selectedAge);
+        const itemHeight = 60;
+        scrollRef.current.scrollTop = index * itemHeight;
       }
-    }
-  };
+    }, []);
+
+    const handleScroll = () => {
+      if (scrollRef.current) {
+        const scrollTop = scrollRef.current.scrollTop;
+        const itemHeight = 60;
+        const centerIndex = Math.round(scrollTop / itemHeight);
+        if (ages[centerIndex]) {
+          setSelectedAge(ages[centerIndex]);
+        }
+      }
+    };
 
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#E9E9E9" }}>
