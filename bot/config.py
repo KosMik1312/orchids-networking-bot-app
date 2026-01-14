@@ -16,7 +16,8 @@ if _admin_ids_env:
         ADMIN_IDS = []
 else:
     ADMIN_IDS = [
-        432235211
+        432235211,
+	    5122343544,
         # 123456789,  # Пример ID
     ]
 

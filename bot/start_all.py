@@ -2,8 +2,9 @@ import asyncio
 import sys
 import os
 
-# Переходим в папку bot
-os.chdir(os.path.join(os.path.dirname(__file__)))
+# Переходим в папку bot (если запущено не из неё)
+if os.path.dirname(__file__):
+    os.chdir(os.path.dirname(__file__))
 
 async def run_tunnel():
     """Запуск localtunnel"""
@@ -109,4 +110,10 @@ async def main():
     print("✅ Все сервисы остановлены")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Для Python 3.6 совместимость
+    try:
+        asyncio.run(main())
+    except AttributeError:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+        loop.close()
