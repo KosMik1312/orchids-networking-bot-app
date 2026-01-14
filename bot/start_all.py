@@ -8,25 +8,45 @@ os.chdir(os.path.join(os.path.dirname(__file__)))
 async def run_tunnel():
     """Запуск localtunnel"""
     print("🌐 Запускаю localtunnel...")
-    process = await asyncio.create_subprocess_exec(
-        "lt", "--port", "8000", "--subdomain", "orchids-api",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    
-    # Читаем вывод
-    while True:
-        line = await process.stdout.readline()
-        if not line:
-            break
-        output = line.decode().strip()
-        if "your url is:" in output:
-            print(f"🌐 [TUNNEL] {output}")
+    try:
+        # Пробуем разные варианты команды
+        commands = [
+            ["lt", "--port", "8000", "--subdomain", "orchids-api"],
+            ["npx", "localtunnel", "--port", "8000", "--subdomain", "orchids-api"],
+            ["node", "-e", "require('localtunnel')({port: 8000, subdomain: 'orchids-api'}).then(tunnel => console.log('your url is:', tunnel.url))"]
+        ]
+        
+        for cmd in commands:
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT
+                )
+                break
+            except FileNotFoundError:
+                continue
         else:
-            print(f"[TUNNEL] {output}")
-    
-    await process.wait()
-    return process
+            print("❌ localtunnel не найден. Запустите вручную: lt --port 8000 --subdomain orchids-api")
+            return None
+        
+        # Читаем вывод
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            output = line.decode().strip()
+            if "your url is:" in output:
+                print(f"🌐 [TUNNEL] {output}")
+            else:
+                print(f"[TUNNEL] {output}")
+        
+        await process.wait()
+        return process
+    except Exception as e:
+        print(f"❌ Ошибка запуска tunnel: {e}")
+        print("📝 Запустите вручную в отдельном терминале: lt --port 8000 --subdomain orchids-api")
+        return None
 
 async def run_bot():
     """Запуск Telegram бота"""
@@ -68,17 +88,16 @@ async def run_api():
     return process
 
 async def main():
-    print("🌸 Запуск Orchids Networking Bot + API Server + Tunnel")
-    print("=" * 60)
+    print("🌸 Запуск Orchids Networking Bot + API Server")
+    print("=" * 50)
     print(f"📁 Рабочая папка: {os.getcwd()}")
-    print("🌐 Tunnel URL: https://orchids-api.loca.lt")
-    print("📄 Обновите NEXT_PUBLIC_API_BASE в Vercel!")
+    print("📝 Для туннеля запустите отдельно: lt --port 8000 --subdomain orchids-api")
+    print("🌐 Тогда URL будет: https://orchids-api.loca.lt")
     print()
     
     try:
-        # Запускаем все сервисы параллельно
+        # Запускаем только бот и API
         await asyncio.gather(
-            run_tunnel(),
             run_api(),
             run_bot()
         )

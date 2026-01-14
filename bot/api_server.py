@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import asyncio
+import sys
+import io
 from database import (
     init_db, save_user_profile, get_user_profile,
     create_slot, get_all_slots, get_users_count,
@@ -10,6 +12,10 @@ from database import (
 )
 import aiosqlite
 from config import DATABASE_NAME
+
+# Настройка кодировки для Windows
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 app = FastAPI(title="Orchids Networking Bot API")
 
@@ -63,14 +69,14 @@ async def startup():
 
 @app.post("/api/profile")
 async def save_profile_endpoint(request: ProfileRequest):
-    print(f"💾 Сохранение профиля пользователя {request.userId}")
-    print(f"📄 Данные: {request.profile.dict()}")
+    print(f"[PROFILE] Saving profile for user {request.userId}")
+    print(f"[PROFILE] Data: {request.profile.dict()}")
     try:
         await save_user_profile(request.userId, request.profile.dict())
-        print(f"✅ Профиль сохранен")
+        print(f"[PROFILE] Profile saved successfully")
         return {"success": True}
     except Exception as e:
-        print(f"❌ Ошибка сохранения профиля: {e}")
+        print(f"[ERROR] Save profile failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profile")
@@ -90,18 +96,50 @@ async def get_profile_endpoint(userId: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/slots")
-async def get_slots_endpoint(city: Optional[str] = None):
-    print(f"🔍 Запрос слотов, город: {city}")
+@app.get("/test")
+async def test_endpoint():
+    """Тестовый эндпоинт для проверки"""
     try:
         slots = await get_all_slots()
-        print(f"📋 Найдено слотов: {len(slots)}")
+        users_count = await get_users_count()
+        return {
+            "status": "OK", 
+            "slots_count": len(slots),
+            "users_count": users_count,
+            "slots": slots[:3]  # Первые 3 слота для проверки
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/slots")
+async def get_slots_endpoint(city: Optional[str] = None):
+    try:
+        print(f"[SLOTS] Request for city: {city}")
+        slots = await get_all_slots()
+        print(f"[SLOTS] Found {len(slots)} slots")
+        
         if city:
-            slots = [slot for slot in slots if slot['city'].lower() == city.lower()]
-            print(f"🏙️ После фильтрации по городу: {len(slots)}")
+            try:
+                from urllib.parse import unquote
+                city_decoded = unquote(city)
+                print(f"[SLOTS] Decoded city: {city_decoded}")
+                
+                # Remove prefix "g. " for comparison
+                city_clean = city_decoded.replace("г. ", "").strip()
+                print(f"[SLOTS] Clean city: {city_clean}")
+                
+                slots = [slot for slot in slots if city_clean.lower() in slot['city'].lower()]
+            except Exception as decode_error:
+                print(f"[SLOTS] Decode error: {decode_error}")
+                slots = [slot for slot in slots if city.lower() in slot['city'].lower()]
+            
+            print(f"[SLOTS] After filter: {len(slots)} slots")
+        
         return {"slots": slots}
     except Exception as e:
-        print(f"❌ Ошибка получения слотов: {e}")
+        print(f"[ERROR] Get slots failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/bookings")

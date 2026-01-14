@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserBookings, createBooking } from '../../../lib/database';
+import { getUserBookings, createBooking } from '../../../lib/api';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +17,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid userId: must be a number.' }, { status: 400 });
     }
 
-    // TODO: [Безопасность] `userId` приходит от клиента.
-    const bookings = await getUserBookings(userId);
-    return NextResponse.json({ bookings });
+    const result = await getUserBookings(userId);
+    return NextResponse.json({ bookings: result.bookings });
 
   } catch (error) {
     console.error('Error getting bookings:', error);
@@ -35,14 +34,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid input: userId and slotId must be numbers.' }, { status: 400 });
     }
 
-    // TODO: [Безопасность] `userId` приходит от клиента.
-    const success = await createBooking(userId, slotId);
-    
-    if (success) {
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json({ error: 'Failed to create booking. The slot may be full, or you have already booked it.' }, { status: 409 }); // 409 Conflict
-    }
+    const result = await createBooking(userId, slotId);
+    return NextResponse.json({ success: result.success });
 
   } catch (error) {
     console.error('Error creating booking:', error);

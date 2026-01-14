@@ -25,8 +25,8 @@ export function MyBookingsScreen({ city, userId, onBack, onTabChange }: MyBookin
   useEffect(() => {
     const loadBookings = async () => {
       if (userId) {
-        const userBookings = await getUserBookings(userId);
-        setBookings(userBookings);
+        const result = await getUserBookings(userId);
+        setBookings(result.bookings); // Исправлено: берем bookings из result
       }
       setIsLoading(false);
     };

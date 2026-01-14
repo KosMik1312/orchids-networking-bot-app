@@ -1,18 +1,22 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAvailableSlots } from '../../../lib/database';
+import { getSlots } from '../../../lib/api';
 
 export async function GET(request: NextRequest) {
+  console.log('🚀 Роут /api/slots вызван');
+  
   try {
     const { searchParams } = new URL(request.url);
     const city = searchParams.get('city');
+    console.log('🏙️ Город:', city);
 
-    const slots = await getAvailableSlots(city || undefined);
-    return NextResponse.json({ slots });
-  } catch (error)
- {
-    console.error('Error getting slots:', error);
+    const result = await getSlots(city || undefined);
+    console.log('✅ Получены слоты:', result);
+    
+    return NextResponse.json({ slots: result.slots });
+  } catch (error) {
+    console.error('❌ Ошибка в роуте:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

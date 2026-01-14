@@ -35,8 +35,8 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
 
   useEffect(() => {
     const loadSlots = async () => {
-      const availableSlots = await getSlots(city);
-      setSlots(availableSlots);
+      const result = await getSlots(city);
+      setSlots(result.slots); // Исправлено: берем slots из result
       setIsLoading(false);
     };
     loadSlots();
