@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime
 
 # Импортируем функции из нашего API для работы с БД
@@ -199,7 +200,13 @@ async def manage_slots(callback: CallbackQuery, is_admin: bool) -> None:
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin_menu")]
     ])
     
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text, reply_markup=keyboard)
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e):
+            pass  # Игнорируем, если сообщение не изменилось
+        else:
+            raise
     await callback.answer()
 
 @admin_router.callback_query(lambda c: c.data == "admin_stats")
@@ -226,7 +233,13 @@ async def admin_stats(callback: CallbackQuery, is_admin: bool) -> None:
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin_menu")]
     ])
     
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text, reply_markup=keyboard)
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e):
+            pass
+        else:
+            raise
     await callback.answer()
 
 @admin_router.callback_query(lambda c: c.data == "broadcast")
