@@ -128,3 +128,6 @@ env/
 
 # Other
 .orchids/
+
+# But include src/lib/
+!src/lib/
