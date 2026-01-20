@@ -1,6 +1,6 @@
 // API functions for communicating with the Python backend
 
-const API_BASE = 'https://hungry-geckos-warn.loca.lt'; // Жестко задано для отладки
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://hungry-geckos-warn.loca.lt'; // Из переменной окружения или значение по умолчанию
 console.log('🔧 API_BASE:', API_BASE);
 
 // --- Custom Error Class ---
