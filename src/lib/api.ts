@@ -1,6 +1,6 @@
 // API functions for communicating with the Python backend
 
-const API_BASE = 'http://81.177.6.20:8000'; // Жестко задано для отладки
+const API_BASE = 'https://early-rice-notice.loca.lt'; // Жестко задано для отладки
 console.log('🔧 API_BASE:', API_BASE);
 
 // --- Custom Error Class ---
