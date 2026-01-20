@@ -86,7 +86,7 @@ export interface Contact {
 }
 
 // Profile API
-export async function saveProfile(userId: number, profile: UserProfile): Promise<{success: boolean}> {
+export async function saveProfile(userId: number, profile: Partial<UserProfile>): Promise<{success: boolean}> {
   const response = await fetch(`${API_BASE}/api/profile`, {
     method: 'POST',
     headers: { 

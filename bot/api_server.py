@@ -36,8 +36,8 @@ app.add_middleware(
 
 # Pydantic модели
 class UserProfile(BaseModel):
-    name: str
-    age: int
+    name: Optional[str] = None
+    age: Optional[int] = None
     gender: Optional[str] = None
     relationship_status: Optional[str] = None
     children: Optional[str] = None

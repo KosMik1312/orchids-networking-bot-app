@@ -59,9 +59,24 @@ async def init_db():
         
         await db.commit()
 
-async def save_user_profile(user_id: int, profile: dict):
-    """Сохранение профиля пользователя"""
+async def save_user_profile(user_id: int, profile_update: dict):
+    """Сохраняет или обновляет профиль пользователя, объединяя новые данные с существующими."""
     async with aiosqlite.connect(DATABASE_NAME) as db:
+        db.row_factory = aiosqlite.Row
+        
+        # 1. Получаем существующий профиль
+        cursor = await db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        existing_profile_row = await cursor.fetchone()
+        
+        # Конвертируем строку в изменяемый словарь или создаем новый
+        existing_profile = dict(existing_profile_row) if existing_profile_row else {}
+        
+        # 2. Объединяем новые данные с существующими
+        # Удаляем None значения из profile_update, чтобы не перезаписывать ими существующие данные
+        updated_data = {k: v for k, v in profile_update.items() if v is not None}
+        merged_profile = {**existing_profile, **updated_data}
+
+        # 3. Используем INSERT OR REPLACE с полным, объединенным профилем
         await db.execute("""
             INSERT OR REPLACE INTO users (
                 user_id, name, age, gender, relationship_status, children,
@@ -70,12 +85,15 @@ async def save_user_profile(user_id: int, profile: dict):
                 photo, about_me, city
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            user_id, profile.get("name"), profile.get("age"), profile.get("gender"),
-            profile.get("relationship_status"), profile.get("children"), profile.get("occupation"),
-            profile.get("goal"), profile.get("interests"), profile.get("comfort_level"),
-            profile.get("social_frequency"), profile.get("communication_format"),
-            profile.get("evening_scenario"), profile.get("telegram"), profile.get("instagram"),
-            profile.get("photo"), profile.get("about_me"), profile.get("city")
+            user_id,
+            merged_profile.get("name"), merged_profile.get("age"), merged_profile.get("gender"),
+            merged_profile.get("relationship_status"), merged_profile.get("children"),
+            merged_profile.get("occupation"), merged_profile.get("goal"),
+            merged_profile.get("interests"), merged_profile.get("comfort_level"),
+            merged_profile.get("social_frequency"), merged_profile.get("communication_format"),
+            merged_profile.get("evening_scenario"), merged_profile.get("telegram"),
+            merged_profile.get("instagram"), merged_profile.get("photo"),
+            merged_profile.get("about_me"), merged_profile.get("city")
         ))
         await db.commit()
 

@@ -26,7 +26,7 @@ import { ProfileScreen } from "@/components/ProfileScreen";
 import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { EditProfileScreen } from "@/components/EditProfileScreen";
 import { BottomNav } from "@/components/BottomNav";
-import { getProfile, saveProfile, ApiError } from "@/lib/api";
+import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
 type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
@@ -51,6 +51,22 @@ export default function Home() {
   const [userCity, setUserCity] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    if (!userId || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      console.log('Saving profile data:', data);
+      await saveProfile(userId, data);
+    } catch (error) {
+      console.error("Failed to save profile", error);
+      // Optionally, show an error to the user
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Load user data on mount
   useEffect(() => {
@@ -105,83 +121,99 @@ export default function Home() {
     setCurrentScreen("quiz");
   };
 
-  const handleQuizComplete = (name: string) => {
+  const handleQuizComplete = async (name: string) => {
     setUserName(name);
+    await updateProfile({ name });
     setCurrentScreen("age");
   };
 
-  const handleAgeComplete = (age: number) => {
+  const handleAgeComplete = async (age: number) => {
     setUserAge(age);
+    await updateProfile({ age });
     setCurrentScreen("gender");
   };
 
-  const handleGenderComplete = (gender: "male" | "female") => {
+  const handleGenderComplete = async (gender: "male" | "female") => {
     setUserGender(gender);
+    await updateProfile({ gender });
     setCurrentScreen("relationship");
   };
 
-  const handleRelationshipComplete = (status: RelationshipStatus) => {
+  const handleRelationshipComplete = async (status: RelationshipStatus) => {
     setUserRelationship(status);
+    await updateProfile({ relationship_status: status });
     setCurrentScreen("children");
   };
 
-  const handleChildrenComplete = (status: ChildrenStatus) => {
+  const handleChildrenComplete = async (status: ChildrenStatus) => {
     setUserChildren(status);
+    await updateProfile({ children: status });
     setCurrentScreen("occupation");
   };
 
-  const handleOccupationComplete = (occupation: OccupationType) => {
+  const handleOccupationComplete = async (occupation: OccupationType) => {
     setUserOccupation(occupation);
+    await updateProfile({ occupation });
     setCurrentScreen("goal");
   };
 
-  const handleGoalComplete = (goal: GoalType) => {
+  const handleGoalComplete = async (goal: GoalType) => {
     setUserGoal(goal);
+    await updateProfile({ goal });
     setCurrentScreen("interests");
   };
 
-  const handleInterestsComplete = (interest: InterestType) => {
+  const handleInterestsComplete = async (interest: InterestType) => {
     setUserInterest(interest);
+    await updateProfile({ interests: interest });
     setCurrentScreen("comfort");
   };
 
-  const handleComfortComplete = (level: number) => {
+  const handleComfortComplete = async (level: number) => {
     setUserComfort(level);
+    await updateProfile({ comfort_level: level });
     setCurrentScreen("social_frequency");
   };
 
-  const handleSocialFrequencyComplete = (level: number) => {
+  const handleSocialFrequencyComplete = async (level: number) => {
     setUserSocialFrequency(level);
+    await updateProfile({ social_frequency: level });
     setCurrentScreen("communication_format");
   };
 
-  const handleCommunicationFormatComplete = (format: CommunicationFormat) => {
+  const handleCommunicationFormatComplete = async (format: CommunicationFormat) => {
     setUserCommunicationFormat(format);
+    await updateProfile({ communication_format: format });
     setCurrentScreen("evening_scenario");
   };
 
-  const handleEveningScenarioComplete = (scenario: EveningScenario) => {
+  const handleEveningScenarioComplete = async (scenario: EveningScenario) => {
     setUserEveningScenario(scenario);
+    await updateProfile({ evening_scenario: scenario });
     setCurrentScreen("social_links");
   };
 
-  const handleSocialLinksComplete = (socials: { telegram: string; instagram: string }) => {
+  const handleSocialLinksComplete = async (socials: { telegram: string; instagram: string }) => {
     setUserSocialLinks(socials);
+    await updateProfile({ telegram: socials.telegram, instagram: socials.instagram });
     setCurrentScreen("photo_upload");
   };
 
-  const handlePhotoUploadComplete = (photo: string) => {
+  const handlePhotoUploadComplete = async (photo: string) => {
     setUserPhoto(photo);
+    await updateProfile({ photo });
     setCurrentScreen("about_me");
   };
 
-  const handleAboutMeComplete = (about: string) => {
+  const handleAboutMeComplete = async (about: string) => {
     setUserAboutMe(about);
+    await updateProfile({ about_me: about });
     setCurrentScreen("city");
   };
 
-  const handleCityComplete = (city: string) => {
+  const handleCityComplete = async (city: string) => {
     setUserCity(city);
+    await updateProfile({ city });
     setCurrentScreen("booking");
   };
 
