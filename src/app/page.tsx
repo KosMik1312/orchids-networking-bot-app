@@ -57,6 +57,9 @@ export default function Home() {
     const initUser = async () => {
       // In Telegram WebApp, get user ID from WebApp.initDataUnsafe
       const webApp = (window as any).Telegram?.WebApp;
+      if (webApp) {
+        webApp.expand();
+      }
       if (webApp?.initDataUnsafe?.user?.id) {
         const id = webApp.initDataUnsafe.user.id;
         setUserId(id);
