@@ -37,12 +37,21 @@ class UserRepo(BaseRepo):
             user = models.User(user_id=user_id)
             self.session.add(user)
         
-        profile_dict = profile_data.dict(exclude_unset=True)
+        # Используем dict(exclude_none=True) чтобы не затирать существующие данные на None
+        profile_dict = profile_data.dict(exclude_none=True)
+        
+        print(f"[REPO] Saving profile for user {user_id}")
+        print(f"[REPO] Profile dict: {profile_dict}")
+        
         for key, value in profile_dict.items():
+            print(f"[REPO] Setting {key} = {value}")
             setattr(user, key, value)
-            
+        
+        print(f"[REPO] Before commit - user data: {user.__dict__}")
         await self.session.commit()
         await self.session.refresh(user)
+        print(f"[REPO] Profile saved successfully for user {user_id}")
+        print(f"[REPO] After refresh - user data: {user.__dict__}")
         return user
     
     async def get_total_count(self) -> int:

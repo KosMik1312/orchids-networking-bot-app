@@ -68,18 +68,23 @@ async def startup():
 
 @app.post("/api/profile")
 async def save_profile_endpoint(request: ProfileRequest, session: AsyncSession = Depends(get_session)):
-    print(f"[PROFILE] Saving profile for user {request.userId}")
-    print(f"[PROFILE] Data: {request.profile.dict()}")
+    print(f"\n[API] === SAVE PROFILE START ===")
+    print(f"[API] User ID: {request.userId}")
+    print(f"[API] Request profile dict: {request.profile.dict()}")
+    print(f"[API] Request profile dict (exclude_none): {request.profile.dict(exclude_none=True)}")
     try:
         user_repo = UserRepo(session)
         profile_schema = UserProfileSchema(**request.profile.dict())
-        await user_repo.save_user_profile(request.userId, profile_schema)
-        print(f"[PROFILE] Profile saved successfully")
+        print(f"[API] Profile schema created: {profile_schema}")
+        result = await user_repo.save_user_profile(request.userId, profile_schema)
+        print(f"[API] Profile saved successfully, returning success response")
+        print(f"[API] === SAVE PROFILE END ===\n")
         return {"success": True}
     except Exception as e:
         print(f"[ERROR] Save profile failed: {e}")
         import traceback
         traceback.print_exc()
+        print(f"[API] === SAVE PROFILE ERROR ===\n")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profile")
