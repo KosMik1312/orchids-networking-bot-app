@@ -101,6 +101,100 @@
 4. Пользователи заполняют профили в MiniApp
 5. Бот может получать данные пользователей
 
+## Запуск на сервере (Продакшен)
+
+### Запуск бота в фоновом режиме
+Бот должен работать постоянно на сервере и не прерываться при закрытии SSH соединения.
+
+#### Вариант 1: nohup (простой)
+```bash
+cd /path/to/bot
+source venv/bin/activate
+nohup python start_all.py > bot.log 2>&1 &
+```
+
+Проверить процесс:
+```bash
+ps aux | grep python
+```
+
+#### Вариант 2: screen (удобный)
+```bash
+cd /path/to/bot
+source venv/bin/activate
+screen -S bot_session
+python start_all.py
+# Нажать Ctrl+A, затем D для отделения сессии
+```
+
+Восстановить сессию:
+```bash
+screen -r bot_session
+```
+
+#### Вариант 3: systemd (профессиональный)
+Создать файл `/etc/systemd/system/orchids-bot.service`:
+```ini
+[Unit]
+Description=Orchids Networking Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/path/to/bot
+ExecStart=/path/to/bot/venv/bin/python start_all.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Запустить:
+```bash
+sudo systemctl start orchids-bot
+sudo systemctl enable orchids-bot  # Автозапуск при перезагрузке
+sudo systemctl status orchids-bot  # Проверить статус
+```
+
+### Настройка публичного доступа (Туннель)
+
+Чтобы фронтенд на Vercel мог обращаться к API серверу, нужно настроить туннель.
+
+#### Использование localtunnel
+
+1. Установить на сервере:
+```bash
+npm install -g localtunnel
+```
+
+2. Запустить туннель (в отдельной сессии):
+```bash
+lt --port 8000
+```
+
+Команда выведет публичный URL типа: `https://early-rice-notice.loca.lt`
+
+3. Обновить `NEXT_PUBLIC_API_BASE` на Vercel:
+   - Перейти в проект на Vercel
+   - Settings → Environment Variables
+   - Добавить `NEXT_PUBLIC_API_BASE=https://your-tunnel-url.loca.lt`
+   - Redeploy проект
+
+4. Обновить `src/lib/api.ts` (если нужно переопределить):
+```typescript
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://early-rice-notice.loca.lt';
+```
+
+#### Другие варианты туннелей
+- **Cloudflare Tunnel**: `cloudflared tunnel --url http://localhost:8000`
+- **ngrok**: `./ngrok http 8000`
+
+#### Примечание о localtunnel
+Localtunnel требует ввода пароля (публичный IP сервера) при первом доступе браузером. 
+API запросы отправляются с заголовком `bypass-tunnel-reminder: true` для обхода этой страницы.
+
 ## Конфигурация для деплоя
 
 ### Переменные окружения и файлы конфигурации
