@@ -1,6 +1,6 @@
 // API functions for communicating with the Python backend
 
-const API_BASE = 'https://angry-birds-sit.loca.lt'; // Жестко задано для отладки
+const API_BASE = 'https://yummy-colts-make.loca.lt'; // Жестко задано для отладки
 console.log('🔧 API_BASE:', API_BASE);
 
 // --- Custom Error Class ---
