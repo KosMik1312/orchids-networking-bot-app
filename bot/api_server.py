@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthenticationCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
 import sys
@@ -24,7 +24,7 @@ app = FastAPI(title="Orchids Networking Bot API")
 security = HTTPBearer()
 
 # Функция для извлечения user_id из токена
-async def get_user_id_from_token(credentials: Optional[HTTPAuthenticationCredentials] = Depends(security)) -> int:
+async def get_user_id_from_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> int:
     """
     Извлекает user_id из JWT токена в заголовке Authorization.
     Если токен не предоставлен или невалиден, выбрасывает HTTPException.

@@ -74,7 +74,14 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
     } catch (error: any) {
       console.error('Booking error:', error);
       // Extract meaningful error message
-      const errorMessage = error?.message || error?.detail || "Не удалось забронировать слот";
+      let errorMessage = error?.message || error?.detail || "Не удалось забронировать слот";
+      if (
+        errorMessage.includes("Slot is full") ||
+        errorMessage.includes("already booked") ||
+        errorMessage.includes("уже забронировано")
+      ) {
+        errorMessage = "Извините! На это время мест уже не осталось.";
+      }
       setBookingError(errorMessage);
     } finally {
       setIsBooking(false);
