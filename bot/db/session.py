@@ -10,6 +10,7 @@ from config import DATABASE_NAME
 from .models import Base
 
 # Логирование пути к БД
+# DATABASE_NAME теперь нормализован в config.py до абсолютного пути.
 db_path = os.path.abspath(DATABASE_NAME)
 print(f"\n[DB] Database path: {db_path}")
 print(f"[DB] Database name: {DATABASE_NAME}")
@@ -17,7 +18,7 @@ print(f"[DB] Current working directory: {os.getcwd()}")
 
 # Создаем асинхронный "движок" для взаимодействия с БД
 # echo=True - полезно для отладки, выводит все SQL-запросы в консоль
-engine = create_async_engine(f"sqlite+aiosqlite:///{DATABASE_NAME}", echo=False)
+engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", echo=False)
 
 # Создаем фабрику сессий, которая будет создавать новые сессии по запросу
 # expire_on_commit=False - важно для асинхронного кода, чтобы объекты были доступны после коммита

@@ -59,9 +59,10 @@ export default function Home() {
     setIsSaving(true);
     try {
       console.log('Saving profile data:', data);
-      await saveProfile(userId, data);
+      const res = await saveProfile(userId, data);
+      console.log('✅ saveProfile response:', res);
     } catch (error) {
-      console.error("Failed to save profile", error);
+      console.error('❌ Failed to save profile', error);
       // Optionally, show an error to the user
     } finally {
       setIsSaving(false);
@@ -103,20 +104,21 @@ export default function Home() {
 
       // Load existing profile
       try {
-        const profile = await getProfile(userId);
+        const result = await getProfile(userId);
+        const profile = (result as any)?.profile ?? (result as any);
         if (profile) {
           setUserName(profile.name || "");
           setUserAge(profile.age || 25);
-          setUserGender(profile.gender as "male" | "female" || null);
-          setUserRelationship(profile.relationship_status as RelationshipStatus || null);
-          setUserChildren(profile.children as ChildrenStatus || null);
-          setUserOccupation(profile.occupation as OccupationType || null);
-          setUserGoal(profile.goal as GoalType || null);
-          setUserInterest(profile.interests as InterestType || null);
+          setUserGender((profile.gender as "male" | "female") || null);
+          setUserRelationship((profile.relationship_status as RelationshipStatus) || null);
+          setUserChildren((profile.children as ChildrenStatus) || null);
+          setUserOccupation((profile.occupation as OccupationType) || null);
+          setUserGoal((profile.goal as GoalType) || null);
+          setUserInterest((profile.interests as InterestType) || null);
           setUserComfort(profile.comfort_level || null);
           setUserSocialFrequency(profile.social_frequency || null);
-          setUserCommunicationFormat(profile.communication_format as CommunicationFormat || null);
-          setUserEveningScenario(profile.evening_scenario as EveningScenario || null);
+          setUserCommunicationFormat((profile.communication_format as CommunicationFormat) || null);
+          setUserEveningScenario((profile.evening_scenario as EveningScenario) || null);
           setUserSocialLinks({
             telegram: profile.telegram || "",
             instagram: profile.instagram || ""
@@ -127,6 +129,9 @@ export default function Home() {
         }
       } catch (error) {
         console.log(`📝 First time user or profile not found for ID: ${userId}`);
+      }
+
+      setIsLoading(false);
       }
 
       setIsLoading(false);

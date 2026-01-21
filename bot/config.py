@@ -1,6 +1,9 @@
 # Конфигурация бота
 import os
 
+# Базовая директория (папка bot/)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Токен бота (по возможности храните в переменных окружения)
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8121198859:AAEY7nBbJjHBd7RZ4BbYOKHBBMCyNF3ydEg")
 
@@ -17,8 +20,11 @@ if _admin_ids_env:
 else:
     ADMIN_IDS = [
         432235211,
-	    5122343544
+        5122343544,
     ]
 
-# Название базы данных
-DATABASE_NAME = os.getenv("DATABASE_NAME", "allora.db")
+# Путь к базе данных.
+# Важно: на сервере текущая рабочая директория может отличаться,
+# поэтому приводим относительный путь к абсолютному относительно bot/.
+_database_name_raw = os.getenv("DATABASE_NAME", "allora.db")
+DATABASE_NAME = _database_name_raw if os.path.isabs(_database_name_raw) else os.path.join(BASE_DIR, _database_name_raw)

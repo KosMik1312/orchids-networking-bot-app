@@ -19,10 +19,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
       return {} as T;
     }
     return response.json();
-  } else {
-    const errorData = await response.json().catch(() => ({ error: 'Invalid JSON response' }));
-    throw new ApiError(errorData.error || 'An unknown error occurred', response.status);
   }
+
+  // Try to read body as text first, because backend might return non-JSON error
+  const text = await response.text().catch(() => '');
+  let errorData: any = undefined;
+  try {
+    errorData = text ? JSON.parse(text) : undefined;
+  } catch {
+    // ignore
+  }
+
+  const message = errorData?.error || errorData?.detail || text || 'An unknown error occurred';
+  throw new ApiError(message, response.status);
 }
 
 
@@ -86,22 +95,51 @@ export interface Contact {
 }
 
 // Profile API
-export async function saveProfile(userId: number, profile: Partial<UserProfile>): Promise<{success: boolean}> {
-  const response = await fetch(`${API_BASE}/api/profile`, {
+export async function saveProfile(userId: number, profile: Partial<UserProfile>): Promise<{ success: boolean }> {
+  const url = `${API_BASE}/api/profile`;
+  console.log('🔗 Запрос к:', url);
+  console.log('📤 Payload:', { userId, profile });
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json'
+    headers: {
+      'Content-Type': 'application/json',
     },
+    cache: 'no-store',
     body: JSON.stringify({ userId, profile }),
   });
+
+  console.log('📡 Ответ:', response.status, response.statusText);
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    console.log('❌ Текст ошибки:', text);
+  }
+
   return handleResponse(response);
 }
 
 export async function getProfile(userId: number): Promise<{ profile: UserProfile }> {
-  const response = await fetch(`${API_BASE}/api/profile?userId=${userId}`);
+  const url = `${API_BASE}/api/profile?userId=${userId}`;
+  console.log('🔗 Запрос к:', url);
+
+  const response = await fetch(url, {
+    cache: 'no-store',
+  });
+
+  console.log('📡 Ответ:', response.status, response.statusText);
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    console.log('❌ Текст ошибки:', text);
+  }
+
   return handleResponse(response);
 }
-
+    cache: 'no-store',
+  });
+  return handleResponse(response);
+}
 // Slots API
 export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   const url = city ? `${API_BASE}/api/slots?city=${encodeURIComponent(city)}` : `${API_BASE}/api/slots`;
