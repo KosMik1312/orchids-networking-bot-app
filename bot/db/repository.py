@@ -1,9 +1,14 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+import sys
+import os
+
+# Add bot directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from . import models
-from ..schemas import UserProfile
+from schemas import UserProfile
 
 class BaseRepo:
     """

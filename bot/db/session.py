@@ -1,8 +1,12 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from typing import AsyncGenerator
 import os
+import sys
 
-from ..config import DATABASE_NAME
+# Add bot directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import DATABASE_NAME
 from .models import Base
 
 # Логирование пути к БД
