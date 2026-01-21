@@ -27,7 +27,6 @@ import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { EditProfileScreen } from "@/components/EditProfileScreen";
 import { BottomNav } from "@/components/BottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { ErrorScreen } from "@/components/ErrorScreen";
 import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
 type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
@@ -55,7 +54,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
 
   const updateProfile = async (data: Partial<UserProfile>) => {
     if (!userId || isSaving) return;
@@ -88,7 +86,7 @@ export default function Home() {
         }
       }
 
-      // 2. Try to get user ID from URL query parameter (for browser testing)
+      // 2. Try to get user ID from URL query parameter
       if (!userId) {
         const params = new URLSearchParams(window.location.search);
         const queryUserId = params.get('userId');
@@ -98,12 +96,9 @@ export default function Home() {
         }
       }
 
-      // 3. If no user ID found, show error
+      // If no user ID found, keep loading - waiting for valid ID
       if (!userId) {
-        console.error('❌ Could not determine user ID. Must be opened from Telegram or with ?userId=<ID> parameter');
-        setInitError('Could not determine user ID');
-        setIsLoading(false);
-        setProfileLoaded(true);
+        console.warn('⏳ Waiting for user ID from Telegram or URL parameter...');
         return;
       }
 
@@ -401,19 +396,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && initError && (
-          <motion.div
-            key="error"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <ErrorScreen />
-          </motion.div>
-        )}
-
-        {profileLoaded && !initError && currentScreen === "welcome" && (
+        {profileLoaded && currentScreen === "welcome" && (
           <motion.div
             key="welcome"
             initial={{ opacity: 0 }}
@@ -426,7 +409,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "onboarding" && (
+        {profileLoaded && currentScreen === "onboarding" && (
           <motion.div
             key="onboarding"
             initial={{ opacity: 0 }}
@@ -443,7 +426,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "quiz" && (
+        {profileLoaded && currentScreen === "quiz" && (
           <motion.div
             key="quiz"
             initial={{ opacity: 0 }}
@@ -460,7 +443,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "age" && (
+        {profileLoaded && currentScreen === "age" && (
           <motion.div
             key="age"
             initial={{ opacity: 0 }}
@@ -477,7 +460,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "gender" && (
+        {profileLoaded && currentScreen === "gender" && (
           <motion.div
             key="gender"
             initial={{ opacity: 0 }}
@@ -494,7 +477,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "relationship" && (
+        {profileLoaded && currentScreen === "relationship" && (
           <motion.div
             key="relationship"
             initial={{ opacity: 0 }}
@@ -511,7 +494,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "children" && (
+        {profileLoaded && currentScreen === "children" && (
           <motion.div
             key="children"
             initial={{ opacity: 0 }}
@@ -528,7 +511,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "occupation" && (
+        {profileLoaded && currentScreen === "occupation" && (
           <motion.div
             key="occupation"
             initial={{ opacity: 0 }}
@@ -545,7 +528,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "goal" && (
+        {profileLoaded && currentScreen === "goal" && (
           <motion.div
             key="goal"
             initial={{ opacity: 0 }}
@@ -562,7 +545,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "interests" && (
+        {profileLoaded && currentScreen === "interests" && (
           <motion.div
             key="interests"
             initial={{ opacity: 0 }}
@@ -579,7 +562,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "comfort" && (
+        {profileLoaded && currentScreen === "comfort" && (
           <motion.div
             key="comfort"
             initial={{ opacity: 0 }}
@@ -596,7 +579,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "social_frequency" && (
+        {profileLoaded && currentScreen === "social_frequency" && (
           <motion.div
             key="social_frequency"
             initial={{ opacity: 0 }}
@@ -613,7 +596,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "communication_format" && (
+        {profileLoaded && currentScreen === "communication_format" && (
           <motion.div
             key="communication_format"
             initial={{ opacity: 0 }}
@@ -630,7 +613,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "evening_scenario" && (
+        {profileLoaded && currentScreen === "evening_scenario" && (
           <motion.div
             key="evening_scenario"
             initial={{ opacity: 0 }}
@@ -647,7 +630,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "social_links" && (
+        {profileLoaded && currentScreen === "social_links" && (
           <motion.div
             key="social_links"
             initial={{ opacity: 0 }}
@@ -664,7 +647,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "photo_upload" && (
+        {profileLoaded && currentScreen === "photo_upload" && (
           <motion.div
             key="photo_upload"
             initial={{ opacity: 0 }}
@@ -681,7 +664,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "about_me" && (
+        {profileLoaded && currentScreen === "about_me" && (
           <motion.div
             key="about_me"
             initial={{ opacity: 0 }}
@@ -698,7 +681,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "city" && (
+        {profileLoaded && currentScreen === "city" && (
           <motion.div
             key="city"
             initial={{ opacity: 0 }}
@@ -715,7 +698,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "booking" && (
+        {profileLoaded && currentScreen === "booking" && (
           <motion.div
             key="booking"
             initial={{ opacity: 0 }}
@@ -733,7 +716,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "contacts" && (
+        {profileLoaded && currentScreen === "contacts" && (
           <motion.div
             key="contacts"
             initial={{ opacity: 0 }}
@@ -749,7 +732,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "profile" && (
+        {profileLoaded && currentScreen === "profile" && (
           <motion.div
             key="profile"
             initial={{ opacity: 0 }}
@@ -769,7 +752,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "my_bookings" && (
+        {profileLoaded && currentScreen === "my_bookings" && (
           <motion.div
             key="my_bookings"
             initial={{ opacity: 0, x: 20 }}
@@ -787,7 +770,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && !initError && currentScreen === "edit_profile" && (
+        {profileLoaded && currentScreen === "edit_profile" && (
           <motion.div
             key="edit_profile"
             initial={{ opacity: 0, y: 20 }}
@@ -825,6 +808,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
