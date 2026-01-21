@@ -10,6 +10,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "8121198859:AAEY7nBbJjHBd7RZ4BbYOKHBBMCyNF3yd
 # URL MiniApp
 MINIAPP_URL = os.getenv("MINIAPP_URL", "https://orchids-networking-bot-app.vercel.app")
 
+# Секретный ключ для подписи токенов пользователей
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-12345")
+
 # ID администраторов (можно задать через переменные окружения, разделённые запятой)
 _admin_ids_env = os.getenv("ADMIN_IDS", "")
 if _admin_ids_env:

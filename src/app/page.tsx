@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { jwtDecode } from "jwt-decode";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
@@ -52,6 +53,7 @@ export default function Home() {
   const [userCity, setUserCity] = useState("");
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -71,46 +73,17 @@ export default function Home() {
     }
   };
 
-  // Load user data on mount
+  // Polling для Telegram ID и загрузка профиля
   useEffect(() => {
-    const initUser = async () => {
-      let userId: number | undefined;
-
-      // 1. Try to get user ID from Telegram WebApp (when opened in Telegram)
-      const webApp = (window as any).Telegram?.WebApp;
-      if (webApp) {
-        webApp.expand();
-        if (webApp?.initDataUnsafe?.user?.id) {
-          userId = webApp.initDataUnsafe.user.id;
-          console.log(`✅ User ID from Telegram: ${userId}`);
-        }
-      }
-
-      // 2. Try to get user ID from URL query parameter
-      if (!userId) {
-        const params = new URLSearchParams(window.location.search);
-        const queryUserId = params.get('userId');
-        if (queryUserId) {
-          userId = parseInt(queryUserId, 10);
-          console.log(`✅ User ID from URL parameter: ${userId}`);
-        }
-      }
-
-      // If no user ID found, keep loading - waiting for valid ID
-      if (!userId) {
-        console.warn('⏳ Waiting for user ID from Telegram or URL parameter...');
-        return;
-      }
-
-      setUserId(userId);
-
-      // Load existing profile and determine which screen to show
+    let isMounted = true;
+    async function tryLoadProfile(foundId: number, authToken?: string) {
+      setUserId(foundId);
       try {
-        const result = await getProfile(userId);
+        // Используем токен если есть, иначе ID
+        const result = await getProfile(foundId, authToken);
         const profile = (result as any)?.profile ?? (result as any);
+        if (!isMounted) return;
         if (profile) {
-          // Profile found - load all data
-          console.log(`✅ Profile found for user ${userId}, loading data and going to booking`);
           setUserName(profile.name || "");
           setUserAge(profile.age || 25);
           setUserGender((profile.gender as "male" | "female") || null);
@@ -130,23 +103,88 @@ export default function Home() {
           setUserPhoto(profile.photo || null);
           setUserAboutMe(profile.about_me || "");
           setUserCity(profile.city || "");
-          
-          // Skip to booking screen for existing users
           setCurrentScreen("booking");
           setProfileLoaded(true);
         }
       } catch (error) {
-        // Profile not found - user needs to fill questionnaire
-        console.log(`📝 First time user - profile not found for ID: ${userId}, showing welcome screen`);
+        if (!isMounted) return;
+        console.log(`📝 First time user or error - showing welcome screen: ${error}`);
         setCurrentScreen("welcome");
         setProfileLoaded(true);
       } finally {
         setIsLoading(false);
       }
-    };
+    }
 
-    initUser();
-  }, []);
+    function getTelegramId() {
+      const webApp = (window as any).Telegram?.WebApp;
+      if (webApp?.initDataUnsafe?.user?.id) {
+        return webApp.initDataUnsafe.user.id;
+      }
+      return undefined;
+    }
+
+    // Если userId уже есть, не делаем ничего
+    if (userId) {
+      setIsLoading(false);
+      return;
+    }
+
+    // 1. Пытаемся получить токен из URL (из бота)
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    
+    if (token) {
+      console.log('🔐 Token получен из URL');
+      try {
+        const decoded = jwtDecode<{ user_id: number }>(token);
+        const userIdFromToken = decoded.user_id;
+        console.log(`✅ User ID из токена: ${userIdFromToken}`);
+        tryLoadProfile(userIdFromToken, token);
+        return;
+      } catch (e) {
+        console.error('❌ Ошибка декодирования токена:', e);
+      }
+    }
+
+    // 2. Пытаемся получить ID из Telegram WebApp
+    let foundId = getTelegramId();
+    if (!foundId) {
+      const params = new URLSearchParams(window.location.search);
+      const queryUserId = params.get('userId');
+      if (queryUserId) {
+        foundId = parseInt(queryUserId, 10);
+      }
+    }
+
+    if (foundId) {
+      console.log(`✅ User ID: ${foundId}`);
+      tryLoadProfile(foundId);
+      return;
+    }
+
+    // 3. Если ничего не найдено - запускаем polling для Telegram ID
+    console.warn('⏳ Ожидание Telegram ID...');
+    let elapsed = 0;
+    pollingRef.current = setInterval(() => {
+      const id = getTelegramId();
+      if (id) {
+        clearInterval(pollingRef.current!);
+        console.log(`✅ User ID найден: ${id}`);
+        tryLoadProfile(id);
+      } else {
+        elapsed += 200;
+        if (elapsed >= 10000) {
+          clearInterval(pollingRef.current!);
+          setIsLoading(false);
+        }
+      }
+    }, 200);
+    return () => {
+      isMounted = false;
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [userId]);
 
   const handleStartOnboarding = () => {
     setCurrentScreen("onboarding");
@@ -384,16 +422,11 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
+        {/* Показываем индикатор загрузки поверх UI, но основной UI всегда доступен */}
         {isLoading && !profileLoaded && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <LoadingScreen message="Проверка профиля..." />
-          </motion.div>
+          <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
+            <span className="bg-white/80 px-4 py-2 rounded shadow">Профиль загружается...</span>
+          </div>
         )}
 
         {profileLoaded && currentScreen === "welcome" && (

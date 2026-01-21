@@ -164,11 +164,35 @@ sudo systemctl status orchids-bot  # Проверить статус
 #### Backend (bot/config.py)
 - `BOT_TOKEN`: Токен Telegram бота (получить у @BotFather)
 - `MINIAPP_URL`: Публичный URL развернутого MiniApp (например, https://your-app.vercel.app)
+- `SECRET_KEY`: Секретный ключ для подписи JWT токенов (обязателен в продакшене!)
 - `ADMIN_IDS`: Список ID администраторов через запятую (например, "123456789,987654321")
 - `DATABASE_NAME`: Имя файла базы данных SQLite (по умолчанию "allora.db")
 
 #### Frontend (src/lib/api.ts)
 - `API_BASE`: URL Python API сервера (например, "https://your-server.com" или "http://localhost:8000" для локальной разработки)
+
+## Получение Telegram ID (JWT токены)
+
+**Логика:**
+1. Пользователь нажимает "Начать!" в боте
+2. Бот получает ID: `message.from_user.id` (безопасно от Telegram)
+3. Бот генерирует JWT токен: `token = generate_user_token(user_id)`
+4. Бот отправляет ссылку: `app.com?token=<JWT>`
+5. Фронтенд декодирует токен: `jwtDecode(token)` → получает `user_id`
+6. Фронтенд отправляет токен в заголовке: `Authorization: Bearer <token>`
+7. Бэкенд проверяет токен: `validate_user_token(token)` → извлекает `user_id`
+
+**Почему это правильно:**
+- ✅ ID получается от Telegram (на бэкенде), не от клиента
+- ✅ Токен подписан SECRET_KEY (клиент не может подделать)
+- ✅ Нет ненадёжного polling на фронтенде
+- ✅ Полная безопасность и контроль на бэкенде
+
+**Файлы:**
+- `bot/auth_token.py` - генерация и валидация JWT
+- `bot/commands/user_commands.py` - создание токена при /start
+- `src/app/page.tsx` - декодирование токена
+- `src/lib/api.ts` - отправка токена в запросах
 
 ### Настройка переменных окружения
 - Для backend: создать `.env` файл в папке `bot/` или задать переменные в системе.

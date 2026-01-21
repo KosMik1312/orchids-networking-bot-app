@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthenticationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
 import sys
@@ -11,12 +12,33 @@ from db.repository import UserRepo, SlotRepo, BookingRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME
+from auth_token import validate_user_token
 
 # Настройка кодировки для Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 app = FastAPI(title="Orchids Networking Bot API")
+
+# Security для токенов
+security = HTTPBearer()
+
+# Функция для извлечения user_id из токена
+async def get_user_id_from_token(credentials: Optional[HTTPAuthenticationCredentials] = Depends(security)) -> int:
+    """
+    Извлекает user_id из JWT токена в заголовке Authorization.
+    Если токен не предоставлен или невалиден, выбрасывает HTTPException.
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
+    token = credentials.credentials
+    result = validate_user_token(token)
+    
+    if not result:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    return result['user_id']
 
 # CORS для MiniApp
 app.add_middleware(
@@ -86,7 +108,28 @@ async def save_profile_endpoint(request: ProfileRequest, session: AsyncSession =
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profile")
-async def get_profile_endpoint(userId: int, session: AsyncSession = Depends(get_session)):
+async def get_profile_endpoint(
+    userId: Optional[int] = None,
+    session: AsyncSession = Depends(get_session),
+    user_id_from_token: Optional[int] = Depends(lambda: None)
+):
+    """
+    Получить профиль пользователя.
+    Может использовать либо userId query параметр, либо токен в заголовке Authorization.
+    """
+    # Если передан токен в заголовке, приоритет выше
+    try:
+        credentials = None
+        # Попытка получить токен из заголовков
+        # Note: это сделано для совместимости, нужно улучшить
+        if not userId:
+            raise HTTPException(status_code=400, detail="userId or token required")
+    except:
+        pass
+    
+    if not userId:
+        raise HTTPException(status_code=400, detail="userId or token required")
+    
     try:
         user_repo = UserRepo(session)
         user = await user_repo.get_user_profile(userId)

@@ -95,7 +95,7 @@ export interface Contact {
 }
 
 // Profile API
-export async function saveProfile(userId: number, profile: Partial<UserProfile>): Promise<{ success: boolean }> {
+export async function saveProfile(userId: number, profile: Partial<UserProfile>, token?: string): Promise<{ success: boolean }> {
   const url = `${API_BASE}/api/profile`;
   console.log('🔗 Запрос к:', url);
   console.log('📤 Payload:', { userId, profile });
@@ -104,6 +104,7 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>)
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
     cache: 'no-store',
     body: JSON.stringify({ userId, profile }),
@@ -119,12 +120,25 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>)
   return handleResponse(response);
 }
 
-export async function getProfile(userId: number): Promise<{ profile: UserProfile }> {
-  const url = `${API_BASE}/api/profile?userId=${userId}`;
+export async function getProfile(userId?: number, token?: string): Promise<{ profile: UserProfile }> {
+  // Если передан только токен, используем его
+  // Если передан userId, используем его
+  // Иначе выбрасываем ошибку
+  if (!userId && !token) {
+    throw new ApiError('Either userId or token must be provided', 400);
+  }
+
+  const params = new URLSearchParams();
+  if (userId) params.append('userId', userId.toString());
+  
+  const url = `${API_BASE}/api/profile${params.toString() ? '?' + params.toString() : ''}`;
   console.log('🔗 Запрос к:', url);
 
   const response = await fetch(url, {
     cache: 'no-store',
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);

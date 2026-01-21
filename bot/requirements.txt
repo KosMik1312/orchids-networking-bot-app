@@ -4,3 +4,4 @@ aiosqlite
 pydantic
 fastapi
 uvicorn[standard]
+PyJWT
