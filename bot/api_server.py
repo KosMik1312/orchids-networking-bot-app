@@ -23,7 +23,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://orchids-networking-bot-app.vercel.app",
-        "https://*.ngrok.io",
         "https://*.loca.lt",
         "http://localhost:3000",
         "*"  # Временно для отладки

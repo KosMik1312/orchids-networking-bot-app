@@ -6,49 +6,6 @@ import os
 if os.path.dirname(__file__):
     os.chdir(os.path.dirname(__file__))
 
-async def run_tunnel():
-    """Запуск localtunnel"""
-    print("🌐 Запускаю localtunnel...")
-    try:
-        # Пробуем разные варианты команды
-        commands = [
-            ["lt", "--port", "8000", "--subdomain", "orchids-api"],
-            ["npx", "localtunnel", "--port", "8000", "--subdomain", "orchids-api"],
-            ["node", "-e", "require('localtunnel')({port: 8000, subdomain: 'orchids-api'}).then(tunnel => console.log('your url is:', tunnel.url))"]
-        ]
-        
-        for cmd in commands:
-            try:
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT
-                )
-                break
-            except FileNotFoundError:
-                continue
-        else:
-            print("❌ localtunnel не найден. Запустите вручную: lt --port 8000 --subdomain orchids-api")
-            return None
-        
-        # Читаем вывод
-        while True:
-            line = await process.stdout.readline()
-            if not line:
-                break
-            output = line.decode().strip()
-            if "your url is:" in output:
-                print(f"🌐 [TUNNEL] {output}")
-            else:
-                print(f"[TUNNEL] {output}")
-        
-        await process.wait()
-        return process
-    except Exception as e:
-        print(f"❌ Ошибка запуска tunnel: {e}")
-        print("📝 Запустите вручную в отдельном терминале: lt --port 8000 --subdomain orchids-api")
-        return None
-
 async def run_bot():
     """Запуск Telegram бота"""
     print("🤖 Запускаю Telegram бота...")
@@ -92,12 +49,10 @@ async def main():
     print("🌸 Запуск Orchids Networking Bot + API Server")
     print("=" * 50)
     print(f"📁 Рабочая папка: {os.getcwd()}")
-    print("📝 Для туннеля запустите отдельно: lt --port 8000 --subdomain orchids-api")
-    print("🌐 Тогда URL будет: https://orchids-api.loca.lt")
     print()
     
     try:
-        # Запускаем только бот и API
+        # Запускаем бот и API
         await asyncio.gather(
             run_api(),
             run_bot()

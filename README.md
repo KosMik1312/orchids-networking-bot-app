@@ -157,44 +157,6 @@ sudo systemctl start orchids-bot
 sudo systemctl enable orchids-bot  # Автозапуск при перезагрузке
 sudo systemctl status orchids-bot  # Проверить статус
 ```
-
-### Настройка публичного доступа (Туннель)
-
-Чтобы фронтенд на Vercel мог обращаться к API серверу, нужно настроить туннель.
-
-#### Использование localtunnel
-
-1. Установить на сервере:
-```bash
-npm install -g localtunnel
-```
-
-2. Запустить туннель (в отдельной сессии):
-```bash
-lt --port 8000
-```
-
-Команда выведет публичный URL типа: `https://early-rice-notice.loca.lt`
-
-3. Обновить `NEXT_PUBLIC_API_BASE` на Vercel:
-   - Перейти в проект на Vercel
-   - Settings → Environment Variables
-   - Добавить `NEXT_PUBLIC_API_BASE=https://your-tunnel-url.loca.lt`
-   - Redeploy проект
-
-4. Обновить `src/lib/api.ts` (если нужно переопределить):
-```typescript
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://early-rice-notice.loca.lt';
-```
-
-#### Другие варианты туннелей
-- **Cloudflare Tunnel**: `cloudflared tunnel --url http://localhost:8000`
-- **ngrok**: `./ngrok http 8000`
-
-#### Примечание о localtunnel
-Localtunnel требует ввода пароля (публичный IP сервера) при первом доступе браузером. 
-API запросы отправляются с заголовком `bypass-tunnel-reminder: true` для обхода этой страницы.
-
 ## Конфигурация для деплоя
 
 ### Переменные окружения и файлы конфигурации

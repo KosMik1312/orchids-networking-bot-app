@@ -90,8 +90,7 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>)
   const response = await fetch(`${API_BASE}/api/profile`, {
     method: 'POST',
     headers: { 
-      'Content-Type': 'application/json',
-      'bypass-tunnel-reminder': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ userId, profile }),
   });
@@ -99,11 +98,7 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>)
 }
 
 export async function getProfile(userId: number): Promise<{ profile: UserProfile }> {
-  const response = await fetch(`${API_BASE}/api/profile?userId=${userId}`, {
-    headers: {
-      'bypass-tunnel-reminder': 'true'
-    }
-  });
+  const response = await fetch(`${API_BASE}/api/profile?userId=${userId}`);
   return handleResponse(response);
 }
 
@@ -113,11 +108,7 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   console.log('🔗 Запрос к:', url);
   
   try {
-    const response = await fetch(url, {
-      headers: {
-        'bypass-tunnel-reminder': 'true'
-      }
-    });
+    const response = await fetch(url);
     console.log('📡 Ответ:', response.status, response.statusText);
     
     if (!response.ok) {
@@ -137,11 +128,7 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
 
 // Bookings API
 export async function getUserBookings(userId: number): Promise<{ bookings: Booking[] }> {
-  const response = await fetch(`${API_BASE}/api/bookings?userId=${userId}`, {
-    headers: {
-      'bypass-tunnel-reminder': 'true'
-    }
-  });
+  const response = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
   return handleResponse(response);
 }
 
@@ -149,8 +136,7 @@ export async function createBooking(userId: number, slotId: number): Promise<{su
   const response = await fetch(`${API_BASE}/api/bookings`, {
     method: 'POST',
     headers: { 
-      'Content-Type': 'application/json',
-      'bypass-tunnel-reminder': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ userId, slotId }),
   });
@@ -159,10 +145,6 @@ export async function createBooking(userId: number, slotId: number): Promise<{su
 
 // Contacts API
 export async function getContacts(slotId: number, userId: number): Promise<{ contacts: Contact[] }> {
-  const response = await fetch(`${API_BASE}/api/contacts?slotId=${slotId}&userId=${userId}`, {
-    headers: {
-      'bypass-tunnel-reminder': 'true'
-    }
-  });
+  const response = await fetch(`${API_BASE}/api/contacts?slotId=${slotId}&userId=${userId}`);
   return handleResponse(response);
 }
