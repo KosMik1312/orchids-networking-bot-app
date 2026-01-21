@@ -71,17 +71,39 @@ export default function Home() {
   // Load user data on mount
   useEffect(() => {
     const initUser = async () => {
-      // In Telegram WebApp, get user ID from WebApp.initDataUnsafe
+      let userId: number | undefined;
+
+      // 1. Try to get user ID from Telegram WebApp (when opened in Telegram)
       const webApp = (window as any).Telegram?.WebApp;
       if (webApp) {
         webApp.expand();
+        if (webApp?.initDataUnsafe?.user?.id) {
+          userId = webApp.initDataUnsafe.user.id;
+          console.log(`✅ User ID from Telegram: ${userId}`);
+        }
       }
-      if (webApp?.initDataUnsafe?.user?.id) {
-        const id = webApp.initDataUnsafe.user.id;
-        setUserId(id);
-        
-        // Load existing profile
-        const profile = await getProfile(id);
+
+      // 2. Try to get user ID from URL query parameter (for browser testing)
+      if (!userId) {
+        const params = new URLSearchParams(window.location.search);
+        const queryUserId = params.get('userId');
+        if (queryUserId) {
+          userId = parseInt(queryUserId, 10);
+          console.log(`✅ User ID from URL parameter: ${userId}`);
+        }
+      }
+
+      // 3. Use development user ID as last resort
+      if (!userId) {
+        userId = 123456789;
+        console.warn(`⚠️ Using development user ID: ${userId}`);
+      }
+
+      setUserId(userId);
+
+      // Load existing profile
+      try {
+        const profile = await getProfile(userId);
         if (profile) {
           setUserName(profile.name || "");
           setUserAge(profile.age || 25);
@@ -103,13 +125,13 @@ export default function Home() {
           setUserAboutMe(profile.about_me || "");
           setUserCity(profile.city || "");
         }
-      } else {
-        // For development, use mock user ID
-        setUserId(123456789);
+      } catch (error) {
+        console.log(`📝 First time user or profile not found for ID: ${userId}`);
       }
+
       setIsLoading(false);
     };
-    
+
     initUser();
   }, []);
 
