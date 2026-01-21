@@ -13,7 +13,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { getSlots, createBooking, type Slot } from "@/lib/api";
+import { getSlots, createBooking, getUserBookings, type Slot } from "@/lib/api";
 
 type BookingStep = "booking" | "payment" | "success";
 
@@ -32,12 +32,20 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
   const [acceptedOffer, setAcceptedOffer] = useState(false);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSlots = async () => {
-      const result = await getSlots(city);
-      setSlots(result.slots); // Исправлено: берем slots из result
-      setIsLoading(false);
+      try {
+        const result = await getSlots(city);
+        setSlots(result.slots); // Исправлено: берем slots из result
+      } catch (error) {
+        console.error('Error loading slots:', error);
+        setSlots([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadSlots();
   }, [city]);
@@ -45,12 +53,31 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
   const handleBookSlot = async () => {
     if (!selectedSlot || !userId) return;
     
-    const success = await createBooking(userId, selectedSlot);
-    if (success) {
-      setStep("payment");
-    } else {
-      // Handle booking failure
-      alert("Не удалось забронировать слот");
+    setIsBooking(true);
+    setBookingError(null);
+    
+    try {
+      // Check if user already has a booking for this slot
+      const userBookings = await getUserBookings(userId);
+      const alreadyBooked = userBookings.bookings.some(booking => booking.slot_id === selectedSlot);
+      
+      if (alreadyBooked) {
+        setBookingError("Вы уже забронировали этот слот");
+        setIsBooking(false);
+        return;
+      }
+      
+      const success = await createBooking(userId, selectedSlot);
+      if (success) {
+        setStep("payment");
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      // Extract meaningful error message
+      const errorMessage = error?.message || error?.detail || "Не удалось забронировать слот";
+      setBookingError(errorMessage);
+    } finally {
+      setIsBooking(false);
     }
   };
 
@@ -144,15 +171,20 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
 
             {/* Action Button */}
             <div className="px-10 mt-auto mb-4">
+              {bookingError && (
+                <div className="mb-3 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-sm">
+                  {bookingError}
+                </div>
+              )}
               <button
-                disabled={selectedSlot === null || isLoading}
+                disabled={selectedSlot === null || isLoading || isBooking}
                 onClick={handleBookSlot}
                 className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all ${
-                  selectedSlot !== null && !isLoading ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
+                  (selectedSlot !== null && !isLoading && !isBooking) ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
                 }`}
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
-                {isLoading ? "Загрузка..." : "Забронировать"}
+                {isLoading ? "Загрузка..." : isBooking ? "Бронирование..." : "Забронировать"}
               </button>
             </div>
           </motion.div>
