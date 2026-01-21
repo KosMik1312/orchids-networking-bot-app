@@ -23,9 +23,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://orchids-networking-bot-app.vercel.app",
-        "https://*.loca.lt",
-        "http://localhost:3000",
-        "*"  # Временно для отладки
+        "https://leracinema.ru",
+        "https://www.leracinema.ru"
     ],
     allow_credentials=True,
     allow_methods=["*"],
