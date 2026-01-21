@@ -136,10 +136,7 @@ export async function getProfile(userId: number): Promise<{ profile: UserProfile
 
   return handleResponse(response);
 }
-    cache: 'no-store',
-  });
-  return handleResponse(response);
-}
+
 // Slots API
 export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   const url = city ? `${API_BASE}/api/slots?city=${encodeURIComponent(city)}` : `${API_BASE}/api/slots`;
