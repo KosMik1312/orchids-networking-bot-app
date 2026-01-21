@@ -132,9 +132,6 @@ export default function Home() {
       }
 
       setIsLoading(false);
-      }
-
-      setIsLoading(false);
     };
 
     initUser();
