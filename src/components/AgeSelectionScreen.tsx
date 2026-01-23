@@ -60,12 +60,12 @@ export function AgeSelectionScreen({ onNext, onBack, progress }: AgeSelectionScr
              <div className="h-[2px] w-full bg-[#404243]" style={{ position: 'absolute', top: 0 }}></div>
              <div className="h-[2px] w-full bg-[#404243]" style={{ position: 'absolute', bottom: 0 }}></div>
           </div>
-          <div 
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide flex flex-col items-center"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
+            <div 
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="h-full overflow-y-scroll overflow-x-hidden snap-y snap-mandatory scrollbar-hide flex flex-col items-center"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-y' }}
+            >
             <div className="py-[120px] w-full"> {/* Padding to allow centering of first/last items */}
               {ages.map((age) => (
                 <div
