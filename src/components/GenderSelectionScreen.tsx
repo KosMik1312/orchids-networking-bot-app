@@ -19,7 +19,7 @@ export function GenderSelectionScreen({ onNext, onBack, progress }: GenderSelect
   };
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-12 pb-8">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

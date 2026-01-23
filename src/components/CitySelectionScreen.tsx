@@ -27,7 +27,7 @@ export function CitySelectionScreen({ onNext, onBack, progress }: CitySelectionS
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
       {/* Top Header */}
       <div className="flex items-center justify-between px-6 pt-12 shrink-0">
         <button 

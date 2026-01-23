@@ -131,7 +131,7 @@ export function OccupationSelectionScreen({ onNext, onBack, progress }: Occupati
   };
 
   return (
-    <div className="flex h-screen flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-8 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

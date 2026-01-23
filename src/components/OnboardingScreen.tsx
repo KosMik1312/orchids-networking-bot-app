@@ -120,7 +120,7 @@ export function OnboardingScreen({
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-black">
+    <div className="relative min-h-screen flex flex-col bg-black overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
       <motion.div
         key={step.id}
         initial={{ opacity: 0 }}
