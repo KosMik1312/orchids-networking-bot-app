@@ -324,7 +324,10 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
             </div>
 
             <button
-              onClick={onComplete || onBack}
+              onClick={() => {
+                setSelectedSlot(null);
+                setStep("booking");
+              }}
               className="w-full py-[22px] rounded-[32px] bg-[#E15859] text-white text-[20px] font-bold shadow-lg hover:bg-[#d14849] transition-all"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
