@@ -189,28 +189,49 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
 
 @app.get("/api/slots")
 async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession = Depends(get_session)):
+    """
+    Получить доступные слоты.
+    Возвращает только активные слоты с доступными местами.
+    Если указан город - фильтрует по городу.
+    """
     try:
-        print(f"[SLOTS] Request for city: {city}")
+        print(f"[SLOTS] Запрос слотов для города: {city}")
         slot_repo = SlotRepo(session)
-        slots = await slot_repo.get_all_slots()
-        print(f"[SLOTS] Found {len(slots)} slots")
         
+        # Получаем ВСЕ слоты
+        all_slots = await slot_repo.get_all_slots()
+        print(f"[SLOTS] Всего слотов в БД: {len(all_slots)}")
+        
+        # Фильтруем: только активные и с доступными местами
+        available_slots = [
+            slot for slot in all_slots 
+            if slot.is_active and slot.current_bookings < slot.max_people
+        ]
+        print(f"[SLOTS] Доступные слоты (активные + есть места): {len(available_slots)}")
+        
+        # Фильтруем по городу если указан
         if city:
             try:
                 from urllib.parse import unquote
                 city_decoded = unquote(city)
-                print(f"[SLOTS] Decoded city: {city_decoded}")
+                print(f"[SLOTS] Декодированный город: {city_decoded}")
                 
-                # Remove prefix "g. " for comparison
+                # Убираем префикс "г. " для сравнения
                 city_clean = city_decoded.replace("г. ", "").strip()
-                print(f"[SLOTS] Clean city: {city_clean}")
+                print(f"[SLOTS] Очищенный город: {city_clean}")
                 
-                slots = [slot for slot in slots if city_clean.lower() in slot.city.lower()]
+                available_slots = [
+                    slot for slot in available_slots 
+                    if city_clean.lower() in slot.city.lower()
+                ]
             except Exception as decode_error:
-                print(f"[SLOTS] Decode error: {decode_error}")
-                slots = [slot for slot in slots if city.lower() in slot.city.lower()]
-            
-            print(f"[SLOTS] After filter: {len(slots)} slots")
+                print(f"[SLOTS] Ошибка декодирования города: {decode_error}")
+                available_slots = [
+                    slot for slot in available_slots 
+                    if city.lower() in slot.city.lower()
+                ]
+        
+        print(f"[SLOTS] Слотов после фильтрации по городу: {len(available_slots)}")
         
         # Конвертируем объекты в словари
         slots_data = [
@@ -222,15 +243,16 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
                 "restaurant": slot.restaurant,
                 "max_people": slot.max_people,
                 "current_bookings": slot.current_bookings,
+                "available_places": slot.max_people - slot.current_bookings,
                 "created_at": slot.created_at.isoformat() if slot.created_at else None,
                 "is_active": slot.is_active
             }
-            for slot in slots
+            for slot in available_slots
         ]
         
         return {"slots": slots_data}
     except Exception as e:
-        print(f"[ERROR] Get slots failed: {e}")
+        print(f"[ERROR] Ошибка получения слотов: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

@@ -35,19 +35,29 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
+  // Функция для загрузки слотов
+  const loadSlots = async () => {
+    try {
+      setIsLoading(true);
+      console.log(`[BOOKING] Загрузка слотов для города: ${city}`);
+      const result = await getSlots(city);
+      console.log(`[BOOKING] Получено ${result.slots.length} слотов`);
+      setSlots(result.slots);
+      setBookingError(null);
+    } catch (error) {
+      console.error('[BOOKING] Ошибка загрузки слотов:', error);
+      setSlots([]);
+      setBookingError("Ошибка при загрузке слотов");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Загрузка слотов при изменении города
   useEffect(() => {
-    const loadSlots = async () => {
-      try {
-        const result = await getSlots(city);
-        setSlots(result.slots); // Исправлено: берем slots из result
-      } catch (error) {
-        console.error('Error loading slots:', error);
-        setSlots([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadSlots();
+    if (city) {
+      loadSlots();
+    }
   }, [city]);
 
   const handleBookSlot = async () => {
@@ -57,7 +67,7 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
     setBookingError(null);
     
     try {
-      // Check if user already has a booking for this slot
+      // Проверяем, не забронировал ли пользователь этот слот
       const userBookings = await getUserBookings(userId);
       const alreadyBooked = userBookings.bookings.some(booking => booking.slot_id === selectedSlot);
       
@@ -67,25 +77,43 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
         return;
       }
       
+      console.log(`[BOOKING] Бронирование слота ${selectedSlot} для пользователя ${userId}`);
       const success = await createBooking(userId, selectedSlot);
       if (success) {
+        console.log(`[BOOKING] Бронирование успешно, переходим на оплату`);
         setStep("payment");
       }
     } catch (error: any) {
-      console.error('Booking error:', error);
-      // Extract meaningful error message
+      console.error('[BOOKING] Ошибка бронирования:', error);
       let errorMessage = error?.message || error?.detail || "Не удалось забронировать слот";
       if (
         errorMessage.includes("Slot is full") ||
-        errorMessage.includes("already booked") ||
-        errorMessage.includes("уже забронировано")
-      ) {
-        errorMessage = "Извините! На это время мест уже не осталось.";
-      }
-      setBookingError(errorMessage);
-    } finally {
-      setIsBooking(false);
+  const handleBack = () => {
+    if (step === "booking") {
+      onBack();
+    } else if (step === "payment") {
+      setStep("booking");
+    } else {
+      handleBackToBooking();
     }
+  };
+  };
+
+  const handlePaymentSuccess = async () => {
+    console.log(`[BOOKING] Платёж успешен, перезагружаем слоты...`);
+    setStep("success");
+    // Перезагружаем слоты после успешного бронирования
+    await loadSlots();
+    // Очищаем выбранный слот для следующего бронирования
+    setSelectedSlot(null);
+  };
+
+  const handleBackToBooking = async () => {
+    console.log(`[BOOKING] Возврат к бронированию, перезагружаем слоты...`);
+    setSelectedSlot(null);
+    setStep("booking");
+    // Перезагружаем слоты при возврате
+    await loadSlots();
   };
 
   const handleBack = () => {
@@ -243,17 +271,17 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
                     <button className="w-20 bg-[#E15859] rounded-[24px] flex items-center justify-center shadow-md">
                       <Check className="text-white" size={24} />
                     </button>
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div className="flex justify-between items-center mb-8 border-t border-gray-100 pt-6">
-                  <span className="text-[#404243] text-xl font-medium">Итого</span>
-                  <span className="text-[#2A2021] text-2xl font-black">1 500 ₽</span>
-                </div>
-
-                {/* Info Text */}
-                <p className="text-[10px] text-[#404243] leading-relaxed mb-4 opacity-70">
+                {/* Pay Button */}
+                <button
+                  disabled={!acceptedOffer}
+                  onClick={handlePaymentSuccess}
+                  className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all ${
+                    acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
+                  }`}
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  Оплатить
+                </button>
                   Возврат средств возможен только в случае, если вы отмените до полуночи понедельника, предшествующего дня ужина.
                 </p>
                 <p className="text-[10px] text-[#404243] leading-relaxed mb-6 opacity-70">
@@ -295,16 +323,13 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
             className="flex-1 flex flex-col items-center justify-center px-8 text-center"
           >
             <div className="w-24 h-24 bg-[#E15859] rounded-full flex items-center justify-center mb-8 shadow-xl shadow-[#E15859]/20">
-              <Check className="text-white" size={48} strokeWidth={3} />
-            </div>
-            
-            <h2 className="text-[#2A2021] text-[34px] font-black uppercase mb-4 leading-none" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-              Готово!
-            </h2>
-            
-            <p className="text-[#404243] text-lg mb-12 leading-relaxed">
-              Ваше бронирование успешно подтверждено. Мы ждем вас на ужине!
-            </p>
+            <button
+              onClick={handleBackToBooking}
+              className="w-full py-[22px] rounded-[32px] bg-[#E15859] text-white text-[20px] font-bold shadow-lg hover:bg-[#d14849] transition-all"
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            >
+              Продолжить
+            </button>
 
             <div className="bg-white rounded-[32px] p-8 w-full shadow-sm mb-12 text-left space-y-4">
               <div className="flex items-center gap-4">

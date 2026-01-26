@@ -9,14 +9,14 @@ interface CitySelectionScreenProps {
   progress: number;
 }
 
-export type City = "spb" | "dubai" | "moscow";
+export type City = "spb" | "moscow";
 
 export function CitySelectionScreen({ onNext, onBack, progress }: CitySelectionScreenProps) {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
   const cities = [
     { id: "spb" as City, name: "г. Санкт-Петербург" },
-    { id: "dubai" as City, name: "Дубай" },
+    { id: "moscow" as City, name: "г. Москва" },
   ];
 
   const handleContinue = () => {
