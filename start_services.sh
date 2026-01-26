@@ -26,6 +26,7 @@ show_menu() {
     echo -e "${YELLOW}5.${NC} Запустить Бот и FastAPI последовательно"
     echo -e "${YELLOW}6.${NC} Запустить только FastAPI"
     echo -e "${YELLOW}7.${NC} Запустить только Бот"
+    echo -e "${YELLOW}8.${NC} Исправить базу данных (fix_database.py)"
     echo -e "${YELLOW}0.${NC} Выход"
     echo ""
 }
@@ -204,6 +205,26 @@ start_bot() {
     fi
 }
 
+fix_database() {
+    echo ""
+    echo -e "${YELLOW}🔧 Исправление базы данных...${NC}"
+    
+    if [ ! -f fix_database.py ]; then
+        echo -e "${RED}✗ Файл fix_database.py не найден${NC}"
+        return 1
+    fi
+    
+    python fix_database.py
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ База данных исправлена успешно${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Ошибка при исправлении базы данных${NC}"
+        return 1
+    fi
+}
+
 start_both() {
     echo ""
     echo -e "${YELLOW}🚀 Запуск FastAPI и Бота...${NC}"
@@ -245,12 +266,15 @@ while true; do
         7)
             start_bot
             ;;
+        8)
+            fix_database
+            ;;
         0)
             echo -e "${BLUE}👋 До свидания!${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-7${NC}"
+            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-8${NC}"
             ;;
     esac
     
