@@ -270,20 +270,30 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
         
         print(f"[BOOKINGS] Найдено {len(bookings)} бронирований для пользователя {userId}")
         
-        # Конвертируем объекты в словари БЕЗ обращения к связанным объектам
+        # Конвертируем объекты в словари с данными слота
         bookings_data = []
         for booking in bookings:
             try:
+                # Slot уже предзагружен через selectinload, можно безопасно обращаться
+                slot = booking.slot
                 booking_dict = {
                     "id": booking.id,
                     "user_id": booking.user_id,
                     "slot_id": booking.slot_id,
                     "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
                     "status": booking.status,
+                    "date": slot.date if slot else None,
+                    "time": slot.time if slot else None,
+                    "city": slot.city if slot else None,
+                    "restaurant": slot.restaurant if slot else None,
+                    "max_people": slot.max_people if slot else None,
+                    "current_bookings": slot.current_bookings if slot else None,
                 }
                 bookings_data.append(booking_dict)
             except Exception as item_error:
                 print(f"[BOOKINGS] Ошибка при обработке бронирования {booking.id}: {item_error}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         print(f"[BOOKINGS] Возвращаем {len(bookings_data)} бронирований")
@@ -293,9 +303,6 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/bookings")
-async def create_booking_endpoint(request: BookingRequest, session: AsyncSession = Depends(get_session)):
     try:
         print(f"\n[API BOOKING] === CREATE BOOKING START ===")
         print(f"[API BOOKING] User ID: {request.userId}, Slot ID: {request.slotId}")
