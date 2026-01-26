@@ -60,3 +60,19 @@ class Booking(Base):
 
     user = relationship("User", back_populates="bookings")
     slot = relationship("DinnerSlot", back_populates="bookings")
+
+
+class Payment(Base):
+    __tablename__ = 'payments'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    yookassa_payment_id = Column(String, unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
+    booking_id = Column(Integer, ForeignKey('bookings.id', ondelete="SET NULL"), nullable=True)
+    amount = Column(String, nullable=False)
+    status = Column(String, default='created')
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+    booking = relationship("Booking")

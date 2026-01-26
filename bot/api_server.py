@@ -8,11 +8,12 @@ import io
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import init_db, get_session
-from db.repository import UserRepo, SlotRepo, BookingRepo
+from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME
 from auth_token import validate_user_token
+from payments.payment_service import PaymentService
 
 # Настройка кодировки для Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -80,6 +81,17 @@ class ProfileRequest(BaseModel):
 class BookingRequest(BaseModel):
     userId: int
     slotId: int
+
+class PaymentRequest(BaseModel):
+    userId: int
+    amount: str
+    bookingId: Optional[int] = None
+    returnUrl: str
+
+class PaymentWebhookRequest(BaseModel):
+    type: str
+    event: str
+    data: dict
 
 # API эндпоинты
 @app.on_event("startup")
@@ -357,6 +369,115 @@ async def get_contacts_endpoint(slotId: int, userId: int, session: AsyncSession 
         return {"contacts": contacts}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Payment endpoints for Yookassa integration
+@app.post("/api/payments")
+async def create_payment_endpoint(request: PaymentRequest, session: AsyncSession = Depends(get_session)):
+    """Создает новый платеж через Yookassa."""
+    print(f"\n[API] === CREATE PAYMENT START ===")
+    print(f"[API] User ID: {request.userId}")
+    print(f"[API] Amount: {request.amount}")
+    print(f"[API] Booking ID: {request.bookingId}")
+    print(f"[API] Return URL: {request.returnUrl}")
+    
+    try:
+        payment_service = PaymentService()
+        payment_result = await payment_service.create_payment(
+            user_id=request.userId,
+            amount=request.amount,
+            booking_id=request.bookingId,
+            return_url=request.returnUrl
+        )
+        
+        # Save payment to database
+        payment_repo = PaymentRepo(session)
+        db_payment = await payment_repo.create_payment(
+            user_id=request.userId,
+            yookassa_payment_id=payment_result['id'],
+            amount=request.amount,
+            booking_id=request.bookingId,
+            status='created'
+        )
+        
+        print(f"[API] Payment created successfully: {db_payment.id}, yookassa_id={db_payment.yookassa_payment_id}")
+        
+        return {
+            "paymentId": db_payment.id,
+            "yookassaPaymentId": db_payment.yookassa_payment_id,
+            "confirmationUrl": payment_result.get('confirmation', {}).get('confirmation_url'),
+            "status": payment_result['status']
+        }
+    except Exception as e:
+        print(f"[API] ERROR creating payment: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/payments/{payment_id}")
+async def get_payment_status(payment_id: int, session: AsyncSession = Depends(get_session)):
+    """Получает статус платежа."""
+    print(f"\n[API] === GET PAYMENT STATUS START ===")
+    print(f"[API] Payment ID: {payment_id}")
+    
+    try:
+        payment_repo = PaymentRepo(session)
+        payment = await payment_repo.get_payment(payment_id)
+        
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        # Get latest status from Yookassa
+        payment_service = PaymentService()
+        yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
+        
+        print(f"[API] Payment status: {yookassa_payment['status']}")
+        
+        # Update status in database
+        await payment_repo.update_payment_status(payment_id, yookassa_payment['status'])
+        
+        return {
+            "paymentId": payment_id,
+            "yookassaPaymentId": payment.yookassa_payment_id,
+            "status": yookassa_payment['status'],
+            "amount": payment.amount,
+            "userId": payment.user_id,
+            "bookingId": payment.booking_id
+        }
+    except Exception as e:
+        print(f"[API] ERROR getting payment status: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/payments/webhook")
+async def payment_webhook(request: dict, session: AsyncSession = Depends(get_session)):
+    """Обработчик вебхука от Yookassa."""
+    print(f"\n[API] === PAYMENT WEBHOOK RECEIVED ===")
+    print(f"[API] Webhook data: {request}")
+    
+    try:
+        payment_service = PaymentService()
+        result = await payment_service.handle_webhook(request)
+        
+        if result['status'] == 'succeeded':
+            # Update payment status in database
+            payment_repo = PaymentRepo(session)
+            yookassa_id = result.get('payment_id')
+            payment = await payment_repo.get_payment_by_yookassa_id(yookassa_id)
+            
+            if payment:
+                await payment_repo.update_payment_status(payment.id, 'succeeded')
+                print(f"[API] Payment {payment.id} marked as succeeded")
+        
+        return {"success": True, "status": result.get('status')}
+    except Exception as e:
+        print(f"[API] ERROR handling webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

@@ -26,6 +26,10 @@ async_session_factory = async_sessionmaker(
     engine, expire_on_commit=False, class_=AsyncSession
 )
 
+# Экспортируем для использования в других модулях
+AsyncSessionLocal = async_session_factory
+get_async_engine = lambda: engine
+
 async def init_db():
     """
     Инициализирует базу данных: создает все таблицы на основе моделей.

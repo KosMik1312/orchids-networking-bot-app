@@ -212,3 +212,56 @@ class BookingRepo(BaseRepo):
             import traceback
             traceback.print_exc()
             return []
+
+
+class PaymentRepo(BaseRepo):
+    """
+    Репозиторий для работы с платежами.
+    """
+    async def create_payment(
+        self, 
+        user_id: int, 
+        yookassa_payment_id: str,
+        amount: str,
+        booking_id: Optional[int] = None,
+        status: str = 'created'
+    ) -> models.Payment:
+        """Создает новый платеж."""
+        payment = models.Payment(
+            user_id=user_id,
+            yookassa_payment_id=yookassa_payment_id,
+            amount=amount,
+            booking_id=booking_id,
+            status=status
+        )
+        self.session.add(payment)
+        await self.session.commit()
+        await self.session.refresh(payment)
+        print(f"[PAYMENT_REPO] Created payment {payment.id} for user {user_id}, yookassa_id={yookassa_payment_id}")
+        return payment
+
+    async def get_payment(self, payment_id: int) -> Optional[models.Payment]:
+        """Получает платеж по ID."""
+        return await self.session.get(models.Payment, payment_id)
+
+    async def get_payment_by_yookassa_id(self, yookassa_payment_id: str) -> Optional[models.Payment]:
+        """Получает платеж по Yookassa ID."""
+        stmt = select(models.Payment).where(models.Payment.yookassa_payment_id == yookassa_payment_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_payment_status(self, payment_id: int, status: str) -> Optional[models.Payment]:
+        """Обновляет статус платежа."""
+        payment = await self.session.get(models.Payment, payment_id)
+        if payment:
+            payment.status = status
+            await self.session.commit()
+            await self.session.refresh(payment)
+            print(f"[PAYMENT_REPO] Updated payment {payment_id} status to {status}")
+        return payment
+
+    async def get_user_payments(self, user_id: int) -> List[models.Payment]:
+        """Получает все платежи пользователя."""
+        stmt = select(models.Payment).where(models.Payment.user_id == user_id).order_by(models.Payment.created_at.desc())
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
