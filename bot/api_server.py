@@ -238,8 +238,10 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 @app.get("/api/bookings")
 async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depends(get_session)):
     try:
+        print(f"[BOOKINGS] Getting bookings for user: {userId}")
         booking_repo = BookingRepo(session)
         bookings = await booking_repo.get_user_bookings(userId)
+        print(f"[BOOKINGS] Found {len(bookings)} bookings for user {userId}")
         
         # Конвертируем объекты в словари
         bookings_data = [
@@ -265,8 +267,10 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
 @app.post("/api/bookings")
 async def create_booking_endpoint(request: BookingRequest, session: AsyncSession = Depends(get_session)):
     try:
+        print(f"[BOOKING] Creating booking: user={request.userId}, slot={request.slotId}")
         booking_repo = BookingRepo(session)
         success = await booking_repo.create_booking(request.userId, request.slotId)
+        print(f"[BOOKING] Result: {success}")
         
         if not success:
             raise HTTPException(status_code=400, detail="Slot is full or already booked")

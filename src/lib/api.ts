@@ -177,11 +177,15 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
 
 // Bookings API
 export async function getUserBookings(userId: number): Promise<{ bookings: Booking[] }> {
+  console.log(`[API] Requesting bookings for userId=${userId} from ${API_BASE}/api/bookings`);
   const response = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
-  return handleResponse(response);
+  const result = await handleResponse(response);
+  console.log(`[API] Got bookings response:`, result);
+  return result;
 }
 
 export async function createBooking(userId: number, slotId: number): Promise<{success: boolean}> {
+  console.log(`[API] Creating booking: userId=${userId}, slotId=${slotId}`);
   const response = await fetch(`${API_BASE}/api/bookings`, {
     method: 'POST',
     headers: { 

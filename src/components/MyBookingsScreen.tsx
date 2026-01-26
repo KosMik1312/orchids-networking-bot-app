@@ -24,9 +24,14 @@ export function MyBookingsScreen({ city, userId, onBack, onTabChange }: MyBookin
 
   useEffect(() => {
     const loadBookings = async () => {
+      console.log("[MyBookingsScreen] userId:", userId);
       if (userId) {
+        console.log("[MyBookingsScreen] Loading bookings for userId:", userId);
         const result = await getUserBookings(userId);
+        console.log("[MyBookingsScreen] Got bookings:", result.bookings);
         setBookings(result.bookings); // Исправлено: берем bookings из result
+      } else {
+        console.log("[MyBookingsScreen] userId is undefined!");
       }
       setIsLoading(false);
     };

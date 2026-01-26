@@ -169,6 +169,7 @@ class BookingRepo(BaseRepo):
 
     async def get_user_bookings(self, user_id: int) -> List[models.Booking]:
         """Получает активные бронирования пользователя."""
+        print(f"[REPO] Getting bookings for user_id={user_id}")
         stmt = (
             select(models.Booking)
             .join(models.DinnerSlot)
@@ -179,4 +180,5 @@ class BookingRepo(BaseRepo):
             .order_by(models.DinnerSlot.date, models.DinnerSlot.time)
         )
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        bookings = result.scalars().all()
+        print(f"[REPO] Found {len(bookings)} active bookings for user_id={user_id}")
