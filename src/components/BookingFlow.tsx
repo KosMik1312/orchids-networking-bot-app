@@ -88,6 +88,17 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
       let errorMessage = error?.message || error?.detail || "Не удалось забронировать слот";
       if (
         errorMessage.includes("Slot is full") ||
+        errorMessage.includes("already booked") ||
+        errorMessage.includes("уже забронировано")
+      ) {
+        errorMessage = "Извините! На это время мест уже не осталось.";
+      }
+      setBookingError(errorMessage);
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
   const handleBack = () => {
     if (step === "booking") {
       onBack();
@@ -96,7 +107,6 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
     } else {
       handleBackToBooking();
     }
-  };
   };
 
   const handlePaymentSuccess = async () => {
@@ -114,16 +124,6 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
     setStep("booking");
     // Перезагружаем слоты при возврате
     await loadSlots();
-  };
-
-  const handleBack = () => {
-    if (step === "booking") {
-      onBack();
-    } else if (step === "payment") {
-      setStep("booking");
-    } else {
-      setStep("payment");
-    }
   };
 
   return (
@@ -271,22 +271,8 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
                     <button className="w-20 bg-[#E15859] rounded-[24px] flex items-center justify-center shadow-md">
                       <Check className="text-white" size={24} />
                     </button>
-                {/* Pay Button */}
-                <button
-                  disabled={!acceptedOffer}
-                  onClick={handlePaymentSuccess}
-                  className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all ${
-                    acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
-                  }`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
-                >
-                  Оплатить
-                </button>
-                  Возврат средств возможен только в случае, если вы отмените до полуночи понедельника, предшествующего дня ужина.
-                </p>
-                <p className="text-[10px] text-[#404243] leading-relaxed mb-6 opacity-70">
-                  Нажимая на кнопку, вы даете согласие на <span className="underline">обработку персональных данных</span>, и соглашаетесь с <span className="underline">политикой конфиденциальности</span>
-                </p>
+                  </div>
+                </div>
 
                 {/* Offer Checkbox */}
                 <button 
@@ -302,14 +288,21 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
                 {/* Pay Button */}
                 <button
                   disabled={!acceptedOffer}
-                  onClick={() => setStep("success")}
-                  className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all ${
+                  onClick={handlePaymentSuccess}
+                  className={`w-full py-[22px] rounded-[32px] text-[20px] font-bold shadow-lg transition-all mb-6 ${
                     acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/30 text-white/50 cursor-not-allowed"
                   }`}
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
                   Оплатить
                 </button>
+
+                <p className="text-[10px] text-[#404243] leading-relaxed mb-6 opacity-70">
+                  Возврат средств возможен только в случае, если вы отмените до полуночи понедельника, предшествующего дня ужина.
+                </p>
+                <p className="text-[10px] text-[#404243] leading-relaxed mb-6 opacity-70">
+                  Нажимая на кнопку, вы даете согласие на <span className="underline">обработку персональных данных</span>, и соглашаетесь с <span className="underline">политикой конфиденциальности</span>
+                </p>
               </div>
             </div>
           </motion.div>
@@ -323,13 +316,11 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
             className="flex-1 flex flex-col items-center justify-center px-8 text-center"
           >
             <div className="w-24 h-24 bg-[#E15859] rounded-full flex items-center justify-center mb-8 shadow-xl shadow-[#E15859]/20">
-            <button
-              onClick={handleBackToBooking}
-              className="w-full py-[22px] rounded-[32px] bg-[#E15859] text-white text-[20px] font-bold shadow-lg hover:bg-[#d14849] transition-all"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
-            >
-              Продолжить
-            </button>
+              <Check className="text-white" size={48} strokeWidth={2} />
+            </div>
+
+            <h2 className="text-[#404243] text-2xl font-bold mb-2">Бронирование успешно!</h2>
+            <p className="text-[#8E8E93] text-sm mb-8">Мы отправили подтверждение на вашу почту</p>
 
             <div className="bg-white rounded-[32px] p-8 w-full shadow-sm mb-12 text-left space-y-4">
               <div className="flex items-center gap-4">
@@ -349,10 +340,7 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
             </div>
 
             <button
-              onClick={() => {
-                setSelectedSlot(null);
-                setStep("booking");
-              }}
+              onClick={handleBackToBooking}
               className="w-full py-[22px] rounded-[32px] bg-[#E15859] text-white text-[20px] font-bold shadow-lg hover:bg-[#d14849] transition-all"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
