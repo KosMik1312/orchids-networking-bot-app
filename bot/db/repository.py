@@ -169,16 +169,23 @@ class BookingRepo(BaseRepo):
 
     async def get_user_bookings(self, user_id: int) -> List[models.Booking]:
         """Получает активные бронирования пользователя."""
-        print(f"[REPO] Getting bookings for user_id={user_id}")
-        stmt = (
-            select(models.Booking)
-            .join(models.DinnerSlot)
-            .where(
-                models.Booking.user_id == user_id,
-                models.Booking.status == 'active'
+        print(f"[REPO] Получение бронирований для пользователя user_id={user_id}")
+        try:
+            stmt = (
+                select(models.Booking)
+                .join(models.DinnerSlot)
+                .where(
+                    models.Booking.user_id == user_id,
+                    models.Booking.status == 'active'
+                )
+                .order_by(models.DinnerSlot.date, models.DinnerSlot.time)
             )
-            .order_by(models.DinnerSlot.date, models.DinnerSlot.time)
-        )
-        result = await self.session.execute(stmt)
-        bookings = result.scalars().all()
-        print(f"[REPO] Found {len(bookings)} active bookings for user_id={user_id}")
+            result = await self.session.execute(stmt)
+            bookings = result.scalars().all()
+            print(f"[REPO] Найдено {len(bookings)} активных бронирований для user_id={user_id}")
+            return bookings
+        except Exception as e:
+            print(f"[REPO] ОШИБКА при получении бронирований для user_id={user_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return []

@@ -238,30 +238,44 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 @app.get("/api/bookings")
 async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depends(get_session)):
     try:
-        print(f"[BOOKINGS] Getting bookings for user: {userId}")
+        print(f"[BOOKINGS] Получение бронирований для пользователя: {userId}")
         booking_repo = BookingRepo(session)
         bookings = await booking_repo.get_user_bookings(userId)
-        print(f"[BOOKINGS] Found {len(bookings)} bookings for user {userId}")
+        
+        # Защита от None
+        if bookings is None:
+            print(f"[BOOKINGS] Функция вернула None, используем пустой список")
+            bookings = []
+        
+        print(f"[BOOKINGS] Найдено {len(bookings)} бронирований для пользователя {userId}")
         
         # Конвертируем объекты в словари
-        bookings_data = [
-            {
-                "id": booking.id,
-                "user_id": booking.user_id,
-                "slot_id": booking.slot_id,
-                "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
-                "status": booking.status,
-                "date": booking.slot.date,
-                "time": booking.slot.time,
-                "city": booking.slot.city,
-                "restaurant": booking.slot.restaurant,
-                "max_people": booking.slot.max_people,
-                "current_bookings": booking.slot.current_bookings
-            }
-            for booking in bookings
-        ]
+        bookings_data = []
+        for booking in bookings:
+            try:
+                booking_dict = {
+                    "id": booking.id,
+                    "user_id": booking.user_id,
+                    "slot_id": booking.slot_id,
+                    "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
+                    "status": booking.status,
+                    "date": booking.slot.date if booking.slot else None,
+                    "time": booking.slot.time if booking.slot else None,
+                    "city": booking.slot.city if booking.slot else None,
+                    "restaurant": booking.slot.restaurant if booking.slot else None,
+                    "max_people": booking.slot.max_people if booking.slot else None,
+                    "current_bookings": booking.slot.current_bookings if booking.slot else None
+                }
+                bookings_data.append(booking_dict)
+            except Exception as item_error:
+                print(f"[BOOKINGS] Ошибка при обработке бронирования {booking.id}: {item_error}")
+                continue
+        
         return {"bookings": bookings_data}
     except Exception as e:
+        print(f"[ERROR] Ошибка получения бронирований: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/bookings")
