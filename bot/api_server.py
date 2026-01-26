@@ -264,14 +264,13 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
         booking_repo = BookingRepo(session)
         bookings = await booking_repo.get_user_bookings(userId)
         
-        # Защита от None
         if bookings is None:
             print(f"[BOOKINGS] Функция вернула None, используем пустой список")
             bookings = []
         
         print(f"[BOOKINGS] Найдено {len(bookings)} бронирований для пользователя {userId}")
         
-        # Конвертируем объекты в словари
+        # Конвертируем объекты в словари БЕЗ обращения к связанным объектам
         bookings_data = []
         for booking in bookings:
             try:
@@ -281,18 +280,13 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
                     "slot_id": booking.slot_id,
                     "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
                     "status": booking.status,
-                    "date": booking.slot.date if booking.slot else None,
-                    "time": booking.slot.time if booking.slot else None,
-                    "city": booking.slot.city if booking.slot else None,
-                    "restaurant": booking.slot.restaurant if booking.slot else None,
-                    "max_people": booking.slot.max_people if booking.slot else None,
-                    "current_bookings": booking.slot.current_bookings if booking.slot else None
                 }
                 bookings_data.append(booking_dict)
             except Exception as item_error:
                 print(f"[BOOKINGS] Ошибка при обработке бронирования {booking.id}: {item_error}")
                 continue
         
+        print(f"[BOOKINGS] Возвращаем {len(bookings_data)} бронирований")
         return {"bookings": bookings_data}
     except Exception as e:
         print(f"[ERROR] Ошибка получения бронирований: {e}")
