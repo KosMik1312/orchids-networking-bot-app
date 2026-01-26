@@ -84,6 +84,20 @@ class PaymentService:
         result = self.yookassa.get_payment(payment_id)
         return result
     
+    def cancel_payment(self, payment_id: str) -> Dict[str, Any]:
+        """
+        Отменяет платеж.
+        
+        Args:
+            payment_id: ID платежа для отмены
+            
+        Returns:
+            Dict с информацией об отменённом платеже
+        """
+        print(f"[PAYMENT SERVICE] Cancelling payment: {payment_id}")
+        result = self.yookassa.cancel_payment(payment_id)
+        return result
+    
     def handle_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Обрабатывает webhook от Ю-Кассы.
@@ -97,7 +111,8 @@ class PaymentService:
         """
         try:
             event_type = webhook_data.get("event")
-            payment_data = webhook_data.get("object", {})
+            # Поддерживаем оба формата: "object" и "data"
+            payment_data = webhook_data.get("object") or webhook_data.get("data", {})
             payment_id = payment_data.get("id")
             payment_status = payment_data.get("status")
             
@@ -112,7 +127,7 @@ class PaymentService:
                     "success": True,
                     "action": "confirm_booking",
                     "payment_id": payment_id,
-                    "status": payment_status
+                    "status": "succeeded"
                 }
             
             elif event_type == "payment.canceled":
@@ -121,7 +136,7 @@ class PaymentService:
                     "success": True,
                     "action": "cancel_booking",
                     "payment_id": payment_id,
-                    "status": payment_status
+                    "status": "canceled"
                 }
             
             else:

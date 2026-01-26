@@ -1,295 +1,438 @@
 # Orchids Networking Bot App
 
-Этот проект — Telegram бот для нетворкинга с встроенным MiniApp (Next.js). Бот помогает организовывать встречи и знакомства (Allora-like).
+**Платформа для организации сетевых встреч и знакомств** — Telegram бот с встроенным MiniApp (Next.js), FastAPI backend и интеграцией системы платежей Ю-Кассы.
+
+Архитектура: MiniApp (Next.js на Vercel) ↔ FastAPI (Python на VPS) ↔ Telegram Bot (Aiogram) ↔ SQLite БД + Платежи (YooMoney)
 
 ## Структура проекта
 
-- `src/` — Frontend MiniApp (Next.js)
-- `bot/` — Backend Telegram бот на Python (aiogram)
-- `public/` — Статические файлы (изображения и т.д.)
+```
+orchids-networking-bot-app/
+├── src/                        # Frontend MiniApp (Next.js 15.5.9)
+│   ├── app/                    # Next.js приложение
+│   │   ├── api/               # API маршруты (прокси к Python backend)
+│   │   │   ├── bookings/
+│   │   │   ├── contacts/
+│   │   │   ├── health/
+│   │   │   ├── profile/
+│   │   │   └── slots/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/            # React компоненты экранов
+│   │   ├── OnboardingScreen.tsx
+│   │   ├── BookingFlow.tsx
+│   │   ├── MyBookingsScreen.tsx
+│   │   ├── ProfileScreen.tsx
+│   │   ├── ContactsScreen.tsx
+│   │   └── ui/                # UI компоненты
+│   ├── hooks/                 # React хуки
+│   └── lib/                   # Утилиты (API клиент, цвета, изображения)
+├── bot/                        # Backend (Python 3.12+)
+│   ├── api_server.py          # FastAPI приложение (порт 8000)
+│   ├── bot.py                 # Telegram бот (Aiogram)
+│   ├── config.py              # Конфигурация
+│   ├── database.py            # Инициализация БД (aiosqlite)
+│   ├── auth_token.py          # JWT токены для безопасности
+│   ├── db/                    # ORM модели (SQLAlchemy)
+│   │   ├── models.py          # User, DinnerSlot, Booking, Payment модели
+│   │   ├── repository.py      # Репозитории (UserRepo, SlotRepo, BookingRepo, PaymentRepo)
+│   │   └── session.py         # Async сессии БД
+│   ├── commands/              # Telegram команды
+│   │   ├── admin_commands.py
+│   │   └── user_commands.py
+│   ├── middleware/            # Aiogram middleware
+│   │   └── admin_middleware.py
+│   ├── payments/              # Модуль платежей Ю-Кассы ✨ НОВОЕ
+│   │   ├── __init__.py
+│   │   ├── payment_config.py  # Конфигурация (Shop ID, Secret Key, Test Mode)
+│   │   ├── yookassa_payment.py # SDK обёртка для API Ю-Кассы
+│   │   └── payment_service.py # Сервис платежей (create, status, webhook)
+│   ├── requirements.txt        # Python зависимости (yookassa==3.2.0)
+│   ├── allora.db             # SQLite база данных
+│   ├── test_payments.py       # Unit-тест модуля платежей ✨ НОВОЕ
+│   ├── migrate_payments.py    # Миграция для создания таблицы payments ✨ НОВОЕ
+│   ├── fix_slots_null.py      # Исправление NULL значений в dinner_slots ✨ НОВОЕ
+│   ├── start_services.sh      # Управление сервисами (меню)
+│   ├── start_all.py           # Запуск всех сервисов
+│   └── check_deps.py          # Проверка зависимостей
+├── public/                     # Статические файлы
+│   └── images/
+│       └── onboarding/        # Изображения для онбординга
+├── package.json               # Node.js зависимости
+├── tsconfig.json              # TypeScript конфигурация
+├── next.config.ts             # Next.js конфигурация
+├── eslint.config.mjs          # ESLint конфигурация
+└── README.md                  # Этот файл
+```
 
 ## Функционал
 
-### Mini App
-- **Онбординг**: WelcomeScreen, AgeSelectionScreen, GenderSelectionScreen, RelationshipStatusScreen, ChildrenSelectionScreen, OccupationSelectionScreen, GoalSelectionScreen, InterestsSelectionScreen, ComfortSelectionScreen, CommunicationFormatScreen, EveningScenarioScreen, SocialFrequencyScreen, PhotoUploadScreen, AboutMeScreen, CitySelectionScreen.
-- **Анкетирование**: сбор данных профиля (имя, возраст, пол, семейное положение, дети, профессия, цели, интересы, уровень комфорта, формат общения, сценарий вечера, частота социальных взаимодействий, фото, о себе, город).
-- **Выбор города и фильтрация событий**.
-- **Бронирование слотов**: BookingFlow (выбор слота, симуляция оплаты, подтверждение).
-- **Профиль**: ProfileScreen (просмотр/редактирование), EditProfileScreen, MyBookingsScreen.
-- **Контакты**: ContactsScreen (просмотр контактов после бронирования).
+### 🎨 MiniApp (Next.js)
+- **Онбординг**: 15 экранов для сбора профиля
+  - Базовые данные: имя, возраст, пол, город
+  - Семья и работа: семейное положение, дети, профессия
+  - Интересы: цели, интересы, уровень комфорта
+  - Социальное: частота встреч, формат общения, сценарий вечера
+  - Фото и о себе: загрузка фото, описание
+- **Просмотр слотов**: фильтр по городу, отображение доступных мест
+- **Бронирование слотов**: выбор слота, оплата, подтверждение
+- **Профиль**: просмотр/редактирование, сохранение на сервер
+- **Мои бронирования**: список бронирований с деталями
+- **Контакты**: просмотр контактов других участников слота
+- **Выход**: безопасный logout
 
-### Telegram Bot
-- Приветствие и открытие MiniApp.
-- Управление простым flow бронирования и уведомления администратору.
-- Сохранение профиля в SQLite.
-- Админ-панель: создание слотов, управление, статистика, рассылка.
+### 🤖 Telegram Бот (Aiogram)
+- **/start** — приветствие и открытие MiniApp с JWT токеном
+- **Админ-панель** (для администраторов):
+  - Создание слотов (дата, время, город, ресторан, количество мест)
+  - Управление слотами (активация, деактивация, удаление)
+  - Просмотр статистики (пользователи, слоты, бронирования)
+  - Рассылка уведомлений пользователям
+- **Уведомления**: при бронировании, отмене, оплате ✨
+- **Админ-middleware**: проверка прав администратора
 
-### API (FastAPI)
-- `/api/slots` (GET): получение слотов (с фильтром по городу).
-- `/api/bookings` (GET, POST): получение бронирований пользователя, создание бронирования.
-- `/api/profile` (GET, POST): получение/сохранение профиля пользователя.
-- `/api/contacts` (GET): получение контактов для слота (после бронирования).
-- `/api/health` (GET): проверка здоровья сервера.
+### 💳 Система платежей (Ю-Касса) ✨ НОВОЕ
+- **Создание платежей**: через API эндпоинт `/api/payments`
+- **Режимы работы**: 
+  - **Тестовый** (Demo Shop ID: 100500) — бесплатные платежи
+  - **Продакшн** — реальные платежи (при наличии Shop ID)
+- **Webhook-обработка**: автоматическое обновление статуса платежей
+- **Статусы платежей**: created → pending → succeeded/canceled
+- **Интеграция**: привязка платежей к бронированиям пользователей
+- **Unit-тесты**: 9/9 тестов для проверки работоспособности ✨
+
+### 🔗 API (FastAPI)
+- `GET /api/slots` — получение слотов (с фильтром по городу)
+- `GET /api/bookings` — получение бронирований пользователя
+- `POST /api/bookings` — создание бронирования
+- `GET /api/profile` — получение профиля пользователя
+- `POST /api/profile` — сохранение профиля
+- `GET /api/contacts` — получение контактов участников слота
+- **Платежи** ✨:
+  - `POST /api/payments` — создание платежа
+  - `GET /api/payments/{payment_id}` — получение статуса платежа
+  - `POST /api/payments/webhook` — webhook от Ю-Кассы (async обновление)
+- `GET /api/health` — проверка здоровья сервера
+
+### 📊 База данных (SQLite + SQLAlchemy ORM)
+**Таблицы:**
+- `users` — профили пользователей (15+ полей)
+- `dinner_slots` — доступные слоты для встреч
+- `bookings` — бронирования пользователей
+- `payments` ✨ — платежи через Ю-Кассу (yookassa_payment_id, статусы, логи)
+
+**Скрипты утилит:**
+- `fix_slots_null.py` — исправление NULL значений в `current_bookings`
+- `migrate_payments.py` — создание таблицы `payments` в БД
 
 ## Установка и запуск
 
 ### Требования
-- Node.js 18+ (frontend)
-- Python 3.8+ (бот)
-- Bun (рекомендуется для frontend, но не обязательно)
+- **Frontend**: Node.js 18+, Bun (опционально)
+- **Backend**: Python 3.12+
+- **Система**: Ubuntu/Debian (для VPS) или Windows/Mac (для локальной разработки)
 
-### Frontend (miniApp)
-1. Установить зависимости:
+### 📦 Зависимости Backend
+
+Основные пакеты в `bot/requirements.txt`:
+```
+aiogram==3.9.0           # Telegram бот
+aiosqlite==0.20.0        # Async SQLite
+fastapi==0.109.0         # Web API
+uvicorn==0.27.0          # ASGI сервер
+sqlalchemy==2.0.25       # ORM
+pydantic==2.5.2          # Валидация данных
+PyJWT==2.8.1             # JWT токены
+yookassa==3.2.0          # Платежи Ю-Кассы ✨
+```
+
+### Frontend (MiniApp на Vercel)
+
+1. **Установка зависимостей:**
    ```bash
    bun install
+   # или
+   npm install
    ```
-2. Запустить dev:
+
+2. **Локальная разработка:**
    ```bash
    bun dev
+   # или
+   npm run dev
    ```
-3. Открыть http://localhost:3000
+   Откройте http://localhost:3000
 
-> В `next.config.ts` сейчас стоят `typescript.ignoreBuildErrors: true` и `eslint.ignoreDuringBuilds: true` — оставляем так временно.
+3. **Сборка и деплой:**
+   ```bash
+   npm run build
+   vercel --prod --yes
+   ```
 
-### Backend (Telegram бот + API сервер)
-1. Перейти в папку `bot/`:
+### Backend (Telegram Bot + FastAPI)
+
+1. **Перейти в папку bot:**
    ```bash
    cd bot
    ```
-2. Создать виртуальное окружение:
+
+2. **Создать виртуальное окружение:**
    ```bash
    python -m venv venv
    ```
-3. Активировать:
-   - Windows: `venv\Scripts\activate`
-   - Linux/Mac: `source venv/bin/activate`
-4. Установить зависимости:
+
+3. **Активировать окружение:**
+   - **Windows:** `venv\Scripts\activate`
+   - **Linux/Mac:** `source venv/bin/activate`
+
+4. **Установить зависимости:**
    ```bash
    pip install -r requirements.txt
    ```
-5. Настроить конфигурацию:
-   - В проекте сейчас используется `config.py` — пока оставляем его.
-   - Обязательные параметры: `BOT_TOKEN`, `MINIAPP_URL`, `DATABASE_NAME` (они должны быть в `config.py` или в переменных окружения).
-6. Запустить (2 варианта):
-   
-   **Вариант 1 - Все вместе:**
+
+5. **Настроить конфигурацию (`bot/config.py`):**
+   ```python
+   BOT_TOKEN = "YOUR_BOT_TOKEN"              # От @BotFather
+   MINIAPP_URL = "https://your-app.vercel.app"
+   SECRET_KEY = "your-secret-key"           # Для JWT
+   ADMIN_IDS = [123456789]                  # ID администраторов
+   ```
+
+6. **Запустить все сервисы (рекомендуется):**
    ```bash
    python start_all.py
    ```
    
-   **Вариант 2 - Раздельно:**
+   **Или раздельно:**
    ```bash
-   # Терминал 1 - API сервер
-   python api_server.py
+   # Терминал 1 - FastAPI
+   python -m uvicorn api_server:app --reload --port 8000
    
-   # Терминал 2 - Telegram бот
+   # Терминал 2 - Telegram Bot
    python bot.py
    ```
 
-## Архитектура
+7. **Интерактивное меню управления:**
+   ```bash
+   bash start_services.sh
+   ```
+   Дает возможность:
+   - Проверить статус процессов
+   - Остановить/запустить сервисы
+   - Просмотреть логи
+   - Миграции БД
 
-### Новая архитектура (FastAPI + Aiogram)
-- **Python Backend**: Единая база данных SQLite
-- **FastAPI Server**: HTTP API для связи с MiniApp (`bot/api_server.py`)
-- **Aiogram Bot**: Telegram бот для админки (`bot/bot.py`)
-- **Next.js MiniApp**: Фронтенд через HTTP API (`src/`)
+### ✨ Проверка интеграции платежей
 
-### Поток данных
-1. Админ создает слоты через Telegram бот
-2. Данные сохраняются в Python базу
-3. MiniApp получает данные через FastAPI
-4. Пользователи заполняют профили в MiniApp
-5. Бот может получать данные пользователей
+**Unit-тест модуля:**
+```bash
+cd bot
+python test_payments.py
+```
+
+**Ожидаемый результат:**
+```
+============================================================
+   ИТОГИ
+============================================================
+
+  [OK]         | Импорты
+  [OK]         | Конфигурация
+  [OK]         | Инициализация PaymentService
+  [OK]         | Методы PaymentService
+  [OK]         | Payment ORM модель
+  [OK]         | PaymentRepo
+  [OK]         | API эндпоинты
+  [OK]         | Webhook: payment.succeeded
+  [OK]         | Webhook: payment.canceled
+
+Результат: 9/9 тестов пройдено
+
+[SUCCESS] ВСЕ ТЕСТЫ ПРОЙДЕНЫ УСПЕШНО! [SUCCESS]
+```
+
+**Миграция БД (создание таблицы payments):**
+```bash
+python migrate_payments.py
+```
+
+**Исправление NULL значений в slots:**
+```bash
+python fix_slots_null.py
+```
+
+## Архитектура приложения
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🌐 ФРОНТЕНД (Vercel)                         │
+│                    Next.js 15.5.9, React                        │
+│                  URL: orchids-app.vercel.app                    │
+└────────────────────────────────────┬──────────────────────────────┘
+                                     │ HTTPS
+                                     │ JWT токен в Authorization
+                                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                🔌 API GATEWAY (Nginx на VPS)                     │
+│              api.your-domain.com → localhost:8000                │
+│          SSL (Let's Encrypt), CORS, Rate Limiting                │
+└────────────────────────────────────┬──────────────────────────────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    ▼                ▼                ▼
+          ┌─────────────────┐  ┌──────────────┐  ┌─────────────┐
+          │  ⚡ FastAPI     │  │  🤖 Telegram │  │  💾 SQLite  │
+          │  (Uvicorn)      │  │  Bot (Aiogram)  │  │  Database  │
+          │  PORT: 8000     │  │                 │  │ allora.db  │
+          │  /api/*         │  │  /commands      │  │            │
+          │  /api/payments/ │  │  /middleware    │  │ ✨ Payment │
+          │  /docs          │  │                 │  │   table    │
+          └────────┬────────┘  └────────┬────────┘  └─────┬──────┘
+                   │                    │                 │
+                   └────────────────────┼─────────────────┘
+                                        │
+                        ┌───────────────┴────────────────┐
+                        ▼                                ▼
+                   ┌─────────────┐              ┌────────────────┐
+                   │ 💳 Ю-Касса  │              │ SQLAlchemy ORM │
+                   │ SDK v3.2.0  │              │ (models.py)    │
+                   │ Test Mode   │              │                │
+                   │ (100500)    │              │ 4 модели:      │
+                   │             │              │ - User         │
+                   │ Webhook API │              │ - DinnerSlot   │
+                   │ (async)     │              │ - Booking      │
+                   └─────────────┘              │ - Payment ✨   │
+                                               └────────────────┘
+```
+
+### Поток данных:
+
+1. **Пользователь** открывает бота `/start` → получает JWT токен
+2. **MiniApp** получает токен → передает в заголовке Authorization
+3. **FastAPI** проверяет токен → получает user_id → выполняет запрос
+4. **Database** обрабатывает запрос → возвращает данные
+5. **MiniApp** отображает результат
+
+### Интеграция платежей:
+
+1. **User** выбирает слот → кликает "Оплатить"
+2. **MiniApp** вызывает `POST /api/payments` с amount, booking_id
+3. **FastAPI** создает платеж в Ю-Кассе (SDK)
+4. **Ю-Касса** возвращает confirmation_url
+5. **MiniApp** редирект на платежную страницу (Ю-Касса)
+6. **User** вводит реквизиты → платеж
+7. **Ю-Касса** отправляет webhook → `POST /api/payments/webhook`
+8. **FastAPI** обновляет статус платежа в БД
+9. **Bot** отправляет уведомление пользователю ✨
+
+## Безопасность
+
+### JWT токены
+- Генерируются на бэкенде: `generate_user_token(user_id)`
+- Подписаны SECRET_KEY (невозможно подделать)
+- Отправляются в заголовке: `Authorization: Bearer <token>`
+- Валидируются на каждом запросе: `validate_user_token(token)`
+- **Файлы:** `bot/auth_token.py`, `bot/commands/user_commands.py`
+
+### Админ-middleware
+- Проверяет ADMIN_IDS перед каждой админ-командой
+- Логирует попытки несанкционированного доступа
+- **Файл:** `bot/middleware/admin_middleware.py`
+
+### CORS
+- Разрешены только запросы с `NEXT_PUBLIC_API_BASE`
+- Защита от cross-site request forgery
+- **Конфиг:** `bot/api_server.py` (CORSMiddleware)
+
+### Платежи
+- Тестовый режим по умолчанию (Demo Shop ID: 100500)
+- Webhook подтверждение от Ю-Кассы
+- Все платежи логируются в БД
+- **Конфиг:** `bot/payments/payment_config.py`
 
 ## Запуск на сервере (Продакшен)
 
-### Запуск бота в фоновом режиме
-Бот должен работать постоянно на сервере и не прерываться при закрытии SSH соединения.
+### Архитектура сервера
 
-#### Вариант 1: nohup (простой)
-```bash
-cd /path/to/bot
-source venv/bin/activate
-nohup python start_all.py > bot.log 2>&1 &
+```
+VPS (Ubuntu/Debian) с выделенным IP
+├── Nginx (reverse proxy, SSL)
+│   ├── api.your-domain.com:443 → localhost:8000 (FastAPI)
+│   └── HTTP → HTTPS redirect
+├── Python 3.12 + venv
+│   ├── FastAPI (Uvicorn) на порту 8000
+│   │   └── /opt/orchids/bot/api_server.py
+│   ├── Telegram Bot (Aiogram)
+│   │   └── /opt/orchids/bot/bot.py
+│   └── SQLite БД
+│       └── /opt/orchids/bot/allora.db
+└── Let's Encrypt SSL сертификаты
+    └── auto-renewal через certbot
 ```
 
-Проверить процесс:
+### Шаг 1: Подготовка VPS
+
 ```bash
-ps aux | grep python
-```
-
-#### Вариант 2: screen (удобный)
-```bash
-cd /path/to/bot
-source venv/bin/activate
-screen -S bot_session
-python start_all.py
-# Нажать Ctrl+A, затем D для отделения сессии
-```
-
-Восстановить сессию:
-```bash
-screen -r bot_session
-```
-
-#### Вариант 3: systemd (профессиональный)
-Создать файл `/etc/systemd/system/orchids-bot.service`:
-```ini
-[Unit]
-Description=Orchids Networking Bot
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/path/to/bot
-ExecStart=/path/to/bot/venv/bin/python start_all.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Запустить:
-```bash
-sudo systemctl start orchids-bot
-sudo systemctl enable orchids-bot  # Автозапуск при перезагрузке
-sudo systemctl status orchids-bot  # Проверить статус
-```
-## Конфигурация для деплоя
-
-### Переменные окружения и файлы конфигурации
-
-#### Backend (bot/config.py)
-- `BOT_TOKEN`: Токен Telegram бота (получить у @BotFather)
-- `MINIAPP_URL`: Публичный URL развернутого MiniApp (например, https://your-app.vercel.app)
-- `SECRET_KEY`: Секретный ключ для подписи JWT токенов (обязателен в продакшене!)
-- `ADMIN_IDS`: Список ID администраторов через запятую (например, "123456789,987654321")
-- `DATABASE_NAME`: Имя файла базы данных SQLite (по умолчанию "allora.db")
-
-#### Frontend (src/lib/api.ts)
-- `API_BASE`: URL Python API сервера (например, "https://your-server.com" или "http://localhost:8000" для локальной разработки)
-
-## Получение Telegram ID (JWT токены)
-
-**Логика:**
-1. Пользователь нажимает "Начать!" в боте
-2. Бот получает ID: `message.from_user.id` (безопасно от Telegram)
-3. Бот генерирует JWT токен: `token = generate_user_token(user_id)`
-4. Бот отправляет ссылку: `app.com?token=<JWT>`
-5. Фронтенд декодирует токен: `jwtDecode(token)` → получает `user_id`
-6. Фронтенд отправляет токен в заголовке: `Authorization: Bearer <token>`
-7. Бэкенд проверяет токен: `validate_user_token(token)` → извлекает `user_id`
-
-**Почему это правильно:**
-- ✅ ID получается от Telegram (на бэкенде), не от клиента
-- ✅ Токен подписан SECRET_KEY (клиент не может подделать)
-- ✅ Нет ненадёжного polling на фронтенде
-- ✅ Полная безопасность и контроль на бэкенде
-
-**Файлы:**
-- `bot/auth_token.py` - генерация и валидация JWT
-- `bot/commands/user_commands.py` - создание токена при /start
-- `src/app/page.tsx` - декодирование токена
-- `src/lib/api.ts` - отправка токена в запросах
-
-### Настройка переменных окружения
-- Для backend: создать `.env` файл в папке `bot/` или задать переменные в системе.
-- Для frontend: переменные можно задать в Vercel или других платформах, но пока жестко в коде.
-
-## Развертывание
-
-### Архитектура приложения
-
-Приложение использует трёхуровневую архитектуру:
-
-1. **Frontend MiniApp** (Next.js) - развернут на Vercel или аналогичной платформе
-2. **Backend API** (FastAPI) - Python API сервер на VPS с поддержкой HTTPS
-3. **Telegram Bot** (Aiogram) - работает на том же VPS вместе с API
-4. **База данных** (SQLite) - находится на VPS
-
-### Шаг 1: Подготовка VPS сервера
-
-#### Требования к серверу:
-- Ubuntu/Debian VPS с выделенным IP или проксированием портов
-- Python 3.8+
-- Nginx (для reverse proxy и SSL)
-- Домен (например, `your-domain.com`)
-
-#### Установка на VPS:
-```bash
-# Обновить пакеты
+# Обновить систему
 sudo apt-get update && sudo apt-get upgrade -y
 
-# Установить Python и зависимости
-sudo apt-get install -y python3 python3-pip python3-venv
+# Установить зависимости
+sudo apt-get install -y python3 python3-pip python3-venv git
 sudo apt-get install -y nginx certbot python3-certbot-nginx
 
+# Создать папку приложения
+sudo mkdir -p /opt/orchids
+cd /opt/orchids
+
 # Клонировать репозиторий
-git clone <your-repo-url> /opt/bot
-cd /opt/bot
+git clone <your-repo-url> .
 
 # Создать виртуальное окружение
 python3 -m venv venv
 source venv/bin/activate
-
-# Установить зависимости
 cd bot
 pip install -r requirements.txt
 ```
 
-### Шаг 2: Получение SSL сертификата через Let's Encrypt
+### Шаг 2: SSL сертификат (Let's Encrypt)
 
 ```bash
-# Остановить Nginx (если работает)
+# Остановить Nginx
 sudo systemctl stop nginx
 
-# Получить сертификат для вашего домена
+# Получить сертификат
 sudo certbot certonly --standalone \
-  -d your-domain.com \
   -d api.your-domain.com \
-  -d www.your-domain.com \
+  -d your-domain.com \
   --agree-tos \
   --email your-email@example.com \
   --non-interactive
 
-# Сертификаты будут в: /etc/letsencrypt/live/your-domain.com/
+# Сертификаты в: /etc/letsencrypt/live/api.your-domain.com/
 ```
 
-### Шаг 3: Настройка Nginx как reverse proxy
+### Шаг 3: Nginx конфигурация
 
-Создайте файл конфигурации `/etc/nginx/conf.d/api.conf`:
-
-```bash
-sudo nano /etc/nginx/conf.d/api.conf
-```
-
-Вставьте:
+**Файл:** `/etc/nginx/conf.d/api.conf`
 
 ```nginx
-# HTTP to HTTPS redirect
+# HTTP → HTTPS редирект
 server {
     listen 80;
-    listen [::]:80;
-    server_name your-domain.com api.your-domain.com www.your-domain.com;
+    server_name api.your-domain.com your-domain.com;
     return 301 https://$server_name$request_uri;
 }
 
-# HTTPS for API
+# HTTPS для API (FastAPI)
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
     server_name api.your-domain.com;
 
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
+    ssl_certificate /etc/letsencrypt/live/api.your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.your-domain.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -297,103 +440,54 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Upgrade $http_upgrade;
         proxy_read_timeout 60s;
     }
 }
 
-# HTTPS for main domain (optional)
+# HTTPS для главного домена (редирект на MiniApp)
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
-    server_name your-domain.com www.your-domain.com;
+    listen 443 ssl http2;
+    server_name your-domain.com;
 
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_certificate /etc/letsencrypt/live/api.your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.your-domain.com/privkey.pem;
 
     location / {
-        return 301 https://your-miniapp-url.vercel.app;
+        return 301 https://your-miniapp.vercel.app;
     }
 }
 ```
 
-**Сохранить:** Ctrl+X, Y, Enter
-
 Затем:
 ```bash
-# Проверить синтаксис
 sudo nginx -t
-
-# Перезагрузить Nginx
 sudo systemctl restart nginx
 sudo systemctl enable nginx
 ```
 
-### Шаг 4: Обновить конфигурацию Backend
+### Шаг 4: Запуск сервисов (Systemd)
 
-Отредактируйте `/opt/bot/bot/config.py`:
-
-```python
-import os
-
-# Telegram Bot Token (получить у @BotFather)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-
-# URL вашего MiniApp (где развернут Next.js frontend)
-MINIAPP_URL = os.getenv("MINIAPP_URL", "https://your-miniapp.vercel.app")
-
-# Администраторы (Telegram ID)
-_admin_ids_env = os.getenv("ADMIN_IDS", "")
-if _admin_ids_env:
-    try:
-        ADMIN_IDS = [int(x.strip()) for x in _admin_ids_env.split(",") if x.strip()]
-    except ValueError:
-        ADMIN_IDS = []
-else:
-    ADMIN_IDS = [123456789]  # Замените на реальные ID
-
-# База данных
-DATABASE_NAME = os.getenv("DATABASE_NAME", "allora.db")
-```
-
-### Шаг 5: Запустить Backend сервисы
-
-**Вариант 1 - Все в одном процессе (простой):**
-
-```bash
-cd /opt/bot
-source venv/bin/activate
-nohup python -m uvicorn bot.api_server:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
-nohup python bot/bot.py > bot.log 2>&1 &
-```
-
-**Вариант 2 - Через systemd (рекомендуется для продакшена):**
-
-Создайте файл `/etc/systemd/system/orchids-api.service`:
+**FastAPI:** `/etc/systemd/system/orchids-api.service`
 
 ```ini
 [Unit]
-Description=Orchids API Server
+Description=Orchids FastAPI Server
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/bot
-ExecStart=/opt/bot/venv/bin/python -m uvicorn bot.api_server:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/opt/orchids/bot
+ExecStart=/opt/orchids/venv/bin/python -m uvicorn api_server:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=10
+Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Создайте файл `/etc/systemd/system/orchids-bot.service`:
+**Telegram Bot:** `/etc/systemd/system/orchids-bot.service`
 
 ```ini
 [Unit]
@@ -403,16 +497,17 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/bot
-ExecStart=/opt/bot/venv/bin/python bot/bot.py
+WorkingDirectory=/opt/orchids/bot
+ExecStart=/opt/orchids/venv/bin/python bot.py
 Restart=always
 RestartSec=10
+Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Затем:
+Активировать:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable orchids-api orchids-bot
@@ -420,96 +515,95 @@ sudo systemctl start orchids-api orchids-bot
 sudo systemctl status orchids-api orchids-bot
 ```
 
-### Шаг 6: Обновить Frontend (Vercel или другой хостинг)
+### Шаг 5: Конфигурация переменных окружения
 
-1. В `src/lib/api.ts` обновить API_BASE:
-```typescript
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.your-domain.com';
+Создайте `/opt/orchids/bot/.env`:
+
+```bash
+# Telegram Bot
+BOT_TOKEN=YOUR_BOT_TOKEN_FROM_BOTFATHER
+
+# MiniApp
+MINIAPP_URL=https://your-miniapp.vercel.app
+
+# Безопасность
+SECRET_KEY=your-secret-key-min-32-chars-long
+
+# Администраторы
+ADMIN_IDS=123456789,987654321
+
+# Платежи Ю-Кассы ✨
+YOOKASSA_SHOP_ID=100500                    # Demo по умолчанию
+YOOKASSA_SECRET_KEY=test_secret_key
+YOOKASSA_TEST_MODE=true                    # Для продакшена: false
+YOOKASSA_RETURN_URL=https://your-app.vercel.app/bookings
+
+# База данных
+DATABASE_NAME=/opt/orchids/bot/allora.db
 ```
 
-2. Развернуть на Vercel:
-```bash
-# Установить Vercel CLI
-npm i -g vercel
+Обновите `bot/config.py`:
+```python
+import os
+from dotenv import load_dotenv
 
-# Залогиниться
-vercel login
+load_dotenv()
 
-# Развернуть
-vercel --prod
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MINIAPP_URL = os.getenv("MINIAPP_URL")
+SECRET_KEY = os.getenv("SECRET_KEY")
+ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",")]
+DATABASE_NAME = os.getenv("DATABASE_NAME", "allora.db")
 ```
 
-3. Или добавить переменную окружения в Vercel UI:
-   - Settings → Environment Variables
-   - `NEXT_PUBLIC_API_BASE = https://api.your-domain.com`
+### Шаг 6: Проверка на VPS
 
-### Шаг 7: Настройка DNS (регистратор домена)
-
-1. Перейти на сайт регистратора домена
-2. Найти настройки DNS
-3. Добавить A-записи:
-   ```
-   Домен: your-domain.com → IP вашего VPS
-   Поддомен: api.your-domain.com → IP вашего VPS
-   Поддомен: www.your-domain.com → IP вашего VPS
-   ```
-
-4. Если используется проксирование портов (например, на Jino.ru):
-   - Отключить проксирование SSL для выделенного IP
-   - Или настроить проксирование на внутренний порт (например, 8000)
-
-5. Подождать 15-30 минут для распространения DNS
-
-### Шаг 8: Проверка
-
-**Проверить, что API доступен:**
 ```bash
+# Проверить API
 curl -I https://api.your-domain.com
-curl -I https://api.your-domain.com/docs
+
+# Проверить статус сервисов
+sudo systemctl status orchids-api orchids-bot
+
+# Просмотреть логи
+sudo journalctl -u orchids-api -f
+sudo journalctl -u orchids-bot -f
+
+# Проверить БД
+cd /opt/orchids/bot
+source ../venv/bin/activate
+python migrate_payments.py
+python fix_slots_null.py
 ```
 
-**Проверить CORS:**
-```bash
-curl -X OPTIONS https://api.your-domain.com/api/profile \
-  -H "Origin: https://your-miniapp.vercel.app" \
-  -H "Access-Control-Request-Method: GET" \
-  -v
-```
+### Шаг 7: Frontend (Vercel)
 
-**В браузере:**
-- Откройте ваш MiniApp на Vercel
-- Откройте DevTools (F12) → Console
-- Должна быть: `🔧 API_BASE: https://api.your-domain.com`
-- Network tab должен показывать запросы к `api.your-domain.com`
+1. Обновить `src/lib/api.ts`:
+   ```typescript
+   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.your-domain.com';
+   ```
 
-### Автоматическое обновление SSL сертификата
+2. В Vercel UI → Project Settings → Environment Variables:
+   ```
+   NEXT_PUBLIC_API_BASE = https://api.your-domain.com
+   ```
 
-Let's Encrypt сертификаты действуют 90 дней. Автоматическое обновление уже настроено:
+3. Развернуть:
+   ```bash
+   vercel --prod --yes
+   ```
+
+### 🔄 Auto-renewal SSL сертификата
+
+Let's Encrypt сертификаты на 90 дней. Auto-renewal уже включен:
 
 ```bash
 # Проверить статус
 sudo systemctl status certbot.timer
 
-# Или обновить вручную
-sudo certbot renew --dry-run
+# Обновить вручную
+sudo certbot renew
 ```
-
-### Решение проблем
-
-**Ошибка ERR_CERT_COMMON_NAME_INVALID в браузере:**
-- Очистить кеш браузера полностью (Ctrl+Shift+Delete)
-- Открыть в приватном окне
-- Проверить, что в Jino.ru отключено проксирование SSL для вашего IP
-
-**FastAPI недоступен:**
-- Проверить, что процесс запущен: `ps aux | grep uvicorn`
-- Проверить логи: `tail -f /opt/bot/api.log`
-- Проверить, что Nginx работает: `sudo systemctl status nginx`
-
-**Бот не отвечает:**
-- Проверить токен в config.py
-- Проверить логи: `tail -f /opt/bot/bot.log`
-- Проверить подключение: `curl https://api.telegram.org/bot<TOKEN>/getMe`
 
 ## Конфигурация для деплоя
 

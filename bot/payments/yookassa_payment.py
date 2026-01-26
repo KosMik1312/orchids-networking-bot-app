@@ -5,7 +5,7 @@
 
 import uuid
 from typing import Optional, Dict, Any
-from yookassa import client, Payment
+from yookassa import Payment, Configuration
 
 from .payment_config import YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, YOOKASSA_TEST_MODE
 
@@ -15,8 +15,12 @@ class YooKassaPayment:
     
     def __init__(self):
         """Инициализирует клиент Ю-Кассы с Shop ID и Secret Key."""
-        client.configure(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
+        # Инициализируем SDK через Configuration
+        Configuration.configure(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
+        self.shop_id = YOOKASSA_SHOP_ID
+        self.secret_key = YOOKASSA_SECRET_KEY
         self.test_mode = YOOKASSA_TEST_MODE
+        print(f"[PAYMENT] YooKassaPayment initialized with Shop ID: {self.shop_id}")
     
     def create_payment(
         self, 
