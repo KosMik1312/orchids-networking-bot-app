@@ -5,7 +5,7 @@
 
 import uuid
 from typing import Optional, Dict, Any
-from yookassa import Client, Payment as YooPayment
+from yookassa import client, Payment
 
 from .payment_config import YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, YOOKASSA_TEST_MODE
 
@@ -15,7 +15,7 @@ class YooKassaPayment:
     
     def __init__(self):
         """Инициализирует клиент Ю-Кассы с Shop ID и Secret Key."""
-        Client.configure(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
+        client.configure(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
         self.test_mode = YOOKASSA_TEST_MODE
     
     def create_payment(
@@ -61,7 +61,7 @@ class YooKassaPayment:
                 payment_params["metadata"] = metadata
             
             # Создаём платёж
-            payment = YooPayment.create(
+            payment = Payment.create(
                 payment_params,
                 idempotency_key=idempotency_key
             )
@@ -100,7 +100,7 @@ class YooKassaPayment:
             Dict с информацией о платеже
         """
         try:
-            payment = YooPayment.find_one(payment_id)
+            payment = Payment.find_one(payment_id)
             
             print(f"[PAYMENT] Retrieved payment info:")
             print(f"  ID: {payment.id}")
@@ -135,7 +135,7 @@ class YooKassaPayment:
             Dict с результатом отмены
         """
         try:
-            payment = YooPayment.find_one(payment_id)
+            payment = Payment.find_one(payment_id)
             payment.cancel()
             
             print(f"[PAYMENT] Payment cancelled: {payment_id}")

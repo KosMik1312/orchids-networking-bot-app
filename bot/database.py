@@ -134,7 +134,7 @@ async def create_slot(date: str, time: str, city: str, restaurant: str, max_peop
     db_path = os.path.abspath(DATABASE_NAME)
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
-            "INSERT INTO dinner_slots (date, time, city, restaurant, max_people, is_active) VALUES (?, ?, ?, ?, ?, 1)",
+            "INSERT INTO dinner_slots (date, time, city, restaurant, max_people, current_bookings, is_active) VALUES (?, ?, ?, ?, ?, 0, 1)",
             (date, time, city, restaurant, max_people),
         )
         await db.commit()
