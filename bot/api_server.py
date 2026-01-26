@@ -303,6 +303,9 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/bookings")
+async def create_booking_endpoint(request: BookingRequest, session: AsyncSession = Depends(get_session)):
     try:
         print(f"\n[API BOOKING] === CREATE BOOKING START ===")
         print(f"[API BOOKING] User ID: {request.userId}, Slot ID: {request.slotId}")
@@ -325,7 +328,6 @@ async def get_user_bookings_endpoint(userId: int, session: AsyncSession = Depend
         traceback.print_exc()
         print(f"[API BOOKING] === ERROR END ===\n")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/api/contacts")
 async def get_contacts_endpoint(slotId: int, userId: int, session: AsyncSession = Depends(get_session)):
     try:
