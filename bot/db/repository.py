@@ -140,9 +140,11 @@ class BookingRepo(BaseRepo):
         """
         Создает бронирование в рамках транзакции, чтобы обеспечить целостность данных.
         """
-        # Начало транзакции обеспечивается самой сессией, коммит в конце
+        print(f"[REPO BOOKING] === START create_booking ===")
+        print(f"[REPO BOOKING] user_id={user_id}, slot_id={slot_id}")
         
         # 1. Проверяем, не забронировал ли пользователь этот слот ранее
+        print(f"[REPO BOOKING] Проверка дублей бронирования...")
         existing_booking = await self.session.execute(
             select(models.Booking).where(
                 models.Booking.user_id == user_id,
@@ -150,21 +152,38 @@ class BookingRepo(BaseRepo):
             )
         )
         if existing_booking.scalar_one_or_none() is not None:
-            return False  # Уже забронировано
+            print(f"[REPO BOOKING] ОШИБКА: Пользователь уже забронировал этот слот")
+            return False
 
         # 2. Получаем слот и проверяем наличие мест
+        print(f"[REPO BOOKING] Получение слота {slot_id}...")
         slot = await self.session.get(models.DinnerSlot, slot_id)
-        if not slot or not slot.is_active or slot.current_bookings >= slot.max_people:
-            return False # Слот не найден, неактивен или полон
+        
+        if not slot:
+            print(f"[REPO BOOKING] ОШИБКА: Слот {slot_id} не найден!")
+            return False
+        
+        print(f"[REPO BOOKING] Слот найден: id={slot.id}, is_active={slot.is_active}, current_bookings={slot.current_bookings}, max_people={slot.max_people}")
+        
+        if not slot.is_active:
+            print(f"[REPO BOOKING] ОШИБКА: Слот неактивен (is_active={slot.is_active})")
+            return False
+        
+        if slot.current_bookings >= slot.max_people:
+            print(f"[REPO BOOKING] ОШИБКА: Слот полон ({slot.current_bookings}/{slot.max_people})")
+            return False
         
         # 3. Создаем бронирование
+        print(f"[REPO BOOKING] Создание записи бронирования...")
         new_booking = models.Booking(user_id=user_id, slot_id=slot_id)
         self.session.add(new_booking)
         
         # 4. Увеличиваем счетчик бронирований
+        print(f"[REPO BOOKING] Увеличение счетчика: {slot.current_bookings} -> {slot.current_bookings + 1}")
         slot.current_bookings += 1
         
         await self.session.commit()
+        print(f"[REPO BOOKING] === УСПЕШНО ===\n")
         return True
 
     async def get_user_bookings(self, user_id: int) -> List[models.Booking]:
