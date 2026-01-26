@@ -186,6 +186,8 @@ export async function getUserBookings(userId: number): Promise<{ bookings: Booki
 
 export async function createBooking(userId: number, slotId: number): Promise<{success: boolean}> {
   console.log(`[API] Creating booking: userId=${userId}, slotId=${slotId}`);
+  console.log(`[API] Request body:`, JSON.stringify({ userId, slotId }));
+  
   const response = await fetch(`${API_BASE}/api/bookings`, {
     method: 'POST',
     headers: { 
@@ -193,6 +195,14 @@ export async function createBooking(userId: number, slotId: number): Promise<{su
     },
     body: JSON.stringify({ userId, slotId }),
   });
+  
+  console.log(`[API] Booking response status: ${response.status}`);
+  
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    console.log(`[API] Booking error response:`, text);
+  }
+  
   return handleResponse(response);
 }
 
