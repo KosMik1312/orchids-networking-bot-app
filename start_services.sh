@@ -12,6 +12,28 @@ cd /opt/allora_bot/bot
 # Активировать виртуальное окружение
 source venv/bin/activate
 
+# Параметры командной строки
+FORCE=false
+# Парсинг опций (например: ./start_services.sh --force)
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f|--force)
+            FORCE=true
+            shift
+            ;;
+        *)
+            echo -e "${YELLOW}⚠ Неизвестная опция: $1${NC}"
+            exit 1
+            ;;
+    esac
+done
+
+# Файл логов для операций с БД
+LOG_FILE="$PWD/db_cleanup.log"
+# Флаг, чтобы пропустить паузу и сразу показать меню после операции
+SKIP_PAUSE=false
+
+
 # ============ ФУНКЦИИ ============
 
 show_menu() {
@@ -26,7 +48,13 @@ show_menu() {
     echo -e "${YELLOW}5.${NC} Запустить Бот и FastAPI последовательно"
     echo -e "${YELLOW}6.${NC} Запустить только FastAPI"
     echo -e "${YELLOW}7.${NC} Запустить только Бот"
+    echo -e "${YELLOW}8.${NC} Очистить базу данных (ВНИМАНИЕ: удаляет все данные)"
     echo -e "${YELLOW}0.${NC} Выход"
+
+    if [ "$FORCE" = "true" ]; then
+        echo -e "${RED}* Режим FORCE: подтверждения отключены${NC}"
+    fi
+
     echo ""
 }
 
@@ -217,6 +245,99 @@ start_both() {
     check_status
 }
 
+clear_database() {
+    echo ""
+    # Линейка лога: START
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] START clear_database FORCE=$FORCE USER=${USER:-$(whoami)}" >> "$LOG_FILE"
+
+    echo -e "${RED}⚠ ВНИМАНИЕ!${NC} Эта операция удалит ВСЕ данные из базы данных."
+    if [ "$FORCE" = "true" ]; then
+        echo -e "${YELLOW}--force задано: пропускаю подтверждение${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] --force задано: подтверждение пропущено" >> "$LOG_FILE"
+    else
+        read -p "Введите 'YES' для подтверждения: " confirm
+        if [ "$confirm" != "YES" ]; then
+            echo "Операция отменена."
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] CANCELLED by user" >> "$LOG_FILE"
+            return
+        fi
+    fi
+
+    echo -e "${YELLOW}🛑 Останавливаю сервисы перед очисткой...${NC}"
+    stop_all
+
+    # Получаем путь к БД из конфигурации Python
+    DB_PATH=$(python - <<PY
+import os
+from config import DATABASE_NAME
+print(os.path.abspath(DATABASE_NAME))
+PY
+)
+
+    if [ -z "$DB_PATH" ]; then
+        echo -e "${RED}✗ Не удалось определить путь к базе данных${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: DB path not found" >> "$LOG_FILE"
+        SKIP_PAUSE=true
+        return
+    fi
+
+    if [ -f "$DB_PATH" ]; then
+        BACKUP="${DB_PATH}.backup.$(date +%Y%m%d%H%M%S)"
+        cp "$DB_PATH" "$BACKUP"
+        echo -e "${GREEN}✓ Бэкап базы создан: $BACKUP${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] BACKUP created: $BACKUP" >> "$LOG_FILE"
+    else
+        echo -e "${YELLOW}⚠ Файл БД не найден по пути: $DB_PATH${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: DB file not found at $DB_PATH" >> "$LOG_FILE"
+    fi
+
+    echo -e "${YELLOW}🧹 Очищаю структуру базы (drop/create)...${NC}"
+    python - <<PY
+import asyncio
+import sys
+import signal
+from db.session import get_async_engine
+from db.models import Base
+
+# Обработка сигнала прерывания для чистого выхода
+def handle_sigint(signum, frame):
+    print("Операция прервана пользователем (SIGINT)")
+    sys.exit(1)
+
+signal.signal(signal.SIGINT, handle_sigint)
+
+async def run():
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+try:
+    asyncio.run(run())
+    print("✅ Очистка и инициализация БД завершены")
+    sys.exit(0)
+except KeyboardInterrupt:
+    print("Операция прервана пользователем (KeyboardInterrupt)")
+    sys.exit(1)
+except Exception as e:
+    print(f"Ошибка при очистке БД: {e}")
+    sys.exit(1)
+PY
+
+    PY_EXIT=$?
+    if [ $PY_EXIT -eq 0 ]; then
+        echo -e "${GREEN}✅ База данных очищена${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: DB cleared" >> "$LOG_FILE"
+    else
+        echo -e "${RED}✗ Ошибка при очистке БД (код: $PY_EXIT)${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: DB cleanup failed (exit $PY_EXIT)" >> "$LOG_FILE"
+    fi
+
+    # После операции возвращаемся в меню без паузы
+    SKIP_PAUSE=true
+}
+
+
 # ============ ОСНОВНОЙ ЦИКЛ ============
 
 while true; do
@@ -245,14 +366,22 @@ while true; do
         7)
             start_bot
             ;;
+        8)
+            clear_database
+            ;;
         0)
             echo -e "${BLUE}👋 До свидания!${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-7${NC}"
+            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-8${NC}"
             ;;
     esac
     
+    if [ "$SKIP_PAUSE" = "true" ]; then
+        SKIP_PAUSE=false
+        continue
+    fi
+
     read -p "Нажмите Enter для продолжения..." dummy
 done
