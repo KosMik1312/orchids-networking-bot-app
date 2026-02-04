@@ -6,8 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime
 
-# Импортируем функции из нашего API для работы с БД
-from database import (
+# Импортируем вспомогательные функции из database_helpers для работы с БД
+from database_helpers import (
     create_slot,
     get_all_slots,
     get_users_count,

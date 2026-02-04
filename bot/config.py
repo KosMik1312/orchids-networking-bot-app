@@ -1,19 +1,25 @@
 # Конфигурация бота
 import os
+from typing import Optional
 
 # Базовая директория (папка bot/)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Токен бота (по возможности храните в переменных окружения)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8121198859:AAEY7nBbJjHBd7RZ4BbYOKHBBMCyNF3ydEg")
+# Загружаем .env файл из директории bot/ (если он есть)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
+except Exception:
+    # python-dotenv может не быть установлен в некоторых окружениях — тогда переменные берутся из окружения
+    pass
+# ===== ТОКЕНЫ И СЕКРЕТЫ (читаются из окружения / .env) =====
+# По соображениям безопасности секреты не задаются в коде.
+# Заполните эти переменные в файле .env на сервере или в системных переменных.
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MINIAPP_URL = os.getenv("MINIAPP_URL")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-# URL MiniApp
-MINIAPP_URL = os.getenv("MINIAPP_URL", "https://orchids-networking-bot-app.vercel.app")
-
-# Секретный ключ для подписи токенов пользователей
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-12345")
-
-# ID администраторов (можно задать через переменные окружения, разделённые запятой)
+# ID администраторов
 _admin_ids_env = os.getenv("ADMIN_IDS", "")
 if _admin_ids_env:
     try:
@@ -21,14 +27,58 @@ if _admin_ids_env:
     except ValueError:
         ADMIN_IDS = []
 else:
-    ADMIN_IDS = [
-        432235211,
-        5122343544,
-        6488220931,
-    ]
+    # По умолчанию список админов пуст — укажите ADMIN_IDS в .env
+    ADMIN_IDS = []
 
-# Путь к базе данных.
-# Важно: на сервере текущая рабочая директория может отличаться,
-# поэтому приводим относительный путь к абсолютному относительно bot/.
-_database_name_raw = os.getenv("DATABASE_NAME", "allora.db")
-DATABASE_NAME = _database_name_raw if os.path.isabs(_database_name_raw) else os.path.join(BASE_DIR, _database_name_raw)
+# ===== КОНФИГУРАЦИЯ БД =====
+# Поддерживает как SQLite (локальная разработка), так и PostgreSQL (production)
+
+# Способ 1: Использовать DATABASE_URL (рекомендуется для production)
+# Примеры:
+#   - SQLite:     sqlite+aiosqlite:///path/to/database.db
+#   - PostgreSQL: postgresql+asyncpg://user:password@localhost:5432/dbname
+DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
+
+# Способ 2: Если DATABASE_URL не задана, используем старую конфигурацию (для совместимости)
+if not DATABASE_URL:
+    # Тип БД (sqlite или postgresql)
+    DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
+    
+    if DB_TYPE == "sqlite":
+        _database_name_raw = os.getenv("DATABASE_NAME", "allora.db")
+        db_path = _database_name_raw if os.path.isabs(_database_name_raw) else os.path.join(BASE_DIR, _database_name_raw)
+        DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+        DATABASE_NAME = db_path  # Для обратной совместимости
+    elif DB_TYPE == "postgresql":
+        # PostgreSQL конфигурация
+        DB_HOST = os.getenv("DB_HOST", "localhost")
+        DB_PORT = os.getenv("DB_PORT", "5432")
+        DB_USER = os.getenv("DB_USER", "orchids_user")
+        DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+        DB_NAME = os.getenv("DB_NAME", "orchids_networking")
+        
+        DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        DATABASE_NAME = DB_NAME  # Для обратной совместимости
+    else:
+        raise ValueError(f"Unknown DB_TYPE: {DB_TYPE}")
+else:
+    # Если DATABASE_URL задана, извлекаем имя БД для обратной совместимости
+    if "sqlite" in DATABASE_URL:
+        DATABASE_NAME = DATABASE_URL.split("///")[-1]
+    else:
+        DATABASE_NAME = DATABASE_URL.split("/")[-1]
+
+# ===== ПАРАМЕТРЫ ПОДКЛЮЧЕНИЯ =====
+# Pooling для оптимизации подключений к БД
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
+DB_POOL_MAX_OVERFLOW = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))
+DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # Переиспользовать соединения каждый час
+
+# Echo SQL queries (для отладки)
+DB_ECHO = os.getenv("DB_ECHO", "false").lower() == "true"
+
+# Логирование
+import logging
+if DB_ECHO:
+    logging.basicConfig()
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)

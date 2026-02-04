@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class UserProfile(BaseModel):
@@ -20,5 +20,4 @@ class UserProfile(BaseModel):
     about_me: Optional[str] = Field(None, description="About me text")
     city: Optional[str] = Field(None, description="City")
 
-    class Config:
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(str_strip_whitespace=True)

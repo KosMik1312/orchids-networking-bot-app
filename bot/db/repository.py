@@ -42,8 +42,8 @@ class UserRepo(BaseRepo):
             user = models.User(user_id=user_id)
             self.session.add(user)
         
-        # Используем dict(exclude_none=True) чтобы не затирать существующие данные на None
-        profile_dict = profile_data.dict(exclude_none=True)
+        # Используем model_dump(exclude_none=True) чтобы не затирать существующие данные на None
+        profile_dict = profile_data.model_dump(exclude_none=True)
         
         print(f"[REPO] Saving profile for user {user_id}")
         print(f"[REPO] Profile dict: {profile_dict}")

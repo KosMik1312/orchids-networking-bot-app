@@ -10,7 +10,8 @@ from aiogram.types import Message
 
 # Импорты из нашей структуры
 from config import BOT_TOKEN
-from database import init_db, save_user_profile, get_user_profile
+from db.session import init_db
+from db.repository import UserRepo
 from middleware.admin_middleware import AdminMiddleware
 from commands.user_commands import user_router
 from commands.admin_commands import admin_router
@@ -69,8 +70,8 @@ async def save_profile(message: Message) -> None:
     profile_data = {"name": "Пример", "age": 25, "interests": "ужины"}
 
     try:
-        await save_user_profile(user_id, profile_data)
-        await message.answer("Профиль сохранён! Теперь можешь искать компанию.")
+        # Note: В реальном приложении профиль сохраняется через API
+        await message.answer("Профиль можешь сохранить через приложение. Теперь можешь искать компанию.")
     except Exception as e:
         logger.error(f"Profile save failed for user {user_id}: {e}")
         await message.answer(f"Ошибка при сохранении профиля: {e}")

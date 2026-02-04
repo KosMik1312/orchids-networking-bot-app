@@ -80,6 +80,23 @@ check_status() {
     echo ""
 }
 
+# Проверка валидности токена бота (простая) из config
+check_bot_token() {
+    BOT_TOKEN_VAL=$(python - <<PY
+from config import BOT_TOKEN
+print(BOT_TOKEN or "")
+PY
+)
+
+    # Простая проверка: токен не пустой и не содержит плейсхолдер
+    if [ -z "$BOT_TOKEN_VAL" ] || echo "$BOT_TOKEN_VAL" | grep -qi "your\|placeholder\|YOUR\|REPLACE\|BOT_TOKEN"; then
+        echo -e "${RED}✗ BOT_TOKEN не задан или содержит плейсхолдер в .env. Бот не будет запущен.${NC}"
+        echo -e "  Установите реальный токен в .env (BOT_TOKEN=...) и повторите запуск."
+        return 1
+    fi
+    return 0
+}
+
 stop_all() {
     echo ""
     echo -e "${YELLOW}🛑 Остановка всех процессов...${NC}"
@@ -219,6 +236,12 @@ start_bot() {
         return
     fi
     
+    # Проверка токена перед запуском
+    check_bot_token
+    if [ $? -ne 0 ]; then
+        return
+    fi
+    
     nohup python start_all.py > bot.log 2>&1 &
     BOT_PID=$!
     disown $BOT_PID
@@ -266,29 +289,65 @@ clear_database() {
     echo -e "${YELLOW}🛑 Останавливаю сервисы перед очисткой...${NC}"
     stop_all
 
-    # Получаем путь к БД из конфигурации Python
-    DB_PATH=$(python - <<PY
+    # Определяем тип БД и делаем резервную копию
+    DB_URL=$(python - <<PY
+from config import DATABASE_URL
+print(DATABASE_URL or "")
+PY
+)
+
+    DB_SCHEME=$(echo "$DB_URL" | awk -F: '{print $1}')
+
+    if [ "$DB_SCHEME" = "sqlite+aiosqlite" ] || [ "$DB_SCHEME" = "sqlite" ]; then
+        # SQLite: делаем копию файла
+        DB_PATH=$(python - <<PY
 import os
 from config import DATABASE_NAME
 print(os.path.abspath(DATABASE_NAME))
 PY
 )
 
-    if [ -z "$DB_PATH" ]; then
-        echo -e "${RED}✗ Не удалось определить путь к базе данных${NC}"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: DB path not found" >> "$LOG_FILE"
-        SKIP_PAUSE=true
-        return
-    fi
+        if [ -z "$DB_PATH" ]; then
+            echo -e "${RED}✗ Не удалось определить путь к SQLite базе данных${NC}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: SQLite DB path not found" >> "$LOG_FILE"
+            SKIP_PAUSE=true
+            return
+        fi
 
-    if [ -f "$DB_PATH" ]; then
-        BACKUP="${DB_PATH}.backup.$(date +%Y%m%d%H%M%S)"
-        cp "$DB_PATH" "$BACKUP"
-        echo -e "${GREEN}✓ Бэкап базы создан: $BACKUP${NC}"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] BACKUP created: $BACKUP" >> "$LOG_FILE"
+        if [ -f "$DB_PATH" ]; then
+            BACKUP="${DB_PATH}.backup.$(date +%Y%m%d%H%M%S)"
+            cp "$DB_PATH" "$BACKUP"
+            echo -e "${GREEN}✓ Бэкап SQLite базы создан: $BACKUP${NC}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] BACKUP created: $BACKUP" >> "$LOG_FILE"
+        else
+            echo -e "${YELLOW}⚠ Файл SQLite БД не найден по пути: $DB_PATH${NC}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: SQLite DB file not found at $DB_PATH" >> "$LOG_FILE"
+        fi
+
+    elif [ "$DB_SCHEME" = "postgresql+asyncpg" ] || [ "$DB_SCHEME" = "postgresql" ]; then
+        # PostgreSQL: делаем дамп через pg_dump (если доступен)
+        BACKUP_FILE="$PWD/postgres_backup_$(date +%Y%m%d%H%M%S).sql.gz"
+        if command -v pg_dump > /dev/null 2>&1; then
+            echo -e "${YELLOW}⤓ Создаю дамп PostgreSQL: $BACKUP_FILE${NC}"
+            # Используем connection string из config.py
+            echo "$DB_URL" | grep -q @ || true
+            # pg_dump поддерживает строку подключения через --dbname
+            pg_dump --dbname="$DB_URL" | gzip > "$BACKUP_FILE" 2>> "$LOG_FILE"
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ Дамп PostgreSQL создан: $BACKUP_FILE${NC}"
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] BACKUP created: $BACKUP_FILE" >> "$LOG_FILE"
+            else
+                echo -e "${RED}✗ Ошибка при создании дампа PostgreSQL${NC}"
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: pg_dump failed" >> "$LOG_FILE"
+            fi
+        else
+            echo -e "${YELLOW}⚠ pg_dump не найден. Пропускаю создание дампа.${NC}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: pg_dump not found" >> "$LOG_FILE"
+        fi
+
     else
-        echo -e "${YELLOW}⚠ Файл БД не найден по пути: $DB_PATH${NC}"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: DB file not found at $DB_PATH" >> "$LOG_FILE"
+        echo -e "${YELLOW}⚠ Неизвестный тип БД (не SQLite и не PostgreSQL). Попытка продолжить...${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Unknown DB scheme: $DB_SCHEME" >> "$LOG_FILE"
     fi
 
     echo -e "${YELLOW}🧹 Очищаю структуру базы (drop/create)...${NC}"

@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from contextlib import asynccontextmanager
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 import sys
 import io
@@ -19,7 +20,15 @@ from payments.payment_service import PaymentService
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-app = FastAPI(title="Orchids Networking Bot API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+    pass
+
+app = FastAPI(title="Orchids Networking Bot API", lifespan=lifespan)
 
 # Security для токенов
 security = HTTPBearer()
@@ -56,6 +65,8 @@ app.add_middleware(
 
 # Pydantic модели
 class UserProfile(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
     name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
@@ -94,19 +105,16 @@ class PaymentWebhookRequest(BaseModel):
     data: dict
 
 # API эндпоинты
-@app.on_event("startup")
-async def startup():
-    await init_db()
-
 @app.post("/api/profile")
 async def save_profile_endpoint(request: ProfileRequest, session: AsyncSession = Depends(get_session)):
     print(f"\n[API] === SAVE PROFILE START ===")
     print(f"[API] User ID: {request.userId}")
-    print(f"[API] Request profile dict: {request.profile.dict()}")
-    print(f"[API] Request profile dict (exclude_none): {request.profile.dict(exclude_none=True)}")
+    profile_dict = request.profile.model_dump(exclude_none=False)
+    print(f"[API] Request profile dict: {profile_dict}")
+    print(f"[API] Request profile dict (exclude_none): {request.profile.model_dump(exclude_none=True)}")
     try:
         user_repo = UserRepo(session)
-        profile_schema = UserProfileSchema(**request.profile.dict())
+        profile_schema = UserProfileSchema(**profile_dict)
         print(f"[API] Profile schema created: {profile_schema}")
         result = await user_repo.save_user_profile(request.userId, profile_schema)
         print(f"[API] Profile saved successfully, returning success response")
@@ -122,25 +130,13 @@ async def save_profile_endpoint(request: ProfileRequest, session: AsyncSession =
 @app.get("/api/profile")
 async def get_profile_endpoint(
     userId: Optional[int] = None,
-    session: AsyncSession = Depends(get_session),
-    user_id_from_token: Optional[int] = Depends(lambda: None)
+    session: AsyncSession = Depends(get_session)
 ):
     """
-    Получить профиль пользователя.
-    Может использовать либо userId query параметр, либо токен в заголовке Authorization.
+    Получить профиль пользователя по userId.
     """
-    # Если передан токен в заголовке, приоритет выше
-    try:
-        credentials = None
-        # Попытка получить токен из заголовков
-        # Note: это сделано для совместимости, нужно улучшить
-        if not userId:
-            raise HTTPException(status_code=400, detail="userId or token required")
-    except:
-        pass
-    
     if not userId:
-        raise HTTPException(status_code=400, detail="userId or token required")
+        raise HTTPException(status_code=400, detail="userId query parameter is required")
     
     try:
         user_repo = UserRepo(session)
@@ -168,8 +164,13 @@ async def get_profile_endpoint(
             "city": user.city
         }
         return {"profile": profile_dict}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[ERROR] Get profile failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.get("/test")
 async def test_endpoint(session: AsyncSession = Depends(get_session)):
