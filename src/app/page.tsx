@@ -51,7 +51,6 @@ export default function Home() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userAboutMe, setUserAboutMe] = useState("");
   const [userCity, setUserCity] = useState("");
-  const [onboardingStep, setOnboardingStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -292,12 +291,10 @@ export default function Home() {
 
   const handleBackToWelcome = () => {
     setCurrentScreen("welcome");
-    setOnboardingStep(1);
   };
 
   const handleBackToOnboarding = () => {
     setCurrentScreen("onboarding");
-    setOnboardingStep(4);
   };
 
   const handleBackToQuiz = () => {
@@ -456,12 +453,7 @@ export default function Home() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <OnboardingScreen
-              currentStep={onboardingStep}
-              onStepChange={setOnboardingStep}
-              onComplete={handleOnboardingComplete}
-              onBack={handleBackToWelcome}
-            />
+            <OnboardingScreen onComplete={handleOnboardingComplete} />
           </motion.div>
         )}
 

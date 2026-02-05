@@ -1,208 +1,134 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight } from "lucide-react";
+import { ru } from "@/lib/i18n";
 import { IMAGE_PATHS } from "@/lib/images";
-
-interface OnboardingStep {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-}
-
-const onboardingSteps: OnboardingStep[] = [
-  {
-    id: 1,
-    title: "РАССКАЖИ О СЕБЕ",
-    description: "Заполни короткую анкету и мы найдем тебе подходящих собеседников",
-    image: IMAGE_PATHS.onboarding.step1,
-  },
-  {
-    id: 2,
-    title: "ПОДБИРАЕМ КОМПАНИЮ",
-    description: "Наш алгоритм учитывает возраст, стиль общения, темперамент и другие нюансы",
-    image: IMAGE_PATHS.onboarding.step2,
-  },
-  {
-    id: 3,
-    title: "МЫ ВСЁ ОРГАНИЗУЕМ",
-    description: "Создаем развлекательную программу для вашей компании, где позитивные эмоции и общие интересы объединяют",
-    image: IMAGE_PATHS.onboarding.step3,
-  },
-  {
-    id: 4,
-    title: "ДЕНЬ X",
-    description: "Идеально для каждого! Наслаждайтесь вечером с людьми, которые разделяют ваш интерес, цели и желания",
-    image: IMAGE_PATHS.onboarding.step4,
-  },
-];
-
-interface StepIndicatorProps {
-  currentStep: number;
-  totalSteps: number;
-}
-
-function StepIndicator({ currentStep, totalSteps }: StepIndicatorProps) {
-  return (
-    <div className="flex items-center gap-0 px-4 pt-4">
-      {Array.from({ length: totalSteps }, (_, i) => {
-        const stepNum = i + 1;
-        const isActive = stepNum === currentStep;
-        const isCompleted = stepNum < currentStep;
-        const isLast = i === totalSteps - 1;
-
-        return (
-          <div key={stepNum} className="flex items-center">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: i * 0.1 }}
-              className={`
-                w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold
-                ${
-                  isActive || isCompleted
-                    ? "text-white"
-                    : "bg-transparent border-2 border-white text-white"
-                }
-              `}
-              style={{ 
-                fontFamily: "'Montserrat', sans-serif",
-                backgroundColor: (isActive || isCompleted) ? "#E15859" : "transparent"
-              }}
-            >
-              {stepNum}
-            </motion.div>
-            {!isLast && (
-              <div
-                className={`w-6 h-[2px] ${
-                  stepNum < currentStep ? "bg-[#E15859]" : "bg-white"
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 interface OnboardingScreenProps {
   onComplete: () => void;
-  onBack: () => void;
-  currentStep: number;
-  onStepChange: (step: number) => void;
 }
 
-export function OnboardingScreen({
-  onComplete,
-  onBack,
-  currentStep,
-  onStepChange,
-}: OnboardingScreenProps) {
-  const step = onboardingSteps[currentStep - 1];
-  const isLastStep = currentStep === onboardingSteps.length;
+export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const texts = ru.onboarding;
+  const totalSlides = texts.slides.length;
 
   const handleNext = () => {
-    if (isLastStep) {
-      onComplete();
-    } else {
-      onStepChange(currentStep + 1);
+    if (currentSlide < totalSlides - 1) {
+      setCurrentSlide(currentSlide + 1);
     }
   };
 
-  const handleBack = () => {
-    if (currentStep > 1) {
-      onStepChange(currentStep - 1);
-    } else {
-      onBack();
-    }
+  const handleDotClick = (index: number) => {
+    setCurrentSlide(index);
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-black overflow-x-hidden" style={{ touchAction: 'pan-y' }}>
-      <motion.div
-        key={step.id}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
-        className="absolute inset-0 z-0"
-      >
+    <div
+      className="relative min-h-screen flex flex-col overflow-x-hidden"
+      style={{ touchAction: "pan-y" }}
+    >
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${step.image})` }}
+          style={{ backgroundImage: `url(${IMAGE_PATHS.onboarding.step1})` }}
         />
-        {/* Градиенты согласно спецификации */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(0deg, rgba(0, 0, 0, 0) 69.16%, #000000 100%)"
-          }}
-        />
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(180deg, rgba(0, 0, 0, 0) 39.03%, #000000 80.01%)"
-          }}
-        />
-      </motion.div>
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-black/30" />
+      </div>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <StepIndicator currentStep={currentStep} totalSteps={onboardingSteps.length} />
-
-        <div className="flex-1" />
-
-        <motion.div
-          key={`content-${step.id}`}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -30 }}
-          transition={{ duration: 0.4 }}
-          className="px-6 pb-6"
-        >
-          <h2
-            className="text-3xl font-extrabold text-white text-center mb-3 tracking-tight"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+      {/* Content */}
+      <div className="relative z-10 flex flex-1 flex-col justify-center items-center px-4">
+        {/* Card with Next Button */}
+        <div className="relative w-full flex items-center justify-center">
+          {/* White Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-[32px] px-6 py-8 w-full max-w-[280px] relative"
+            style={{ minHeight: "240px" }}
           >
-            {step.title}
-          </h2>
-          <p
-            className="text-white/80 text-center text-base leading-relaxed max-w-sm mx-auto"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
-          >
-            {step.description}
-          </p>
-        </motion.div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center"
+              >
+                {/* Title */}
+                <h2
+                  className="text-[#E15859] text-[24px] font-black uppercase tracking-wide mb-4 text-center"
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  {texts.slides[currentSlide].title}
+                </h2>
 
-        <div className="px-6 pb-8">
-          <div className="flex gap-3">
+                {/* Scrollable Text */}
+                <div
+                  className="overflow-y-auto max-h-[140px] w-full"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                >
+                  <p
+                    className="text-[#2A2021] text-[16px] text-center leading-relaxed"
+                    style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  >
+                    {texts.slides[currentSlide].text}
+                  </p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Next Button - positioned outside the card */}
+          {currentSlide < totalSlides - 1 && (
             <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleBack}
-              className="w-14 h-14 rounded-full flex items-center justify-center"
-              style={{ 
-                backgroundColor: "transparent",
-                border: "1.5px solid #E15859"
-              }}
-            >
-              <ChevronLeft className="w-6 h-6" style={{ color: "#E15859" }} />
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
               onClick={handleNext}
-              className="flex-1 py-4 rounded-full text-white text-lg font-semibold"
-              style={{ 
-                fontFamily: "'Montserrat', sans-serif",
-                backgroundColor: "#E15859"
-              }}
+              className="absolute right-0 w-[56px] h-[56px] rounded-full bg-[#E15859] flex items-center justify-center shadow-lg"
+              style={{ transform: "translateX(28px)" }}
             >
-              Далее
+              <ChevronRight className="w-7 h-7 text-white" />
             </motion.button>
-          </div>
+          )}
         </div>
+
+        {/* Dots Indicator */}
+        <div className="flex gap-2 mt-6">
+          {Array.from({ length: totalSlides }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => handleDotClick(index)}
+              className={`w-[10px] h-[10px] rounded-full transition-all duration-300 ${
+                index === currentSlide
+                  ? "bg-white"
+                  : "bg-white/50"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Button */}
+      <div className="relative z-10 px-10 pb-10">
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onComplete}
+          className="w-full py-[22px] rounded-full bg-[#E15859] text-white text-[20px] font-medium"
+          style={{ fontFamily: "'Montserrat', sans-serif" }}
+        >
+          {texts.button}
+        </motion.button>
       </div>
     </div>
   );
