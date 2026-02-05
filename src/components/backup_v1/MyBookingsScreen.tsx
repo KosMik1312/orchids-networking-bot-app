@@ -8,7 +8,6 @@ import {
   Calendar,
   ArrowLeft
 } from "lucide-react";
-import { BottomNav } from "./BottomNav";
 import { getUserBookings, type Booking } from "@/lib/api";
 
 interface MyBookingsScreenProps {
@@ -106,7 +105,6 @@ export function MyBookingsScreen({ city, userId, onBack, onTabChange }: MyBookin
         )}
       </div>
 
-      <BottomNav activeTab="profile" onTabChange={onTabChange} />
     </div>
   );
 }

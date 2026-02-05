@@ -10,13 +10,14 @@ import {
   Instagram,
   Camera
 } from "lucide-react";
-import { RelationshipStatus } from "./RelationshipStatusScreen";
 import { ChildrenStatus } from "./ChildrenSelectionScreen";
-import { OccupationType } from "./OccupationSelectionScreen";
 import { GoalType } from "./GoalSelectionScreen";
-import { InterestType } from "./InterestsSelectionScreen";
 import { CommunicationFormat } from "./CommunicationFormatScreen";
 import { EveningScenario } from "./EveningScenarioScreen";
+
+type RelationshipStatus = "single" | "in_relationship" | null;
+type OccupationType = string | null;
+type InterestType = string | null;
 
 interface EditProfileScreenProps {
   userData: {

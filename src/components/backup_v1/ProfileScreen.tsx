@@ -8,7 +8,6 @@ import {
   Calendar,
   Info
 } from "lucide-react";
-import { BottomNav } from "./BottomNav";
 
 interface ProfileScreenProps {
   userName: string;
@@ -108,8 +107,6 @@ export function ProfileScreen({
           <ChevronRight className="text-[#E15859]" size={24} />
         </button>
       </div>
-
-      <BottomNav activeTab="profile" onTabChange={onTabChange} />
     </div>
   );
 }

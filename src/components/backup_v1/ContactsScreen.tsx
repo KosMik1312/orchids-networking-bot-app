@@ -9,7 +9,6 @@ import {
   Instagram,
   Headset
 } from "lucide-react";
-import { BottomNav } from "./BottomNav";
 import { getContacts, type Contact } from "@/lib/api";
 
 interface ContactsScreenProps {
@@ -37,7 +36,7 @@ export function ContactsScreen({ city, slotId, userId, onBack, onTabChange }: Co
             telegram: "@allora_support",
             instagram: "allora_club",
           } as Contact,
-          ...slotContacts
+          ...slotContacts.contacts
         ];
         setContacts(allContacts);
       } else {
@@ -134,8 +133,6 @@ export function ContactsScreen({ city, slotId, userId, onBack, onTabChange }: Co
           ))
         )}
       </div>
-
-      <BottomNav activeTab="contacts" onTabChange={onTabChange} />
     </div>
   );
 }

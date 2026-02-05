@@ -12,7 +12,6 @@ import {
   Calendar,
   CheckCircle2
 } from "lucide-react";
-import { BottomNav } from "./BottomNav";
 import { getSlots, createBooking, getUserBookings, type Slot } from "@/lib/api";
 
 type BookingStep = "booking" | "payment" | "success";
@@ -349,8 +348,6 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
           </motion.div>
         )}
         </AnimatePresence>
-  
-        <BottomNav activeTab="home" onTabChange={onTabChange} />
       </div>
     );
   }
