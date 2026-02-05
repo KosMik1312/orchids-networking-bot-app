@@ -10,9 +10,10 @@ import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { BestInMeScreen } from "@/components/BestInMeScreen";
 import { MeetingConditionsScreen } from "@/components/MeetingConditionsScreen";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { BookingScreen } from "@/components/BookingScreen";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -193,13 +194,23 @@ export default function Home() {
             )}
 
             {currentScreen === "quiz" && (
-              <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <QuizScreen onNext={() => {}} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
-              </motion.div>
-            )}
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+                <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <QuizScreen onNext={() => setCurrentScreen("booking")} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
+                </motion.div>
+              )}
+
+              {currentScreen === "booking" && (
+                <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <BookingScreen 
+                    city="Москва" 
+                    onBack={() => setCurrentScreen("quiz")} 
+                    onComplete={() => {}}
+                  />
+                </motion.div>
+              )}
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
