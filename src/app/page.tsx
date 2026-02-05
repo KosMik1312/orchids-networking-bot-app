@@ -8,6 +8,7 @@ import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { BestInMeScreen } from "@/components/BestInMeScreen";
+import { MeetingConditionsScreen } from "@/components/MeetingConditionsScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
@@ -32,7 +33,14 @@ import { BottomNav } from "@/components/BottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
+
+interface MeetingConditionsData {
+  place: string[];
+  payment: string | null;
+  budget: string;
+  expectations: string;
+}
 
 // ⚠️ DEV MODE: Установи true чтобы пропустить загрузку профиля и сразу видеть экраны
 const DEV_SKIP_PROFILE_LOADING = true;
@@ -56,6 +64,7 @@ export default function Home() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userAboutMe, setUserAboutMe] = useState("");
   const [userCity, setUserCity] = useState("");
+  const [userMeetingConditions, setUserMeetingConditions] = useState<Partial<MeetingConditionsData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -255,12 +264,24 @@ export default function Home() {
       photo: data.photo || undefined,
       // Можно добавить дополнительные поля в API
     });
-    setCurrentScreen("quiz"); // Следующий экран после "Лучшее во мне"
+    setCurrentScreen("meeting_conditions"); // Следующий экран после "Лучшее во мне"
   };
+
+  const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
+    setUserMeetingConditions(data);
+    await updateProfile({
+      // meeting_conditions: data // Добавить когда будет в API
+    });
+    setCurrentScreen("quiz");
+  }
 
   const handleBackToProfileForm = () => {
     setCurrentScreen("profile_form");
   };
+
+  const handleBackToBestInMe = () => {
+    setCurrentScreen("best_in_me");
+  }
 
   const handleQuizComplete = async (name: string) => {
     setUserName(name);
@@ -558,6 +579,23 @@ export default function Home() {
             </motion.div>
           )}
 
+          {profileLoaded && currentScreen === "meeting_conditions" && (
+            <motion.div
+              key="meeting_conditions"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="min-h-screen"
+            >
+              <MeetingConditionsScreen
+                onContinue={handleMeetingConditionsComplete}
+                onBack={handleBackToBestInMe}
+                initialData={userMeetingConditions}
+              />
+            </motion.div>
+          )}
+
           {profileLoaded && currentScreen === "quiz" && (
           <motion.div
             key="quiz"
@@ -569,7 +607,7 @@ export default function Home() {
           >
             <QuizScreen 
               onNext={handleQuizComplete} 
-              onBack={handleBackToOnboarding} 
+              onBack={() => setCurrentScreen("meeting_conditions")} 
               progress={6}
             />
           </motion.div>
@@ -940,8 +978,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-
-
-
