@@ -32,6 +32,9 @@ import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
 type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
+// ⚠️ DEV MODE: Установи true чтобы пропустить загрузку профиля и сразу видеть экраны
+const DEV_SKIP_PROFILE_LOADING = true;
+
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userId, setUserId] = useState<number | undefined>(undefined);
@@ -74,6 +77,15 @@ export default function Home() {
 
   // Polling для Telegram ID и загрузка профиля
   useEffect(() => {
+    // DEV MODE: пропускаем загрузку профиля
+    if (DEV_SKIP_PROFILE_LOADING) {
+      setUserId(123456789); // Фейковый ID для тестов
+      setIsLoading(false);
+      setProfileLoaded(true);
+      setCurrentScreen("welcome");
+      return;
+    }
+
     let isMounted = true;
     async function tryLoadProfile(foundId: number, authToken?: string) {
       setUserId(foundId);
