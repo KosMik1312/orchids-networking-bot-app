@@ -4,6 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import JSONB
 
 Base = declarative_base()
 
@@ -27,6 +28,11 @@ class User(Base):
     instagram = Column(String)
     photo = Column(String)
     about_me = Column(Text)
+    # Meeting preferences (stored as native JSONB in Postgres)
+    meeting_metro = Column(JSONB, nullable=True)
+    meeting_days = Column(JSONB, nullable=True)
+    meeting_time_from = Column(String, nullable=True)
+    meeting_time_to = Column(String, nullable=True)
     city = Column(String)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

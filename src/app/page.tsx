@@ -145,6 +145,15 @@ export default function Home() {
 
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
+    // Save meeting conditions to server (map to backend fields)
+    updateProfile({
+      meeting_metro: data.metro,
+      meeting_days: data.days,
+      meeting_time_from: data.time.from,
+      meeting_time_to: data.time.to,
+      format: data.format,
+      goal: data.goal,
+    });
     setCurrentScreen("booking");
   };
 

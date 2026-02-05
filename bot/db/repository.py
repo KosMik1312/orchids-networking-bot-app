@@ -44,6 +44,9 @@ class UserRepo(BaseRepo):
         
         # Используем model_dump(exclude_none=True) чтобы не затирать существующие данные на None
         profile_dict = profile_data.model_dump(exclude_none=True)
+        # Map frontend 'format' key to DB 'communication_format'
+        if 'format' in profile_dict:
+            profile_dict['communication_format'] = profile_dict.pop('format')
         
         print(f"[REPO] Saving profile for user {user_id}")
         print(f"[REPO] Profile dict: {profile_dict}")

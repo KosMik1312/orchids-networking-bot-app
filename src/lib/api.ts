@@ -53,6 +53,13 @@ export interface UserProfile {
   photo?: string;
   about_me?: string;
   city?: string;
+  // Meeting-related
+  meeting_metro?: string[];
+  meeting_days?: string[];
+  meeting_time_from?: string;
+  meeting_time_to?: string;
+  // Frontend uses `format` key for meeting format; backend maps it to communication_format
+  format?: string;
 }
 
 export interface Slot {

@@ -19,5 +19,12 @@ class UserProfile(BaseModel):
     photo: Optional[str] = Field(None, description="Photo URL")
     about_me: Optional[str] = Field(None, description="About me text")
     city: Optional[str] = Field(None, description="City")
+    # New meeting-related fields
+    meeting_metro: Optional[list[str]] = Field(None, description="Preferred metro stations")
+    meeting_days: Optional[list[str]] = Field(None, description="Preferred meeting days")
+    meeting_time_from: Optional[str] = Field(None, description="Preferred meeting time from")
+    meeting_time_to: Optional[str] = Field(None, description="Preferred meeting time to")
+    # Frontend sends 'format' — map it on save to `communication_format` in the DB
+    format: Optional[str] = Field(None, description="Meeting format (frontend key 'format')")
 
     model_config = ConfigDict(str_strip_whitespace=True)
