@@ -9,61 +9,28 @@ import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { BestInMeScreen } from "@/components/BestInMeScreen";
 import { MeetingConditionsScreen } from "@/components/MeetingConditionsScreen";
-import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
-import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
-import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
-import { ChildrenSelectionScreen, type ChildrenStatus } from "@/components/ChildrenSelectionScreen";
-import { OccupationSelectionScreen, type OccupationType } from "@/components/OccupationSelectionScreen";
-import { GoalSelectionScreen, type GoalType } from "@/components/GoalSelectionScreen";
-import { InterestsSelectionScreen, type InterestType } from "@/components/InterestsSelectionScreen";
-import { ComfortSelectionScreen } from "@/components/ComfortSelectionScreen";
-import { SocialFrequencyScreen } from "@/components/SocialFrequencyScreen";
-import { CommunicationFormatScreen, type CommunicationFormat } from "@/components/CommunicationFormatScreen";
-import { EveningScenarioScreen, type EveningScenario } from "@/components/EveningScenarioScreen";
-import { SocialLinksScreen } from "@/components/SocialLinksScreen";
-import { PhotoUploadScreen } from "@/components/PhotoUploadScreen";
-import { AboutMeScreen } from "@/components/AboutMeScreen";
-import { CitySelectionScreen } from "@/components/CitySelectionScreen";
-import { BookingFlow } from "@/components/BookingFlow";
-import { ContactsScreen } from "@/components/ContactsScreen";
-import { ProfileScreen } from "@/components/ProfileScreen";
-import { MyBookingsScreen } from "@/components/MyBookingsScreen";
-import { EditProfileScreen } from "@/components/EditProfileScreen";
-import { BottomNav } from "@/components/BottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
+import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz";
 
 interface MeetingConditionsData {
-  place: string[];
-  payment: string | null;
-  budget: string;
-  expectations: string;
+  metro: string[];
+  days: string[];
+  time: { from: string; to: string };
+  goal: string;
+  format: string;
 }
 
-// ⚠️ DEV MODE: Установи true чтобы пропустить загрузку профиля и сразу видеть экраны
 const DEV_SKIP_PROFILE_LOADING = true;
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [userId, setUserId] = useState<number | undefined>(undefined);
   const [userName, setUserName] = useState("");
-  const [userAge, setUserAge] = useState<number>(25);
   const [userGender, setUserGender] = useState<"male" | "female" | null>(null);
-  const [userRelationship, setUserRelationship] = useState<RelationshipStatus | null>(null);
-  const [userChildren, setUserChildren] = useState<ChildrenStatus | null>(null);
-  const [userOccupation, setUserOccupation] = useState<OccupationType | null>(null);
-  const [userGoal, setUserGoal] = useState<GoalType | null>(null);
-  const [userInterest, setUserInterest] = useState<InterestType | null>(null);
-  const [userComfort, setUserComfort] = useState<number | null>(null);
-  const [userSocialFrequency, setUserSocialFrequency] = useState<number | null>(null);
-  const [userCommunicationFormat, setUserCommunicationFormat] = useState<CommunicationFormat | null>(null);
-  const [userEveningScenario, setUserEveningScenario] = useState<EveningScenario | null>(null);
-  const [userSocialLinks, setUserSocialLinks] = useState<{ telegram: string; instagram: string }>({ telegram: "", instagram: "" });
+  const [userSocialLinks, setUserSocialLinks] = useState({ telegram: "", instagram: "" });
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  const [userAboutMe, setUserAboutMe] = useState("");
-  const [userCity, setUserCity] = useState("");
   const [userMeetingConditions, setUserMeetingConditions] = useState<Partial<MeetingConditionsData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,25 +39,19 @@ export default function Home() {
 
   const updateProfile = async (data: Partial<UserProfile>) => {
     if (!userId || isSaving) return;
-
     setIsSaving(true);
     try {
-      console.log('Saving profile data:', data);
-      const res = await saveProfile(userId, data);
-      console.log('✅ saveProfile response:', res);
+      await saveProfile(userId, data);
     } catch (error) {
       console.error('❌ Failed to save profile', error);
-      // Optionally, show an error to the user
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Polling для Telegram ID и загрузка профиля
   useEffect(() => {
-    // DEV MODE: пропускаем загрузку профиля
     if (DEV_SKIP_PROFILE_LOADING) {
-      setUserId(123456789); // Фейковый ID для тестов
+      setUserId(123456789);
       setIsLoading(false);
       setProfileLoaded(true);
       setCurrentScreen("welcome");
@@ -101,36 +62,17 @@ export default function Home() {
     async function tryLoadProfile(foundId: number, authToken?: string) {
       setUserId(foundId);
       try {
-        // Используем токен если есть, иначе ID
         const result = await getProfile(foundId, authToken);
         const profile = (result as any)?.profile ?? (result as any);
         if (!isMounted) return;
         if (profile) {
           setUserName(profile.name || "");
-          setUserAge(profile.age || 25);
           setUserGender((profile.gender as "male" | "female") || null);
-          setUserRelationship((profile.relationship_status as RelationshipStatus) || null);
-          setUserChildren((profile.children as ChildrenStatus) || null);
-          setUserOccupation((profile.occupation as OccupationType) || null);
-          setUserGoal((profile.goal as GoalType) || null);
-          setUserInterest((profile.interests as InterestType) || null);
-          setUserComfort(profile.comfort_level || null);
-          setUserSocialFrequency(profile.social_frequency || null);
-          setUserCommunicationFormat((profile.communication_format as CommunicationFormat) || null);
-          setUserEveningScenario((profile.evening_scenario as EveningScenario) || null);
-          setUserSocialLinks({
-            telegram: profile.telegram || "",
-            instagram: profile.instagram || ""
-          });
-          setUserPhoto(profile.photo || null);
-          setUserAboutMe(profile.about_me || "");
-          setUserCity(profile.city || "");
-          setCurrentScreen("booking");
           setProfileLoaded(true);
+          setCurrentScreen("welcome");
         }
       } catch (error) {
         if (!isMounted) return;
-        console.log(`📝 First time user or error - showing welcome screen: ${error}`);
         setCurrentScreen("welcome");
         setProfileLoaded(true);
       } finally {
@@ -140,839 +82,122 @@ export default function Home() {
 
     function getTelegramId() {
       const webApp = (window as any).Telegram?.WebApp;
-      if (webApp?.initDataUnsafe?.user?.id) {
-        return webApp.initDataUnsafe.user.id;
-      }
-      return undefined;
+      return webApp?.initDataUnsafe?.user?.id;
     }
 
-    // Если userId уже есть, не делаем ничего
     if (userId) {
       setIsLoading(false);
       return;
     }
 
-    // 1. Пытаемся получить токен из URL (из бота)
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
-    
     if (token) {
-      console.log('🔐 Token получен из URL');
       try {
         const decoded = jwtDecode<{ user_id: number }>(token);
-        const userIdFromToken = decoded.user_id;
-        console.log(`✅ User ID из токена: ${userIdFromToken}`);
-        tryLoadProfile(userIdFromToken, token);
+        tryLoadProfile(decoded.user_id, token);
         return;
-      } catch (e) {
-        console.error('❌ Ошибка декодирования токена:', e);
-      }
+      } catch (e) {}
     }
 
-    // 2. Пытаемся получить ID из Telegram WebApp
     let foundId = getTelegramId();
-    if (!foundId) {
-      const params = new URLSearchParams(window.location.search);
-      const queryUserId = params.get('userId');
-      if (queryUserId) {
-        foundId = parseInt(queryUserId, 10);
-      }
-    }
-
     if (foundId) {
-      console.log(`✅ User ID: ${foundId}`);
       tryLoadProfile(foundId);
       return;
     }
 
-    // 3. Если ничего не найдено - запускаем polling для Telegram ID
-    console.warn('⏳ Ожидание Telegram ID...');
-    let elapsed = 0;
     pollingRef.current = setInterval(() => {
       const id = getTelegramId();
       if (id) {
         clearInterval(pollingRef.current!);
-        console.log(`✅ User ID найден: ${id}`);
         tryLoadProfile(id);
-      } else {
-        elapsed += 200;
-        if (elapsed >= 10000) {
-          clearInterval(pollingRef.current!);
-          setIsLoading(false);
-        }
       }
     }, 200);
+
     return () => {
       isMounted = false;
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [userId]);
 
-  const handleStartOnboarding = () => {
-    setCurrentScreen("onboarding");
-  };
+  const handleStartOnboarding = () => setCurrentScreen("onboarding");
+  const handleOnboardingComplete = () => setCurrentScreen("profile_form");
 
-  const handleOnboardingComplete = () => {
-    setCurrentScreen("profile_form");
-  };
-
-  const handleProfileFormComplete = async (data: {
-    name: string;
-    gender: string;
-    age: string;
-    zodiac: string;
-    career: string;
-    familyStatus: string;
-    hasChildren: string;
-  }) => {
-    setUserName(data.name);
-    // Конвертируем пол в формат API
+  const handleProfileFormComplete = async (data: any) => {
     const genderValue = data.gender === "Мужской" ? "male" : "female";
+    setUserName(data.name);
     setUserGender(genderValue);
-    // Сохраняем в профиль (можно расширить позже)
-    await updateProfile({ 
-      name: data.name, 
-      gender: genderValue,
-      // Остальные поля можно добавить в API по необходимости
-    });
-    setCurrentScreen("best_in_me"); // Переход на экран 4
+    setCurrentScreen("best_in_me");
+    updateProfile({ name: data.name, gender: genderValue });
   };
 
-  const handleBestInMeComplete = async (data: {
-    strengths: string[];
-    weaknesses: string;
-    values: string[];
-    loveLanguage: string[];
-    goals: string;
-    dreams: string;
-    interests: string[];
-    telegramNickname: string;
-    instagramNickname: string;
-    photo: string | null;
-  }) => {
-    // Сохраняем данные
-    setUserSocialLinks({
-      telegram: data.telegramNickname,
-      instagram: data.instagramNickname,
+  const handleBestInMeComplete = async (data: any) => {
+    setUserSocialLinks({ telegram: data.telegramNickname, instagram: data.instagramNickname });
+    if (data.photo) setUserPhoto(data.photo);
+    setCurrentScreen("meeting_conditions");
+    updateProfile({ 
+      telegram: data.telegramNickname, 
+      instagram: data.instagramNickname, 
+      photo: data.photo || undefined 
     });
-    if (data.photo) {
-      setUserPhoto(data.photo);
-    }
-    await updateProfile({
-      telegram: data.telegramNickname,
-      instagram: data.instagramNickname,
-      photo: data.photo || undefined,
-      // Можно добавить дополнительные поля в API
-    });
-    setCurrentScreen("meeting_conditions"); // Следующий экран после "Лучшее во мне"
   };
 
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
-    await updateProfile({
-      // meeting_conditions: data // Добавить когда будет в API
-    });
     setCurrentScreen("quiz");
-  }
-
-  const handleBackToProfileForm = () => {
-    setCurrentScreen("profile_form");
-  };
-
-  const handleBackToBestInMe = () => {
-    setCurrentScreen("best_in_me");
-  }
-
-  const handleQuizComplete = async (name: string) => {
-    setUserName(name);
-    await updateProfile({ name });
-    setCurrentScreen("age");
-  };
-
-  const handleAgeComplete = async (age: number) => {
-    setUserAge(age);
-    await updateProfile({ age });
-    setCurrentScreen("gender");
-  };
-
-  const handleGenderComplete = async (gender: "male" | "female") => {
-    setUserGender(gender);
-    await updateProfile({ gender });
-    setCurrentScreen("relationship");
-  };
-
-  const handleRelationshipComplete = async (status: RelationshipStatus) => {
-    setUserRelationship(status);
-    await updateProfile({ relationship_status: status });
-    setCurrentScreen("children");
-  };
-
-  const handleChildrenComplete = async (status: ChildrenStatus) => {
-    setUserChildren(status);
-    await updateProfile({ children: status });
-    setCurrentScreen("occupation");
-  };
-
-  const handleOccupationComplete = async (occupation: OccupationType) => {
-    setUserOccupation(occupation);
-    await updateProfile({ occupation });
-    setCurrentScreen("goal");
-  };
-
-  const handleGoalComplete = async (goal: GoalType) => {
-    setUserGoal(goal);
-    await updateProfile({ goal });
-    setCurrentScreen("interests");
-  };
-
-  const handleInterestsComplete = async (interest: InterestType) => {
-    setUserInterest(interest);
-    await updateProfile({ interests: interest });
-    setCurrentScreen("comfort");
-  };
-
-  const handleComfortComplete = async (level: number) => {
-    setUserComfort(level);
-    await updateProfile({ comfort_level: level });
-    setCurrentScreen("social_frequency");
-  };
-
-  const handleSocialFrequencyComplete = async (level: number) => {
-    setUserSocialFrequency(level);
-    await updateProfile({ social_frequency: level });
-    setCurrentScreen("communication_format");
-  };
-
-  const handleCommunicationFormatComplete = async (format: CommunicationFormat) => {
-    setUserCommunicationFormat(format);
-    await updateProfile({ communication_format: format });
-    setCurrentScreen("evening_scenario");
-  };
-
-  const handleEveningScenarioComplete = async (scenario: EveningScenario) => {
-    setUserEveningScenario(scenario);
-    await updateProfile({ evening_scenario: scenario });
-    setCurrentScreen("social_links");
-  };
-
-  const handleSocialLinksComplete = async (socials: { telegram: string; instagram: string }) => {
-    setUserSocialLinks(socials);
-    await updateProfile({ telegram: socials.telegram, instagram: socials.instagram });
-    setCurrentScreen("photo_upload");
-  };
-
-  const handlePhotoUploadComplete = async (photo: string) => {
-    setUserPhoto(photo);
-    await updateProfile({ photo });
-    setCurrentScreen("about_me");
-  };
-
-  const handleAboutMeComplete = async (about: string) => {
-    setUserAboutMe(about);
-    await updateProfile({ about_me: about });
-    setCurrentScreen("city");
-  };
-
-  const handleCityComplete = async (city: string) => {
-    setUserCity(city);
-    await updateProfile({ city });
-    setCurrentScreen("booking");
-  };
-
-  const handleBackToWelcome = () => {
-    setCurrentScreen("welcome");
-  };
-
-  const handleBackToOnboarding = () => {
-    setCurrentScreen("onboarding");
-  };
-
-  const handleBackToQuiz = () => {
-    setCurrentScreen("quiz");
-  };
-
-  const handleBackToAge = () => {
-    setCurrentScreen("age");
-  };
-
-  const handleBackToGender = () => {
-    setCurrentScreen("gender");
-  };
-
-  const handleBackToRelationship = () => {
-    setCurrentScreen("relationship");
-  };
-
-  const handleBackToChildren = () => {
-    setCurrentScreen("children");
-  };
-
-  const handleBackToOccupation = () => {
-    setCurrentScreen("occupation");
-  };
-
-  const handleBackToGoal = () => {
-    setCurrentScreen("goal");
-  };
-
-  const handleBackToInterests = () => {
-    setCurrentScreen("interests");
-  };
-
-  const handleBackToComfort = () => {
-    setCurrentScreen("comfort");
-  };
-
-  const handleBackToSocialFrequency = () => {
-    setCurrentScreen("social_frequency");
-  };
-
-  const handleBackToCommunicationFormat = () => {
-    setCurrentScreen("communication_format");
-  };
-
-  const handleBackToEveningScenario = () => {
-    setCurrentScreen("evening_scenario");
-  };
-
-  const handleBackToSocialLinks = () => {
-    setCurrentScreen("social_links");
-  };
-
-  const handleBackToPhotoUpload = () => {
-    setCurrentScreen("photo_upload");
-  };
-
-  const handleTabChange = (tab: "home" | "contacts" | "profile") => {
-    if (tab === "home") setCurrentScreen("booking");
-    else if (tab === "contacts") setCurrentScreen("contacts");
-    else if (tab === "profile") setCurrentScreen("profile");
-  };
-
-  const handleSaveProfile = async (newData: any) => {
-    if (!userId) return;
-    
-    const profileData = {
-      name: newData.name || userName,
-      age: newData.age || userAge,
-      gender: newData.gender || userGender,
-      relationship_status: newData.relationship || userRelationship,
-      children: newData.children || userChildren,
-      occupation: newData.occupation || userOccupation,
-      goal: newData.goal || userGoal,
-      interests: newData.interest || userInterest,
-      comfort_level: newData.comfort || userComfort,
-      social_frequency: newData.socialFrequency || userSocialFrequency,
-      communication_format: newData.communicationFormat || userCommunicationFormat,
-      evening_scenario: newData.eveningScenario || userEveningScenario,
-      telegram: newData.socialLinks?.telegram || userSocialLinks.telegram,
-      instagram: newData.socialLinks?.instagram || userSocialLinks.instagram,
-      photo: newData.photo || userPhoto,
-      about_me: newData.aboutMe || userAboutMe,
-      city: newData.city || userCity,
-    };
-    
-    const success = await saveProfile(userId, profileData);
-    if (success) {
-      // Update local state
-      setUserName(profileData.name);
-      setUserAboutMe(profileData.about_me);
-      setUserSocialLinks({
-        telegram: profileData.telegram,
-        instagram: profileData.instagram
-      });
-      setCurrentScreen("profile");
-    }
-  };
-
-  const handleSelectField = (field: string) => {
-    // Mapping edit fields to onboarding screens
-    const fieldToScreen: Record<string, Screen> = {
-      age: "age",
-      gender: "gender",
-      relationship: "relationship",
-      children: "children",
-      occupation: "occupation",
-      interest: "interests",
-      communicationFormat: "communication_format",
-      eveningScenario: "evening_scenario",
-      comfort: "comfort",
-      socialFrequency: "social_frequency"
-    };
-    
-    const targetScreen = fieldToScreen[field];
-    if (targetScreen) {
-      setCurrentScreen(targetScreen);
-    }
   };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: currentScreen === "onboarding" ? "#000000" : "#E9E9E9" }}>
       <AnimatePresence mode="wait">
-        {/* Полноценный экран загрузки пока профиль не загружен */}
         {isLoading && !profileLoaded && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100]"
-          >
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100]">
             <LoadingScreen message="Профиль загружается..." />
           </motion.div>
         )}
 
-        {profileLoaded && currentScreen === "welcome" && (
-          <motion.div
-            key="welcome"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <WelcomeScreen onStart={handleStartOnboarding} />
-          </motion.div>
-        )}
+        {profileLoaded && (
+          <>
+            {currentScreen === "welcome" && (
+              <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <WelcomeScreen onStart={handleStartOnboarding} />
+              </motion.div>
+            )}
 
-        {profileLoaded && currentScreen === "onboarding" && (
-          <motion.div
-            key="onboarding"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <OnboardingScreen onComplete={handleOnboardingComplete} />
-          </motion.div>
-        )}
+            {currentScreen === "onboarding" && (
+              <motion.div key="onboarding" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <OnboardingScreen onComplete={handleOnboardingComplete} />
+              </motion.div>
+            )}
 
-          {profileLoaded && currentScreen === "profile_form" && (
-            <motion.div
-              key="profile_form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="min-h-screen"
-            >
-              <ProfileFormScreen 
-                onContinue={handleProfileFormComplete}
-                onBack={handleBackToOnboarding}
-              />
-            </motion.div>
-          )}
+            {currentScreen === "profile_form" && (
+              <motion.div key="profile_form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ProfileFormScreen onContinue={handleProfileFormComplete} onBack={() => setCurrentScreen("onboarding")} />
+              </motion.div>
+            )}
 
-          {profileLoaded && currentScreen === "best_in_me" && (
-            <motion.div
-              key="best_in_me"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="min-h-screen"
-            >
-              <BestInMeScreen 
-                onContinue={handleBestInMeComplete}
-                onBack={handleBackToProfileForm}
-              />
-            </motion.div>
-          )}
+            {currentScreen === "best_in_me" && (
+              <motion.div key="best_in_me" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <BestInMeScreen onContinue={handleBestInMeComplete} onBack={() => setCurrentScreen("profile_form")} />
+              </motion.div>
+            )}
 
-          {profileLoaded && currentScreen === "meeting_conditions" && (
-            <motion.div
-              key="meeting_conditions"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="min-h-screen"
-            >
-              <MeetingConditionsScreen
-                onContinue={handleMeetingConditionsComplete}
-                onBack={handleBackToBestInMe}
-                initialData={userMeetingConditions}
-              />
-            </motion.div>
-          )}
+            {currentScreen === "meeting_conditions" && (
+              <motion.div key="meeting_conditions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <MeetingConditionsScreen
+                  onContinue={handleMeetingConditionsComplete}
+                  onBack={() => setCurrentScreen("best_in_me")}
+                  initialData={userMeetingConditions}
+                />
+              </motion.div>
+            )}
 
-          {profileLoaded && currentScreen === "quiz" && (
-          <motion.div
-            key="quiz"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <QuizScreen 
-              onNext={handleQuizComplete} 
-              onBack={() => setCurrentScreen("meeting_conditions")} 
-              progress={6}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "age" && (
-          <motion.div
-            key="age"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <AgeSelectionScreen 
-              onNext={handleAgeComplete} 
-              onBack={handleBackToQuiz}
-              progress={13}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "gender" && (
-          <motion.div
-            key="gender"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <GenderSelectionScreen 
-              onNext={handleGenderComplete} 
-              onBack={handleBackToAge}
-              progress={20}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "relationship" && (
-          <motion.div
-            key="relationship"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <RelationshipStatusScreen 
-              onNext={handleRelationshipComplete} 
-              onBack={handleBackToGender}
-              progress={26}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "children" && (
-          <motion.div
-            key="children"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <ChildrenSelectionScreen 
-              onNext={handleChildrenComplete} 
-              onBack={handleBackToRelationship}
-              progress={33}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "occupation" && (
-          <motion.div
-            key="occupation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <OccupationSelectionScreen 
-              onNext={handleOccupationComplete} 
-              onBack={handleBackToChildren}
-              progress={40}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "goal" && (
-          <motion.div
-            key="goal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <GoalSelectionScreen 
-              onNext={handleGoalComplete} 
-              onBack={handleBackToOccupation}
-              progress={46}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "interests" && (
-          <motion.div
-            key="interests"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <InterestsSelectionScreen 
-              onNext={handleInterestsComplete} 
-              onBack={handleBackToGoal}
-              progress={53}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "comfort" && (
-          <motion.div
-            key="comfort"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <ComfortSelectionScreen 
-              onNext={handleComfortComplete} 
-              onBack={handleBackToInterests}
-              progress={60}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "social_frequency" && (
-          <motion.div
-            key="social_frequency"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <SocialFrequencyScreen 
-              onNext={handleSocialFrequencyComplete} 
-              onBack={handleBackToComfort}
-              progress={66}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "communication_format" && (
-          <motion.div
-            key="communication_format"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <CommunicationFormatScreen 
-              onNext={handleCommunicationFormatComplete} 
-              onBack={handleBackToSocialFrequency}
-              progress={73}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "evening_scenario" && (
-          <motion.div
-            key="evening_scenario"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <EveningScenarioScreen 
-              onNext={handleEveningScenarioComplete} 
-              onBack={handleBackToCommunicationFormat}
-              progress={80}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "social_links" && (
-          <motion.div
-            key="social_links"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <SocialLinksScreen 
-              onNext={handleSocialLinksComplete} 
-              onBack={handleBackToEveningScenario}
-              progress={86}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "photo_upload" && (
-          <motion.div
-            key="photo_upload"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <PhotoUploadScreen 
-              onNext={handlePhotoUploadComplete} 
-              onBack={handleBackToSocialLinks}
-              progress={93}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "about_me" && (
-          <motion.div
-            key="about_me"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <AboutMeScreen 
-              onNext={handleAboutMeComplete} 
-              onBack={handleBackToPhotoUpload}
-              progress={100}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "city" && (
-          <motion.div
-            key="city"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <CitySelectionScreen 
-              onNext={handleCityComplete} 
-              onBack={() => setCurrentScreen("about_me")}
-              progress={100}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "booking" && (
-          <motion.div
-            key="booking"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <BookingFlow 
-              city={userCity}
-              userId={userId}
-              onBack={() => setCurrentScreen("city")}
-              onTabChange={handleTabChange}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "contacts" && (
-          <motion.div
-            key="contacts"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <ContactsScreen 
-              city={userCity} 
-              onTabChange={handleTabChange}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "profile" && (
-          <motion.div
-            key="profile"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <ProfileScreen 
-              userName={userName}
-              userPhoto={userPhoto}
-              city={userCity}
-              onEditProfile={() => setCurrentScreen("edit_profile")}
-              onMyBookings={() => setCurrentScreen("my_bookings")}
-              onTabChange={handleTabChange}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "my_bookings" && (
-          <motion.div
-            key="my_bookings"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <MyBookingsScreen 
-              city={userCity}
-              userId={userId}
-              onBack={() => setCurrentScreen("profile")}
-              onTabChange={handleTabChange}
-            />
-          </motion.div>
-        )}
-
-        {profileLoaded && currentScreen === "edit_profile" && (
-          <motion.div
-            key="edit_profile"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <EditProfileScreen 
-              userData={{
-                name: userName,
-                age: userAge,
-                gender: userGender,
-                relationship: userRelationship,
-                children: userChildren,
-                occupation: userOccupation,
-                goal: userGoal,
-                interest: userInterest,
-                comfort: userComfort,
-                socialFrequency: userSocialFrequency,
-                communicationFormat: userCommunicationFormat,
-                eveningScenario: userEveningScenario,
-                socialLinks: userSocialLinks,
-                photo: userPhoto,
-                aboutMe: userAboutMe,
-                city: userCity,
-              }}
-              onSave={handleSaveProfile}
-              onBack={() => setCurrentScreen("profile")}
-              onSelectField={handleSelectField}
-            />
-          </motion.div>
+            {currentScreen === "quiz" && (
+              <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <QuizScreen onNext={() => {}} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
+              </motion.div>
+            )}
+          </>
         )}
       </AnimatePresence>
     </div>

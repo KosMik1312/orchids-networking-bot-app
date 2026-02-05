@@ -193,5 +193,6 @@ export const ru = {
     continue: "Продолжить",
     back: "Назад"
   },
+};
 
 export type Translations = typeof ru;

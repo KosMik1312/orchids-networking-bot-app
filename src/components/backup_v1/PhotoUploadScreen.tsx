@@ -99,25 +99,8 @@ export function PhotoUploadScreen({ onNext, onBack, progress }: PhotoUploadScree
         </div>
 
         {error && (
-          <p 
-            className="mt-4 text-center text-[14px] font-semibold text-red-500 animate-pulse"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
-          >
-            {error}
-          </p>
+          <p className="mt-4 text-center text-red-600 font-semibold">{error}</p>
         )}
-
-        <button
-          onClick={handleButtonClick}
-          className="mt-8 px-8 py-3 rounded-full border-[1.5px] text-[18px] font-semibold transition-all active:scale-95"
-          style={{ 
-            borderColor: "#E15859", 
-            color: "#E15859",
-            fontFamily: "'Montserrat', sans-serif"
-          }}
-        >
-          {photo ? "Заменить" : "Добавить"}
-        </button>
       </div>
 
       {/* Footer Buttons */}
@@ -132,13 +115,13 @@ export function PhotoUploadScreen({ onNext, onBack, progress }: PhotoUploadScree
 
         <button
           onClick={handleContinue}
+          disabled={!photo}
           className="h-[64px] flex-1 rounded-full text-[18px] font-bold transition-all active:scale-[0.98]"
           style={{
             backgroundColor: !photo ? "rgba(225, 88, 89, 0.3)" : "#E15859",
             color: "white",
             fontFamily: "'Montserrat', sans-serif",
           }}
-          disabled={!photo}
         >
           Продолжить
         </button>

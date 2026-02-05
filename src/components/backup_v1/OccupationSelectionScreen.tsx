@@ -217,15 +217,6 @@ export function OccupationSelectionScreen({ onNext, onBack, progress }: Occupati
           Продолжить
         </button>
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 0px;
-        }
-        .custom-scrollbar {
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }

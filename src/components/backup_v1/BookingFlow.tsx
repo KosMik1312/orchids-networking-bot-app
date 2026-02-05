@@ -354,4 +354,3 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
       </div>
     );
   }
-

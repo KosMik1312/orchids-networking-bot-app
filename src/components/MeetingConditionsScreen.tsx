@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { ChevronLeft, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronDown } from "lucide-react";
 import { ru } from "@/lib/i18n";
 
 interface MeetingConditionsData {
-  place: string[];
-  payment: string | null;
-  budget: string;
-  expectations: string;
+  metro: string[];
+  days: string[];
+  time: { from: string; to: string };
+  goal: string;
+  format: string;
 }
 
 interface MeetingConditionsScreenProps {
@@ -22,13 +23,20 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   const texts = ru.meetingConditions;
 
   const [formData, setFormData] = useState<MeetingConditionsData>({
-    place: initialData?.place || [],
-    payment: initialData?.payment || null,
-    budget: initialData?.budget || "",
-    expectations: initialData?.expectations || "",
+    metro: initialData?.metro || [],
+    days: initialData?.days || [],
+    time: initialData?.time || { from: "17:00", to: "21:00" },
+    goal: initialData?.goal || "",
+    format: initialData?.format || "",
   });
 
-  const handleMultiSelect = (field: "place", value: string) => {
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
+  const handleMultiSelect = (field: "metro" | "days", value: string) => {
     setFormData((prev) => {
       const current = prev[field];
       if (current.includes(value)) {
@@ -39,156 +47,188 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     });
   };
 
-  const handleSingleSelect = (field: "payment", value: string) => {
+  const handleSingleSelect = (field: "goal" | "format", value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleTextChange = (field: "budget" | "expectations", value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-  
-  // place and payment are required
-  const isFormComplete = formData.place.length > 0 && formData.payment !== null;
+  const isFormComplete = formData.metro.length > 0 && formData.goal !== "" && formData.format !== "";
+
+  const AccordionItem = ({ 
+    id, 
+    label, 
+    children, 
+    isOpen 
+  }: { 
+    id: string; 
+    label: string; 
+    children: React.ReactNode; 
+    isOpen: boolean 
+  }) => (
+    <div className="bg-white rounded-[32px] overflow-hidden mb-4 shadow-sm">
+      <button
+        onClick={() => toggleSection(id)}
+        className="w-full px-6 py-5 flex items-center justify-between text-left"
+      >
+        <span className="text-[18px] text-[#9CA3AF] font-medium">{label}</span>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-300 ${isOpen ? 'bg-[#E15859] rotate-180' : 'bg-[#E15859]'}`}>
+          <ChevronDown className="w-6 h-6 text-white" />
+        </div>
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="px-6 pb-6 pt-2 space-y-3 max-h-[250px] overflow-y-auto">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 
   return (
-    <div
-      className="min-h-screen flex flex-col overflow-x-hidden"
-      style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}
-    >
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
       {/* Progress Bar */}
-      <div className="px-6 pt-4">
+      <div className="px-8 pt-6">
         <div className="h-[6px] bg-[#D9D9D9] rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-[#E15859] rounded-full"
-            initial={{ width: "50%" }}
-            animate={{ width: "75%" }} // Progress after screen 4
+            className="h-full bg-[#2A2021] rounded-full"
+            initial={{ width: "60%" }}
+            animate={{ width: "75%" }}
             transition={{ duration: 0.5 }}
           />
         </div>
       </div>
 
       {/* Title */}
-      <motion.h1
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="text-[#E15859] text-[28px] font-black text-center mt-6 mb-4 uppercase"
-        style={{ fontFamily: "'Montserrat', sans-serif" }}
-      >
-        {texts.title}
-      </motion.h1>
+      <div className="px-8 mt-10 mb-8">
+        <h1 className="text-[#E15859] text-[32px] font-black text-center leading-tight uppercase whitespace-pre-line">
+          {texts.title}
+        </h1>
+      </div>
 
-      {/* Scrollable Form */}
-      <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
-
-        {/* Place for meeting */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
-            <h2 className="text-[16px] text-gray-500 font-medium mb-2" style={{ fontFamily: "'Montserrat', sans-serif" }}>{texts.fields.place.title}</h2>
-            <div className="flex flex-wrap gap-2">
-                {texts.fields.place.options.map(option => {
-                    const isSelected = formData.place.includes(option);
-                    return (
-                        <button
-                            key={option}
-                            onClick={() => handleMultiSelect("place", option)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                                isSelected ? 'bg-[#E15859] text-white' : 'bg-white text-gray-700'
-                            }`}
-                            style={{ fontFamily: "'Montserrat', sans-serif" }}
-                        >
-                            {option}
-                            {isSelected && <Check className="w-4 h-4" />}
-                        </button>
-                    )
-                })}
+      {/* Form Sections */}
+      <div className="flex-1 px-6 overflow-y-auto">
+        {/* Metro */}
+        <AccordionItem id="metro" label={texts.metro.label} isOpen={openSection === "metro"}>
+          {texts.metro.options.map((option) => (
+            <div 
+              key={option} 
+              className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+              onClick={() => handleMultiSelect("metro", option)}
+            >
+              <span className="text-[18px] text-[#9CA3AF]">{option}</span>
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                formData.metro.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              }`}>
+                {formData.metro.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
+              </div>
             </div>
-        </motion.div>
+          ))}
+        </AccordionItem>
 
-        {/* Who pays */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
-            <h2 className="text-[16px] text-gray-500 font-medium mb-2" style={{ fontFamily: "'Montserrat', sans-serif" }}>{texts.fields.payment.title}</h2>
-            <div className="grid grid-cols-2 gap-3">
-                {texts.fields.payment.options.map(option => {
-                    const isSelected = formData.payment === option;
-                    return (
-                        <button
-                            key={option}
-                            onClick={() => handleSingleSelect("payment", option)}
-                            className={`py-3 px-4 rounded-[16px] text-center font-medium transition-all ${
-                                isSelected ? 'bg-[#E15859] text-white' : 'bg-white text-gray-700'
-                            }`}
-                            style={{ fontFamily: "'Montserrat', sans-serif" }}
-                        >
-                           {option}
-                        </button>
-                    )
-                })}
+        {/* Days */}
+        <AccordionItem id="days" label={texts.days.label} isOpen={openSection === "days"}>
+          {texts.days.options.map((option) => (
+            <div 
+              key={option} 
+              className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+              onClick={() => handleMultiSelect("days", option)}
+            >
+              <span className="text-[18px] text-[#9CA3AF]">{option}</span>
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                formData.days.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              }`}>
+                {formData.days.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
+              </div>
             </div>
-        </motion.div>
-        
-        {/* Budget */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.3 }}>
-             <h2 className="text-[16px] text-gray-500 font-medium mb-2" style={{ fontFamily: "'Montserrat', sans-serif" }}>{texts.fields.budget.title}</h2>
-             <input
-                type="text"
-                value={formData.budget}
-                onChange={(e) => handleTextChange("budget", e.target.value)}
-                placeholder={texts.fields.budget.placeholder}
-                className="w-full bg-white rounded-full px-6 py-4 text-[16px] text-[#2A2021] placeholder-[#9CA3AF] outline-none"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
-            />
-            <p className="text-xs text-gray-400 text-center mt-1">{texts.fields.budget.hint}</p>
-        </motion.div>
+          ))}
+        </AccordionItem>
 
-        {/* Expectations */}
-         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.4 }}>
-            <div className="flex items-center gap-2 mb-2">
-                 <h2 className="text-[16px] text-gray-500 font-medium" style={{ fontFamily: "'Montserrat', sans-serif" }}>{texts.fields.expectations.title}</h2>
-                 <span className="text-xs text-gray-400">({texts.fields.expectations.optional})</span>
+        {/* Time */}
+        <AccordionItem id="time" label={texts.time.label} isOpen={openSection === "time"}>
+          <div className="flex items-center gap-4 py-2">
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-[18px] text-[#9CA3AF]">{texts.time.from}</span>
+              <input 
+                type="text" 
+                value={formData.time.from}
+                onChange={(e) => setFormData(p => ({ ...p, time: { ...p.time, from: e.target.value } }))}
+                className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
+              />
             </div>
-             <textarea
-                value={formData.expectations}
-                onChange={(e) => handleTextChange("expectations", e.target.value)}
-                placeholder={texts.fields.expectations.placeholder}
-                className="w-full bg-white rounded-[24px] px-6 py-4 text-[16px] text-[#2A2021] placeholder-[#9CA3AF] outline-none min-h-[100px]"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
-            />
-        </motion.div>
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-[18px] text-[#9CA3AF]">{texts.time.to}</span>
+              <input 
+                type="text" 
+                value={formData.time.to}
+                onChange={(e) => setFormData(p => ({ ...p, time: { ...p.time, to: e.target.value } }))}
+                className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
+              />
+            </div>
+          </div>
+        </AccordionItem>
 
+        {/* Goals */}
+        <AccordionItem id="goals" label={texts.goals.label} isOpen={openSection === "goals"}>
+          {texts.goals.options.map((option) => (
+            <div 
+              key={option} 
+              className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+              onClick={() => handleSingleSelect("goal", option)}
+            >
+              <span className="text-[18px] text-[#9CA3AF]">{option}</span>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                formData.goal === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              }`}>
+                {formData.goal === option && <div className="w-2 h-2 bg-white rounded-full" />}
+              </div>
+            </div>
+          ))}
+        </AccordionItem>
+
+        {/* Format */}
+        <AccordionItem id="format" label={texts.format.label} isOpen={openSection === "format"}>
+          {texts.format.options.map((option) => (
+            <div 
+              key={option} 
+              className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+              onClick={() => handleSingleSelect("format", option)}
+            >
+              <span className="text-[18px] text-[#9CA3AF]">{option}</span>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                formData.format === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              }`}>
+                {formData.format === option && <div className="w-2 h-2 bg-white rounded-full" />}
+              </div>
+            </div>
+          ))}
+        </AccordionItem>
       </div>
 
       {/* Bottom Buttons */}
-      <div className="px-6 pb-8 pt-4">
-        <div className="flex items-center gap-3">
-          {/* Back Button */}
-          <motion.button
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            whileTap={{ scale: 0.95 }}
+      <div className="px-6 pb-10 pt-4">
+        <div className="flex items-center gap-4">
+          <button
             onClick={onBack}
-            className="w-[56px] h-[56px] rounded-full border-2 border-[#E15859] flex items-center justify-center bg-transparent"
+            className="w-[70px] h-[70px] rounded-full border-2 border-[#E15859] flex items-center justify-center bg-transparent shrink-0"
           >
-            <ChevronLeft className="w-6 h-6 text-[#E15859]" />
-          </motion.button>
+            <ChevronLeft className="w-8 h-8 text-[#E15859]" />
+          </button>
 
-          {/* Continue Button */}
-          <motion.button
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            whileTap={{ scale: isFormComplete ? 0.98 : 1 }}
+          <button
             onClick={() => isFormComplete && onContinue(formData)}
-            disabled={!isFormComplete}
-            className={`flex-1 py-[18px] rounded-full text-[18px] font-medium transition-all ${
-              isFormComplete
-                ? "bg-[#E15859] text-white"
-                : "bg-[#E15859]/30 text-white/50"
+            className={`flex-1 h-[70px] rounded-full text-[20px] font-medium transition-all ${
+              isFormComplete ? "bg-[#EBC2C2] text-white" : "bg-[#EBC2C2]/50 text-white/70"
             }`}
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
-            {texts.continueButton}
-          </motion.button>
+            {texts.continue}
+          </button>
         </div>
       </div>
     </div>

@@ -1,46 +1,55 @@
 # Backup V1 - Allora MiniApp Components
 
-**Дата создания:** 2026-02-05
+**Дата создания:** 2026-02-05  
+**Последнее обновление:** 2026-02-05
 
-Этот бэкап содержит все экраны MiniApp до редизайна.
+Этот каталог содержит архивные копии экранов приложения, которые больше не используются в активной разработке.
 
-## Список компонентов:
+## Активные экраны (хранятся в `src/components/`)
 
-### Onboarding Flow:
-1. `WelcomeScreen.tsx` - Приветственный экран
-2. `OnboardingScreen.tsx` - 4-шаговый онбординг
-3. `QuizScreen.tsx` - Ввод имени
+Используются в приложении в файле `src/app/page.tsx`:
+- WelcomeScreen.tsx
+- QuizScreen.tsx
+- OnboardingScreen.tsx
+- ProfileFormScreen.tsx
+- BestInMeScreen.tsx
+- MeetingConditionsScreen.tsx
+- LoadingScreen.tsx
 
-### Анкета:
-4. `AgeSelectionScreen.tsx` - Выбор возраста (барабан)
-5. `GenderSelectionScreen.tsx` - Выбор пола
-6. `RelationshipStatusScreen.tsx` - Семейный статус
-7. `ChildrenSelectionScreen.tsx` - Есть ли дети
-8. `OccupationSelectionScreen.tsx` - Сфера деятельности
-9. `InterestsSelectionScreen.tsx` - Интересы
-10. `GoalSelectionScreen.tsx` - Цель участия
-11. `SocialFrequencyScreen.tsx` - Частота знакомств
-12. `ComfortSelectionScreen.tsx` - Комфорт в компании
-13. `CommunicationFormatScreen.tsx` - Формат общения
-14. `EveningScenarioScreen.tsx` - Сценарий вечера
+## Архивированные экраны (22 файла)
+
+### Анкета и выбор:
+- AgeSelectionScreen.tsx
+- GenderSelectionScreen.tsx
+- RelationshipStatusScreen.tsx
+- ChildrenSelectionScreen.tsx
+- OccupationSelectionScreen.tsx
+- InterestsSelectionScreen.tsx
+- GoalSelectionScreen.tsx
+- SocialFrequencyScreen.tsx
+- ComfortSelectionScreen.tsx
+- CommunicationFormatScreen.tsx
+- EveningScenarioScreen.tsx
 
 ### Профиль:
-15. `PhotoUploadScreen.tsx` - Загрузка фото
-16. `AboutMeScreen.tsx` - О себе
-17. `SocialLinksScreen.tsx` - Соцсети
-18. `CitySelectionScreen.tsx` - Выбор города
+- PhotoUploadScreen.tsx
+- AboutMeScreen.tsx
+- SocialLinksScreen.tsx
+- CitySelectionScreen.tsx
+- EditProfileScreen.tsx
+- ProfileScreen.tsx
 
-### Main App:
-19. `BookingFlow.tsx` - Бронирование (3 шага)
-20. `ProfileScreen.tsx` - Профиль
-21. `EditProfileScreen.tsx` - Редактирование профиля
-22. `MyBookingsScreen.tsx` - Мои бронирования
-23. `ContactsScreen.tsx` - Контакты
+### Бронирование и навигация:
+- BookingFlow.tsx
+- MyBookingsScreen.tsx
+- ContactsScreen.tsx
+- BottomNav.tsx
 
 ### Служебные:
-24. `BottomNav.tsx` - Нижняя навигация
-25. `LoadingScreen.tsx` - Экран загрузки
-26. `ErrorScreen.tsx` - Экран ошибки
+- ErrorScreen.tsx
 
-### Главная страница:
-27. `page.tsx.backup` - Копия src/app/page.tsx
+## Примечания
+
+Все архивированные файлы содержат полный и работающий код. Они могут быть восстановлены и использованы при необходимости изменить структуру приложения.
+
+**Последнее изменение:** Перемещены неиспользуемые компоненты из src/components/ в архив по состоянию на 2026-02-05.
