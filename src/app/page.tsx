@@ -7,6 +7,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { ProfileFormScreen } from "@/components/ProfileFormScreen";
+import { BestInMeScreen } from "@/components/BestInMeScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
@@ -31,7 +32,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
 // ⚠️ DEV MODE: Установи true чтобы пропустить загрузку профиля и сразу видеть экраны
 const DEV_SKIP_PROFILE_LOADING = true;
@@ -225,7 +226,40 @@ export default function Home() {
       gender: genderValue,
       // Остальные поля можно добавить в API по необходимости
     });
-    setCurrentScreen("quiz"); // Следующий экран после формы профиля
+    setCurrentScreen("best_in_me"); // Переход на экран 4
+  };
+
+  const handleBestInMeComplete = async (data: {
+    strengths: string[];
+    weaknesses: string;
+    values: string[];
+    loveLanguage: string[];
+    goals: string;
+    dreams: string;
+    interests: string[];
+    telegramNickname: string;
+    instagramNickname: string;
+    photo: string | null;
+  }) => {
+    // Сохраняем данные
+    setUserSocialLinks({
+      telegram: data.telegramNickname,
+      instagram: data.instagramNickname,
+    });
+    if (data.photo) {
+      setUserPhoto(data.photo);
+    }
+    await updateProfile({
+      telegram: data.telegramNickname,
+      instagram: data.instagramNickname,
+      photo: data.photo || undefined,
+      // Можно добавить дополнительные поля в API
+    });
+    setCurrentScreen("quiz"); // Следующий экран после "Лучшее во мне"
+  };
+
+  const handleBackToProfileForm = () => {
+    setCurrentScreen("profile_form");
   };
 
   const handleQuizComplete = async (name: string) => {
@@ -492,23 +526,39 @@ export default function Home() {
           </motion.div>
         )}
 
-        {profileLoaded && currentScreen === "profile_form" && (
-          <motion.div
-            key="profile_form"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-screen"
-          >
-            <ProfileFormScreen 
-              onContinue={handleProfileFormComplete}
-              onBack={handleBackToOnboarding}
-            />
-          </motion.div>
-        )}
+          {profileLoaded && currentScreen === "profile_form" && (
+            <motion.div
+              key="profile_form"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="min-h-screen"
+            >
+              <ProfileFormScreen 
+                onContinue={handleProfileFormComplete}
+                onBack={handleBackToOnboarding}
+              />
+            </motion.div>
+          )}
 
-        {profileLoaded && currentScreen === "quiz" && (
+          {profileLoaded && currentScreen === "best_in_me" && (
+            <motion.div
+              key="best_in_me"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="min-h-screen"
+            >
+              <BestInMeScreen 
+                onContinue={handleBestInMeComplete}
+                onBack={handleBackToProfileForm}
+              />
+            </motion.div>
+          )}
+
+          {profileLoaded && currentScreen === "quiz" && (
           <motion.div
             key="quiz"
             initial={{ opacity: 0 }}
