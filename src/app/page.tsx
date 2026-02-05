@@ -6,6 +6,7 @@ import { jwtDecode } from "jwt-decode";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
+import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { AgeSelectionScreen } from "@/components/AgeSelectionScreen";
 import { GenderSelectionScreen } from "@/components/GenderSelectionScreen";
 import { RelationshipStatusScreen, type RelationshipStatus } from "@/components/RelationshipStatusScreen";
@@ -30,7 +31,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { getProfile, saveProfile, ApiError, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
+type Screen = "welcome" | "onboarding" | "profile_form" | "quiz" | "age" | "gender" | "relationship" | "children" | "occupation" | "goal" | "interests" | "comfort" | "social_frequency" | "communication_format" | "evening_scenario" | "social_links" | "photo_upload" | "about_me" | "city" | "booking" | "contacts" | "profile" | "my_bookings" | "edit_profile";
 
 // ⚠️ DEV MODE: Установи true чтобы пропустить загрузку профиля и сразу видеть экраны
 const DEV_SKIP_PROFILE_LOADING = true;
@@ -202,7 +203,29 @@ export default function Home() {
   };
 
   const handleOnboardingComplete = () => {
-    setCurrentScreen("quiz");
+    setCurrentScreen("profile_form");
+  };
+
+  const handleProfileFormComplete = async (data: {
+    name: string;
+    gender: string;
+    age: string;
+    zodiac: string;
+    career: string;
+    familyStatus: string;
+    hasChildren: string;
+  }) => {
+    setUserName(data.name);
+    // Конвертируем пол в формат API
+    const genderValue = data.gender === "Мужской" ? "male" : "female";
+    setUserGender(genderValue);
+    // Сохраняем в профиль (можно расширить позже)
+    await updateProfile({ 
+      name: data.name, 
+      gender: genderValue,
+      // Остальные поля можно добавить в API по необходимости
+    });
+    setCurrentScreen("quiz"); // Следующий экран после формы профиля
   };
 
   const handleQuizComplete = async (name: string) => {
@@ -466,6 +489,22 @@ export default function Home() {
             transition={{ duration: 0.3 }}
           >
             <OnboardingScreen onComplete={handleOnboardingComplete} />
+          </motion.div>
+        )}
+
+        {profileLoaded && currentScreen === "profile_form" && (
+          <motion.div
+            key="profile_form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-screen"
+          >
+            <ProfileFormScreen 
+              onContinue={handleProfileFormComplete}
+              onBack={handleBackToOnboarding}
+            />
           </motion.div>
         )}
 
