@@ -1,12 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ru } from "@/lib/i18n";
 
 interface WelcomeScreenProps {
   onStart: () => void;
 }
 
 export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
+  const texts = ru.welcome;
+
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: '#E9E9E9', touchAction: 'pan-y' }}>
       <div className="flex flex-1 flex-col items-center justify-center px-6">
@@ -20,7 +23,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             className="font-serif text-[44px] italic text-[#E15859] text-center"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
-            Аллора Клаб
+            {texts.title}
           </h1>
           <div className="h-[1px] bg-[#E15859] w-[85%] mt-[-4px]" />
         </motion.div>
@@ -35,9 +38,9 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             className="text-[34px] font-black tracking-tight leading-[1.1] uppercase"
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
-            <span className="text-[#E15859]">СОЗДАЕМ ЯРКУЮ</span>
+            <span className="text-[#E15859]">{texts.headline1}</span>
             <br />
-            <span className="text-[#2A2021]">ЖИЗНЬ ВМЕСТЕ</span>
+            <span className="text-[#2A2021]">{texts.headline2}</span>
           </h2>
         </motion.div>
 
@@ -48,7 +51,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           className="text-center text-[#404243] text-[18px] max-w-[300px] leading-snug"
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
-          Свежие впечатления, эмоции, приключения в компании новых людей
+          {texts.subtitle}
         </motion.p>
       </div>
 
@@ -62,7 +65,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           className="w-full py-[22px] rounded-full bg-[#E15859] text-white text-[20px] font-medium"
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
-          Начать
+          {texts.button}
         </motion.button>
 
         <motion.p
@@ -72,7 +75,10 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           className="text-center text-[11px] text-[#2A2021] mt-6 leading-tight"
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
-          Нажимая на кнопку, вы даете согласие на обработку персональных данных и соглашаетесь с политикой конфиденциальности
+          {texts.disclaimer}{" "}
+          <span className="underline">{texts.consentLink}</span>{" "}
+          {texts.and}{" "}
+          <span className="underline">{texts.privacyLink}</span>
         </motion.p>
       </div>
     </div>
