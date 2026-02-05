@@ -51,7 +51,11 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const isFormComplete = formData.metro.length > 0 && formData.goal !== "" && formData.format !== "";
+  const isFormComplete = 
+    formData.metro.length > 0 && 
+    formData.days.length > 0 && 
+    formData.goal !== "" && 
+    formData.format !== "";
 
   const AccordionItem = ({ 
     id, 
@@ -222,9 +226,14 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
           </button>
 
           <button
-            onClick={() => isFormComplete && onContinue(formData)}
+            onClick={() => {
+              if (isFormComplete) {
+                onContinue(formData);
+              }
+            }}
+            disabled={!isFormComplete}
             className={`flex-1 h-[70px] rounded-full text-[20px] font-medium transition-all ${
-              isFormComplete ? "bg-[#EBC2C2] text-white" : "bg-[#EBC2C2]/50 text-white/70"
+              isFormComplete ? "bg-[#E15859] text-white cursor-pointer" : "bg-[#BDBDBD] text-white/50 cursor-not-allowed"
             }`}
           >
             {texts.continue}

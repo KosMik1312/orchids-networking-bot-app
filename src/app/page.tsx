@@ -145,7 +145,7 @@ export default function Home() {
 
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
-    setCurrentScreen("quiz");
+    setCurrentScreen("booking");
   };
 
   return (
@@ -195,7 +195,10 @@ export default function Home() {
 
             {currentScreen === "quiz" && (
                 <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <QuizScreen onNext={() => setCurrentScreen("booking")} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
+                  <QuizScreen onNext={() => {
+                    console.log("Moving to booking screen");
+                    setCurrentScreen("booking");
+                  }} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
                 </motion.div>
               )}
 
