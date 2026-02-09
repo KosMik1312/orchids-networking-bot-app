@@ -1,12 +1,19 @@
+"""
+ORM модели для базы данных.
+Обновлённая версия с:
+- Индексами для часто запрашиваемых полей
+- JSON вместо JSONB для совместимости (PostgreSQL использует JSONB автоматически)
+"""
+
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean,
-    func
+    Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean, Index
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
 
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = 'users'
@@ -28,16 +35,17 @@ class User(Base):
     instagram = Column(String)
     photo = Column(String)
     about_me = Column(Text)
-    # Meeting preferences (stored as native JSONB in Postgres)
+    # Meeting preferences (JSONB для PostgreSQL)
     meeting_metro = Column(JSONB, nullable=True)
     meeting_days = Column(JSONB, nullable=True)
     meeting_time_from = Column(String, nullable=True)
     meeting_time_to = Column(String, nullable=True)
-    city = Column(String)
+    city = Column(String, index=True)  # Индекс для поиска по городу
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     bookings = relationship("Booking", back_populates="user", cascade="all, delete-orphan")
+
 
 class DinnerSlot(Base):
     __tablename__ = 'dinner_slots'
@@ -49,10 +57,16 @@ class DinnerSlot(Base):
     restaurant = Column(String, nullable=False)
     max_people = Column(Integer, nullable=False)
     current_bookings = Column(Integer, default=0)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)  # Индекс для фильтрации активных
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     bookings = relationship("Booking", back_populates="slot", cascade="all, delete-orphan")
+
+    # Составной индекс для поиска доступных слотов
+    __table_args__ = (
+        Index('ix_dinner_slots_active_city', 'is_active', 'city'),
+        Index('ix_dinner_slots_date_time', 'date', 'time'),
+    )
 
 
 class Booking(Base):
@@ -62,23 +76,34 @@ class Booking(Base):
     user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
     slot_id = Column(Integer, ForeignKey('dinner_slots.id', ondelete="CASCADE"), nullable=False)
     booking_date = Column(TIMESTAMP, server_default=func.now())
-    status = Column(String, default='active')
+    status = Column(String, default='active', index=True)  # Индекс для фильтрации по статусу
 
     user = relationship("User", back_populates="bookings")
     slot = relationship("DinnerSlot", back_populates="bookings")
+
+    # Составной уникальный индекс: пользователь может забронировать слот только один раз
+    __table_args__ = (
+        Index('ix_bookings_user_slot', 'user_id', 'slot_id', unique=True),
+        Index('ix_bookings_user_status', 'user_id', 'status'),
+    )
 
 
 class Payment(Base):
     __tablename__ = 'payments'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    yookassa_payment_id = Column(String, unique=True, nullable=False)
-    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
+    yookassa_payment_id = Column(String, unique=True, nullable=False, index=True)  # Индекс для поиска по yookassa_id
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
     booking_id = Column(Integer, ForeignKey('bookings.id', ondelete="SET NULL"), nullable=True)
     amount = Column(String, nullable=False)
-    status = Column(String, default='created')
+    status = Column(String, default='created', index=True)  # Индекс для фильтрации по статусу
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User")
     booking = relationship("Booking")
+
+    # Составной индекс для поиска платежей пользователя
+    __table_args__ = (
+        Index('ix_payments_user_status', 'user_id', 'status'),
+    )

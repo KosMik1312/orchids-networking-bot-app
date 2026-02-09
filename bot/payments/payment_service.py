@@ -1,11 +1,26 @@
 """
 Высокоуровневый сервис для работы с платежами.
-Интегрирует платежный модуль с БД и API приложения.
+Обновлённая версия с:
+- Асинхронными методами
+- Обёрткой синхронного SDK через asyncio.to_thread
 """
 
+import asyncio
 from typing import Optional, Dict, Any
+
 from .yookassa_payment import YooKassaPayment
 from .payment_config import DEFAULT_RETURN_URL
+
+# Импорт логгера
+import sys
+import os
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from logger import get_payment_logger
+
+logger = get_payment_logger()
 
 
 class PaymentService:
@@ -14,9 +29,9 @@ class PaymentService:
     def __init__(self):
         """Инициализирует сервис платежей."""
         self.yookassa = YooKassaPayment()
-        print("[PAYMENT SERVICE] PaymentService initialized")
+        logger.info("PaymentService initialized")
     
-    def create_payment(
+    async def create_payment(
         self,
         user_id: int,
         amount: float,
@@ -25,7 +40,7 @@ class PaymentService:
         description: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Создаёт платёж для пользователя.
+        Создаёт платёж для пользователя (асинхронно).
         
         Args:
             user_id: ID пользователя
@@ -37,9 +52,7 @@ class PaymentService:
         Returns:
             Dict с информацией о платеже
         """
-        print(f"\n[PAYMENT SERVICE] Creating payment for user {user_id}:")
-        print(f"  Amount: {amount} RUB")
-        print(f"  Booking ID: {booking_id}")
+        logger.info(f"Creating payment: user={user_id}, amount={amount}, booking_id={booking_id}")
         
         # Используем дефолтный URL если не указан
         if not return_url:
@@ -55,8 +68,9 @@ class PaymentService:
             "booking_id": booking_id if booking_id else None
         }
         
-        # Создаём платёж через Ю-Кассу
-        payment_result = self.yookassa.create_payment(
+        # Создаём платёж через Ю-Кассу (в отдельном потоке, так как SDK синхронный)
+        payment_result = await asyncio.to_thread(
+            self.yookassa.create_payment,
             amount=amount,
             return_url=return_url,
             description=description,
@@ -64,15 +78,15 @@ class PaymentService:
         )
         
         if payment_result.get("success"):
-            print(f"[PAYMENT SERVICE] Payment created successfully: {payment_result['payment_id']}")
+            logger.info(f"Payment created: {payment_result['payment_id']}")
         else:
-            print(f"[PAYMENT SERVICE] Payment creation failed: {payment_result.get('error')}")
+            logger.error(f"Payment creation failed: {payment_result.get('error')}")
         
         return payment_result
     
-    def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
+    async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """
-        Получает текущий статус платежа.
+        Получает текущий статус платежа (асинхронно).
         
         Args:
             payment_id: ID платежа
@@ -80,13 +94,15 @@ class PaymentService:
         Returns:
             Dict с информацией о платеже
         """
-        print(f"\n[PAYMENT SERVICE] Getting payment status: {payment_id}")
-        result = self.yookassa.get_payment(payment_id)
+        logger.debug(f"Getting payment status: {payment_id}")
+        
+        # Синхронный вызов SDK в отдельном потоке
+        result = await asyncio.to_thread(self.yookassa.get_payment, payment_id)
         return result
     
-    def cancel_payment(self, payment_id: str) -> Dict[str, Any]:
+    async def cancel_payment(self, payment_id: str) -> Dict[str, Any]:
         """
-        Отменяет платеж.
+        Отменяет платеж (асинхронно).
         
         Args:
             payment_id: ID платежа для отмены
@@ -94,13 +110,15 @@ class PaymentService:
         Returns:
             Dict с информацией об отменённом платеже
         """
-        print(f"[PAYMENT SERVICE] Cancelling payment: {payment_id}")
-        result = self.yookassa.cancel_payment(payment_id)
+        logger.info(f"Cancelling payment: {payment_id}")
+        
+        # Синхронный вызов SDK в отдельном потоке
+        result = await asyncio.to_thread(self.yookassa.cancel_payment, payment_id)
         return result
     
-    def handle_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Обрабатывает webhook от Ю-Кассы.
+        Обрабатывает webhook от Ю-Кассы (асинхронно).
         Вызывается при изменении статуса платежа.
         
         Args:
@@ -116,13 +134,10 @@ class PaymentService:
             payment_id = payment_data.get("id")
             payment_status = payment_data.get("status")
             
-            print(f"\n[PAYMENT WEBHOOK] Received webhook:")
-            print(f"  Event: {event_type}")
-            print(f"  Payment ID: {payment_id}")
-            print(f"  Status: {payment_status}")
+            logger.info(f"Webhook received: event={event_type}, payment_id={payment_id}, status={payment_status}")
             
             if event_type == "payment.succeeded":
-                print(f"[PAYMENT WEBHOOK] Payment succeeded! Booking can be confirmed.")
+                logger.info(f"Payment succeeded: {payment_id}")
                 return {
                     "success": True,
                     "action": "confirm_booking",
@@ -131,7 +146,7 @@ class PaymentService:
                 }
             
             elif event_type == "payment.canceled":
-                print(f"[PAYMENT WEBHOOK] Payment canceled! Booking should be cancelled.")
+                logger.info(f"Payment canceled: {payment_id}")
                 return {
                     "success": True,
                     "action": "cancel_booking",
@@ -139,8 +154,17 @@ class PaymentService:
                     "status": "canceled"
                 }
             
+            elif event_type == "payment.waiting_for_capture":
+                logger.info(f"Payment waiting for capture: {payment_id}")
+                return {
+                    "success": True,
+                    "action": "wait",
+                    "payment_id": payment_id,
+                    "status": "waiting_for_capture"
+                }
+            
             else:
-                print(f"[PAYMENT WEBHOOK] Unknown event type: {event_type}")
+                logger.warning(f"Unknown webhook event: {event_type}")
                 return {
                     "success": True,
                     "action": "log_event",
@@ -149,7 +173,7 @@ class PaymentService:
                 }
         
         except Exception as e:
-            print(f"[PAYMENT WEBHOOK ERROR] Failed to handle webhook: {str(e)}")
+            logger.error(f"Failed to handle webhook: {e}")
             return {
                 "success": False,
                 "error": str(e)

@@ -11,9 +11,13 @@ import { BestInMeScreen } from "@/components/BestInMeScreen";
 import { MeetingConditionsScreen } from "@/components/MeetingConditionsScreen";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { BookingScreen } from "@/components/BookingScreen";
+import { PromotionsScreen } from "@/components/PromotionsScreen";
+import { AfishaScreen } from "@/components/AfishaScreen";
+import { FavoritesScreen } from "@/components/FavoritesScreen";
+import { ProfileScreen } from "@/components/ProfileScreen";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking" | "promotions" | "afisha" | "favorites" | "profile";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -37,6 +41,16 @@ export default function Home() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+
+  const toggleFavorite = (id: number) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
     if (!userId || isSaving) return;
@@ -212,14 +226,61 @@ export default function Home() {
               )}
 
               {currentScreen === "booking" && (
-                <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <BookingScreen 
-                    city="Москва" 
-                    onBack={() => setCurrentScreen("quiz")} 
-                    onComplete={() => {}}
-                  />
-                </motion.div>
-              )}
+                  <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <BookingScreen 
+                        city="Москва" 
+                        onBack={() => setCurrentScreen("quiz")} 
+                        onComplete={() => {}}
+                        onPromotions={() => setCurrentScreen("promotions")}
+                        onAfisha={() => setCurrentScreen("afisha")}
+                        onProfile={() => setCurrentScreen("profile")}
+                      />
+                  </motion.div>
+                )}
+
+                {currentScreen === "promotions" && (
+                  <motion.div key="promotions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <PromotionsScreen onBack={() => setCurrentScreen("booking")} />
+                  </motion.div>
+                )}
+
+                {currentScreen === "afisha" && (
+                  <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <AfishaScreen
+                      city="Москва"
+                      favoriteIds={favoriteIds}
+                      onToggleFavorite={toggleFavorite}
+                      onFavorites={() => setCurrentScreen("favorites")}
+                      onHome={() => setCurrentScreen("booking")}
+                      onBook={() => setCurrentScreen("booking")}
+                    />
+                  </motion.div>
+                )}
+
+                {currentScreen === "favorites" && (
+                  <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <FavoritesScreen
+                      favoriteIds={favoriteIds}
+                      onToggleFavorite={toggleFavorite}
+                      onBack={() => setCurrentScreen("afisha")}
+                      onBook={() => setCurrentScreen("booking")}
+                    />
+                  </motion.div>
+                )}
+
+                {currentScreen === "profile" && (
+                  <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <ProfileScreen
+                      city="Москва"
+                      userName={userName || "Павел"}
+                      userPhoto={userPhoto}
+                      onHome={() => setCurrentScreen("booking")}
+                      onAfisha={() => setCurrentScreen("afisha")}
+                      onFavorites={() => setCurrentScreen("favorites")}
+                      onBookings={() => setCurrentScreen("booking")}
+                    />
+                  </motion.div>
+                )}
             </>
           )}
         </AnimatePresence>
