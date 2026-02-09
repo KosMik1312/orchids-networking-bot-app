@@ -4,19 +4,11 @@
 export const ru = {
   // Screen 1 - Welcome
   welcome: {
-    title: "Добро пожаловать в клуб яркой и наполненной жизни!",
-    headline1: "ЯРКАЯ ЖИЗНЬ", // Not used in new text but keeping structure for safety, or removing if I check usage. Let's keep existing keys but empty or adapt if possible.
-    headline2: "ВМЕСТЕ",      // User provided a single block of text. I should check how WelcomeScreen uses these.
-    // Actually, looking at the user request, they provided:
-    // "Добро пожаловать в клуб яркой и наполненной жизни!" as title/header?
-    // "Тебя ждут весёлые вечеринки..." as subtitle/description?
-    // "Начать!" as button.
-    // Let's adapt the keys to fit the new content or I might need to check WelcomeScreen.tsx first to see how it renders.
-    // I'll assume standard mapping for now but might need to adjust component.
-    // Re-reading usage in next step.
-    title: "Добро пожаловать в клуб яркой и наполненной жизни!",
-    subtitle: "Тебя ждут весёлые вечеринки, спортивные активности, душевные ужины, отдых в приятной компании и культурные события.",
-    button: "Начать!",
+    logo: "Аллора Клаб",
+    titlePart1: "СОЗДАЕМ ЯРКУЮ",
+    titlePart2: "ЖИЗНЬ ВМЕСТЕ",
+    subtitle: "Свежие впечатления, эмоции, приключения в компании новых людей",
+    button: "Начать",
     disclaimer: "Я даю",
     consentLink: "согласие на обработку персональных данных",
     and: "и соглашаюсь с",
@@ -25,10 +17,10 @@ export const ru = {
 
   // Screen 2 - Onboarding
   onboarding: {
-    button: "Начать!", // "Начать!" mentioned in text 4
+    button: "Начать!",
     slides: [
       {
-        title: "Добро пожаловать!", // Inferring title from context or using generic
+        title: "Добро пожаловать!",
         text: "Добро пожаловать в клуб яркой и наполненной жизни! Тебя ждут весёлые вечеринки, спортивные активности, душевные ужины, отдых в приятной компании и культурные события.",
       },
       {
@@ -36,7 +28,7 @@ export const ru = {
         text: "Важно не количество, а качество! Мы подберём активность по душе и соберём для тебя компанию единомышленников.",
       },
       {
-        title: "Как это работает?",
+        title: "Просто и удобно",
         text: "Заполни мини-анкету ➡️ выбери мероприятие ➡️ наслаждайся вечером среди своих!",
       },
       {

@@ -15,35 +15,52 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   const texts = ru.welcome;
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: '#E9E9E9', touchAction: 'pan-y' }}>
-      <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+    <div className="flex min-h-screen flex-col overflow-x-hidden relative" style={{ backgroundColor: '#E9E9E9', touchAction: 'pan-y' }}>
+
+      {/* Top Logo Area */}
+      <div className="pt-24 flex justify-center">
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-8 flex flex-col items-center text-center"
+          className="text-[#E15859] text-[42px] leading-none"
+          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic" }}
+        >
+          {texts.logo}
+          <div className="h-[2px] bg-[#E15859] w-full mt-1 opacity-70" />
+        </motion.h2>
+      </div>
+
+      {/* Center Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex flex-col items-center text-center"
         >
           <h1
-            className="font-serif text-[32px] leading-tight text-[#E15859] mb-6"
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-[40px] leading-[0.9] font-black uppercase tracking-tight flex flex-col items-center"
+            style={{ fontFamily: "'Oswald', sans-serif" }} // Using Oswald if available, or fallback to sans-serif
           >
-            {texts.title}
+            <span className="text-[#E15859] block mb-1">{texts.titlePart1}</span>
+            <span className="text-[#2A2021] block">{texts.titlePart2}</span>
           </h1>
-          <div className="h-[1px] bg-[#E15859] w-[60%]" />
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center text-[#2A2021] text-[18px] leading-relaxed max-w-[320px]"
+          className="text-center text-[#555555] text-[16px] leading-snug max-w-[280px] mt-8 font-light"
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
           {texts.subtitle}
         </motion.p>
       </div>
 
-      <div className="px-10 pb-10">
+      {/* Bottom Area */}
+      <div className="px-10 pb-12">
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -52,8 +69,8 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           onClick={() => accepted && onStart()}
           disabled={!accepted}
           className={cn(
-            "w-full py-[22px] rounded-full text-white text-[20px] font-medium transition-all duration-300",
-            accepted ? "bg-[#E15859] opacity-100" : "bg-[#E15859]/40 cursor-not-allowed"
+            "w-full py-[20px] rounded-[24px] text-white text-[18px] font-semibold transition-all duration-300 shadow-lg shadow-[#E15859]/20",
+            accepted ? "bg-[#E15859] opacity-100" : "bg-[#E15859]/50 cursor-not-allowed"
           )}
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
@@ -64,17 +81,17 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          className="flex items-start gap-3 mt-6"
+          className="flex items-start gap-3 mt-6 justify-center"
         >
           <Checkbox
             id="consent"
             checked={accepted}
             onCheckedChange={(checked) => setAccepted(checked === true)}
-            className="mt-0.5 border-[#E15859] data-[state=checked]:bg-[#E15859] data-[state=checked]:text-white rounded-[4px] size-[20px] shrink-0 transition-colors"
+            className="mt-0.5 border-[#E15859] data-[state=checked]:bg-[#E15859] data-[state=checked]:text-white rounded-[6px] size-[22px] shrink-0 transition-colors"
           />
           <label
             htmlFor="consent"
-            className="text-[11px] text-[#2A2021] leading-tight cursor-pointer select-none"
+            className="text-[11px] text-[#2A2021] leading-tight cursor-pointer select-none max-w-[260px]"
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
             {texts.disclaimer}{" "}
