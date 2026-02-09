@@ -70,7 +70,13 @@ class UserRepo(BaseRepo):
         logger.debug(f"Saving profile for user {user_id}: {list(profile_dict.keys())}")
         
         for key, value in profile_dict.items():
-            setattr(user, key, value)
+            if hasattr(user, key):
+                setattr(user, key, value)
+        
+        # Если все обязательные поля заполнены, можно ставить True (опционально, или доверяем фронту)
+        # В данном случае доверяем фронту, который присылает is_profile_completed=True в конце
+        if 'is_profile_completed' in profile_dict:
+             user.is_profile_completed = profile_dict['is_profile_completed']
         
         await self.session.commit()
         await self.session.refresh(user)

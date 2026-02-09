@@ -21,38 +21,22 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-16 flex flex-col items-center"
+          className="mb-8 flex flex-col items-center text-center"
         >
           <h1
-            className="font-serif text-[44px] italic text-[#E15859] text-center"
+            className="font-serif text-[32px] leading-tight text-[#E15859] mb-6"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
             {texts.title}
           </h1>
-          <div className="h-[1px] bg-[#E15859] w-[85%] mt-[-4px]" />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-center mb-6"
-        >
-          <h2
-            className="text-[34px] font-black tracking-tight leading-[1.1] uppercase"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
-          >
-            <span className="text-[#E15859]">{texts.headline1}</span>
-            <br />
-            <span className="text-[#2A2021]">{texts.headline2}</span>
-          </h2>
+          <div className="h-[1px] bg-[#E15859] w-[60%]" />
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center text-[#404243] text-[18px] max-w-[300px] leading-snug"
+          className="text-center text-[#2A2021] text-[18px] leading-relaxed max-w-[320px]"
           style={{ fontFamily: "'Montserrat', sans-serif" }}
         >
           {texts.subtitle}
@@ -88,8 +72,8 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             onCheckedChange={(checked) => setAccepted(checked === true)}
             className="mt-0.5 border-[#E15859] data-[state=checked]:bg-[#E15859] data-[state=checked]:text-white rounded-[4px] size-[20px] shrink-0 transition-colors"
           />
-          <label 
-            htmlFor="consent" 
+          <label
+            htmlFor="consent"
             className="text-[11px] text-[#2A2021] leading-tight cursor-pointer select-none"
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
@@ -100,6 +84,6 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           </label>
         </motion.div>
       </div>
-    </div>
+    </div >
   );
 }

@@ -134,7 +134,7 @@ class UserProfile(BaseModel):
     photo: Optional[str] = None
     about_me: Optional[str] = None
     city: Optional[str] = None
-
+    is_profile_completed: bool = False
 
 class ProfileRequest(BaseModel):
     userId: int
@@ -305,7 +305,8 @@ async def get_profile_endpoint(
             "instagram": user.instagram,
             "photo": user.photo,
             "about_me": user.about_me,
-            "city": user.city
+            "city": user.city,
+            "is_profile_completed": user.is_profile_completed
         }
         return {"profile": profile_dict}
     except HTTPException:

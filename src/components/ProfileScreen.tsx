@@ -15,6 +15,7 @@ interface ProfileScreenProps {
   onBookings?: () => void;
   onFavorites?: () => void;
   onHelp?: () => void;
+  onEditProfile?: () => void;
 }
 
 export function ProfileScreen({
@@ -29,9 +30,10 @@ export function ProfileScreen({
   onBookings,
   onFavorites,
   onHelp,
+  onEditProfile,
 }: ProfileScreenProps) {
   const menuItems = [
-    { icon: User, label: "Моя анкета", onClick: onMyProfile },
+    { icon: User, label: "Моя анкета", onClick: onEditProfile || onMyProfile },
     { icon: Calendar, label: "Актуальные бронирования", onClick: onBookings },
     { icon: Heart, label: "Избранное", onClick: onFavorites },
     { icon: Info, label: "Справочный центр", onClick: onHelp },
@@ -64,7 +66,10 @@ export function ProfileScreen({
             </div>
             <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
           </div>
-          <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+          <button
+            onClick={onEditProfile}
+            className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm"
+          >
             <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
           </button>
         </div>

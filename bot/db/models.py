@@ -41,6 +41,7 @@ class User(Base):
     meeting_time_from = Column(String, nullable=True)
     meeting_time_to = Column(String, nullable=True)
     city = Column(String, index=True)  # Индекс для поиска по городу
+    is_profile_completed = Column(Boolean, default=False)  # Флаг завершенности профиля
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 

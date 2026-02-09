@@ -60,6 +60,7 @@ export interface UserProfile {
   meeting_time_to?: string;
   // Frontend uses `format` key for meeting format; backend maps it to communication_format
   format?: string;
+  is_profile_completed?: boolean;
 }
 
 export interface Slot {
@@ -137,7 +138,7 @@ export async function getProfile(userId?: number, token?: string): Promise<{ pro
 
   const params = new URLSearchParams();
   if (userId) params.append('userId', userId.toString());
-  
+
   const url = `${API_BASE}/api/profile${params.toString() ? '?' + params.toString() : ''}`;
   console.log('🔗 Запрос к:', url);
 
@@ -162,17 +163,17 @@ export async function getProfile(userId?: number, token?: string): Promise<{ pro
 export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   const url = city ? `${API_BASE}/api/slots?city=${encodeURIComponent(city)}` : `${API_BASE}/api/slots`;
   console.log('🔗 Запрос к:', url);
-  
+
   try {
     const response = await fetch(url);
     console.log('📡 Ответ:', response.status, response.statusText);
-    
+
     if (!response.ok) {
       const text = await response.text();
       console.log('❌ Текст ошибки:', text);
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
-    
+
     const data = await response.json();
     console.log('✅ Данные:', data);
     return data;
@@ -191,25 +192,25 @@ export async function getUserBookings(userId: number): Promise<{ bookings: Booki
   return result;
 }
 
-export async function createBooking(userId: number, slotId: number): Promise<{success: boolean}> {
+export async function createBooking(userId: number, slotId: number): Promise<{ success: boolean }> {
   console.log(`[API] Creating booking: userId=${userId}, slotId=${slotId}`);
   console.log(`[API] Request body:`, JSON.stringify({ userId, slotId }));
-  
+
   const response = await fetch(`${API_BASE}/api/bookings`, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ userId, slotId }),
   });
-  
+
   console.log(`[API] Booking response status: ${response.status}`);
-  
+
   if (!response.ok) {
     const text = await response.text().catch(() => '');
     console.log(`[API] Booking error response:`, text);
   }
-  
+
   return handleResponse(response);
 }
 

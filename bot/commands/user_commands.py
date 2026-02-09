@@ -4,58 +4,17 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from config import MINIAPP_URL
 from auth_token import generate_user_token
+from i18n import i18n  # Import i18n helper
 
 # Роутер для пользовательских команд
 user_router = Router()
-
-# Приветственное сообщение
-WELCOME_TEXT = (
-    "Привет! Добро пожаловать в Allora 💛\n\n"
-    "Это сервис тёплых ужинов с интересными незнакомцами, где за одним столом можно встретить «своих» людей.\n\n"
-    "Уже больше 2500 человек познакомились на наших встречах, и каждый вечер становится маленькой историей.\n\n"
-    "Будем рады открыть для тебя этот формат. Возможно, именно его атмосферы тебе сейчас и не хватало.\n\n"
-    "Всё, что нужно знать о Allora, собрали в нашем телеграм-канале:\n"
-    # TODO: Заменить на реальный ID канала когда будет предоставлен
-    "🔸 <a href='https://t.me/CHANNEL_ID'>Как проходят встречи</a>\n"
-    "🔸 <a href='https://t.me/CHANNEL_ID'>В чём особенность формата</a>\n"
-    "🔸 <a href='https://t.me/CHANNEL_ID'>Отзывы участников</a>\n"
-    "🔸 <a href='https://t.me/CHANNEL_ID'>Гайд для классного вечера</a>\n"
-    "🔸 <a href='https://t.me/CHANNEL_ID'>Ответы на вопросы</a>\n\n"
-    "<blockquote>Dating Thursday\n\n"
-    "По четвергам мы с Twinby решили добавить немного романтики в наши ужины. Это всё тот же классический формат Allora, но с одним небольшим исключением: в этот вечер за столом собираются только свободные люди. 😉\n\n"
-    "P.S. Анкета остаётся прежней, поэтому там есть вопрос про «семейное положение» и нет цели встречи «поиск отношений».\n"
-    "Выбери любую цель, по четвергам алгоритм всё равно учтёт романтический формат 💛</blockquote>\n\n"
-    "Если хочешь присоединиться — жми <b><a href='#'>Старт</a></b> в левом нижнем углу и заполняй короткую анкету.\n"
-    "Всё просто: выбери дату, подтверди участие — и приходи за тёплым вечером и живыми разговорами.\n\n"
-    "💳 Сбор за участие — <b>1 000 ₽</b>\n"
-    "Еду и напитки каждый выбирает по вкусу и оплачивает отдельно.\n\n"
-    "Ты креатор?\n"
-    "Пришли свои соцсети в @allora_support — с радостью пригласим тебя на ужин бесплатно ☄️"
-)
-
-# Сообщение "Узнать больше"
-LEARN_MORE_TEXT = (
-    "Как всё устроено?\n\n"
-    "<b>Всё начинается с небольшой анкеты</b>\n"
-    "О тебе и твоих предпочтениях в общении — она несложная и займёт всего пару минут. Наш умный алгоритм подберёт тебе единомышленников, с которыми будет комфортно и интересно.\n\n"
-    "<b>Затем мы бронируем столик в ресторане</b>\n"
-    "Мы сами выбираем место, и это тоже часть опыта. Не нужно тратить время на поиск и согласование заведения — ты окажешься в уютном ресторане в центре города, с высоким рейтингом, тёплой атмосферой и вкусной едой.\n\n"
-    "<b>Адрес встречи мы сообщаем за сутки</b>\n"
-    "Это важный шаг: сначала мы собираем всех желающих, а потом формируем группы, которые подходят друг другу. В результате тебя ждёт ужин с людьми, с которыми точно будет о чём поговорить.\n\n"
-    "<b>За столом нет модератора</b>\n"
-    "И это сделано осознанно. Мы верим в силу естественного общения: когда нет ведущего, каждый чувствует себя на равных, и разговор развивается свободно. Алгоритм уже сделал главное — собрал людей, которым будет легко вместе!\n\n"
-    "<b>В боте доступны карточки с вопросами</b>\n"
-    "Они помогут уйти от банальных тем и узнать друг друга ближе. Но это лишь лёгкий повод начать диалог — вскоре ты и не заметишь, как карточки отодвинутся в сторону, а беседа пойдёт сама собой 🧡\n\n"
-    "<b>После ужина вечер продолжается</b>\n"
-    "Во время ужина тебе придёт сообщение с адресом секретного бара — туда гости отправляются, чтобы продлить вечер в неформальной обстановке ✨\n\n"
-    "Там можно встретить участников Allora из других ресторанов, пообщаться с новыми людьми и завершить вечер в лёгкой и уютной атмосфере."
-)
 
 @user_router.message(CommandStart())
 async def start_command(message: Message, state: FSMContext) -> None:
     """Команда /start для всех пользователей"""
     # Получаем Telegram ID пользователя (это безопасно - данные от Telegram)
     user_id = message.from_user.id
+    lang = message.from_user.language_code
     
     # Генерируем токен с Telegram ID
     token = generate_user_token(user_id)
@@ -63,17 +22,21 @@ async def start_command(message: Message, state: FSMContext) -> None:
     # Строим URL миниапп с токеном
     miniapp_url_with_token = f"{MINIAPP_URL}?token={token}"
     
+    # URL канала пока хардкодим или берем из конфига/i18n, в i18n строках уже есть placeholder 'CHANNEL_ID' но мы его не заменяем пока
+    # так как пользователь не дал ID.
+    
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Начать!", web_app=WebAppInfo(url=miniapp_url_with_token))],
-        [InlineKeyboardButton(text="Узнать больше", callback_data="learn_more")]
+        [InlineKeyboardButton(text=i18n.get("btn_start", lang), web_app=WebAppInfo(url=miniapp_url_with_token))],
+        [InlineKeyboardButton(text=i18n.get("btn_learn_more", lang), callback_data="learn_more")]
     ])
-    await message.answer(WELCOME_TEXT, reply_markup=keyboard)
+    await message.answer(i18n.get("welcome_text", lang), reply_markup=keyboard)
 
 @user_router.callback_query(lambda c: c.data == "learn_more")
 async def learn_more(callback) -> None:
     """Обработчик кнопки 'Узнать больше'"""
     # Получаем Telegram ID пользователя
     user_id = callback.from_user.id
+    lang = callback.from_user.language_code
     
     # Генерируем токен с Telegram ID
     token = generate_user_token(user_id)
@@ -82,6 +45,6 @@ async def learn_more(callback) -> None:
     miniapp_url_with_token = f"{MINIAPP_URL}?token={token}"
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Начать!", web_app=WebAppInfo(url=miniapp_url_with_token))]
+        [InlineKeyboardButton(text=i18n.get("btn_start", lang), web_app=WebAppInfo(url=miniapp_url_with_token))]
     ])
-    await callback.message.answer(LEARN_MORE_TEXT, reply_markup=keyboard)
+    await callback.message.answer(i18n.get("learn_more_text", lang), reply_markup=keyboard)

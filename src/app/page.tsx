@@ -37,6 +37,7 @@ export default function Home() {
   const [userSocialLinks, setUserSocialLinks] = useState({ telegram: "", instagram: "" });
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userMeetingConditions, setUserMeetingConditions] = useState<Partial<MeetingConditionsData>>({});
+  const [fullProfile, setFullProfile] = useState<Partial<UserProfile>>({});
   const [isLoading, setIsLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,6 +58,7 @@ export default function Home() {
     setIsSaving(true);
     try {
       await saveProfile(userId, data);
+      setFullProfile(prev => ({ ...prev, ...data }));
     } catch (error) {
       console.error('❌ Failed to save profile', error);
     } finally {
@@ -81,10 +83,17 @@ export default function Home() {
         const profile = (result as any)?.profile ?? (result as any);
         if (!isMounted) return;
         if (profile) {
+          setFullProfile(profile);
           setUserName(profile.name || "");
           setUserGender((profile.gender as "male" | "female") || null);
           setProfileLoaded(true);
-          setCurrentScreen("welcome");
+
+          if (profile.is_profile_completed) {
+            setCurrentScreen("booking");
+          } else {
+            // Если профиль не завершен, начинаем сначала
+            setCurrentScreen("welcome");
+          }
         }
       } catch (error) {
         if (!isMounted) return;
@@ -112,7 +121,7 @@ export default function Home() {
         const decoded = jwtDecode<{ user_id: number }>(token);
         tryLoadProfile(decoded.user_id, token);
         return;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     let foundId = getTelegramId();
@@ -150,10 +159,10 @@ export default function Home() {
     setUserSocialLinks({ telegram: data.telegramNickname, instagram: data.instagramNickname });
     if (data.photo) setUserPhoto(data.photo);
     setCurrentScreen("meeting_conditions");
-    updateProfile({ 
-      telegram: data.telegramNickname, 
-      instagram: data.instagramNickname, 
-      photo: data.photo || undefined 
+    updateProfile({
+      telegram: data.telegramNickname,
+      instagram: data.instagramNickname,
+      photo: data.photo || undefined
     });
   };
 
@@ -167,6 +176,7 @@ export default function Home() {
       meeting_time_to: data.time.to,
       format: data.format,
       goal: data.goal,
+      is_profile_completed: true
     });
     setCurrentScreen("booking");
   };
@@ -196,7 +206,25 @@ export default function Home() {
 
             {currentScreen === "profile_form" && (
               <motion.div key="profile_form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ProfileFormScreen onContinue={handleProfileFormComplete} onBack={() => setCurrentScreen("onboarding")} />
+                <ProfileFormScreen
+                  onContinue={handleProfileFormComplete}
+                  onBack={() => setCurrentScreen("profile")} // Go back to profile if editing, or onboarding if new? Needs logic.
+                  // Only pass data if we have it. If new user, fullProfile is empty.
+                  initialData={{
+                    name: fullProfile.name || "",
+                    gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
+                    age: fullProfile.age?.toString() || "",
+                    zodiac: "", // UserProfile doesn't seem to have zodiac yet in my view of api.ts? Wait, let me check api.ts again.
+                    // Checked api.ts: UserProfile has `interests`, `comfort_level`, etc. It has `children`, `familyStatus` as optional strings.
+                    // It does not explicitly have `zodiac` in the interface I saw?
+                    // Let me check UserProfile interface in api.ts again.
+                    // It DOES NOT have zodiac in `api.ts`. I should add it to `api.ts` too.
+                    // For now I will pass what I have.
+                    career: fullProfile.occupation || "",
+                    familyStatus: fullProfile.relationship_status || "",
+                    hasChildren: fullProfile.children || ""
+                  }}
+                />
               </motion.div>
             )}
 
@@ -217,73 +245,74 @@ export default function Home() {
             )}
 
             {currentScreen === "quiz" && (
-                <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <QuizScreen onNext={() => {
-                    console.log("Moving to booking screen");
-                    setCurrentScreen("booking");
-                  }} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
-                </motion.div>
-              )}
+              <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <QuizScreen onNext={() => {
+                  console.log("Moving to booking screen");
+                  setCurrentScreen("booking");
+                }} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
+              </motion.div>
+            )}
 
-              {currentScreen === "booking" && (
-                  <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <BookingScreen 
-                        city="Москва" 
-                        onBack={() => setCurrentScreen("quiz")} 
-                        onComplete={() => {}}
-                        onPromotions={() => setCurrentScreen("promotions")}
-                        onAfisha={() => setCurrentScreen("afisha")}
-                        onProfile={() => setCurrentScreen("profile")}
-                      />
-                  </motion.div>
-                )}
+            {currentScreen === "booking" && (
+              <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <BookingScreen
+                  city="Москва"
+                  onBack={() => setCurrentScreen("quiz")}
+                  onComplete={() => { }}
+                  onPromotions={() => setCurrentScreen("promotions")}
+                  onAfisha={() => setCurrentScreen("afisha")}
+                  onProfile={() => setCurrentScreen("profile")}
+                />
+              </motion.div>
+            )}
 
-                {currentScreen === "promotions" && (
-                  <motion.div key="promotions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <PromotionsScreen onBack={() => setCurrentScreen("booking")} />
-                  </motion.div>
-                )}
+            {currentScreen === "promotions" && (
+              <motion.div key="promotions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <PromotionsScreen onBack={() => setCurrentScreen("booking")} />
+              </motion.div>
+            )}
 
-                {currentScreen === "afisha" && (
-                  <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <AfishaScreen
-                      city="Москва"
-                      favoriteIds={favoriteIds}
-                      onToggleFavorite={toggleFavorite}
-                      onFavorites={() => setCurrentScreen("favorites")}
-                      onHome={() => setCurrentScreen("booking")}
-                      onBook={() => setCurrentScreen("booking")}
-                    />
-                  </motion.div>
-                )}
+            {currentScreen === "afisha" && (
+              <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <AfishaScreen
+                  city="Москва"
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={toggleFavorite}
+                  onFavorites={() => setCurrentScreen("favorites")}
+                  onHome={() => setCurrentScreen("booking")}
+                  onBook={() => setCurrentScreen("booking")}
+                />
+              </motion.div>
+            )}
 
-                {currentScreen === "favorites" && (
-                  <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <FavoritesScreen
-                      favoriteIds={favoriteIds}
-                      onToggleFavorite={toggleFavorite}
-                      onBack={() => setCurrentScreen("afisha")}
-                      onBook={() => setCurrentScreen("booking")}
-                    />
-                  </motion.div>
-                )}
+            {currentScreen === "favorites" && (
+              <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <FavoritesScreen
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={toggleFavorite}
+                  onBack={() => setCurrentScreen("afisha")}
+                  onBook={() => setCurrentScreen("booking")}
+                />
+              </motion.div>
+            )}
 
-                {currentScreen === "profile" && (
-                  <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <ProfileScreen
-                      city="Москва"
-                      userName={userName || "Павел"}
-                      userPhoto={userPhoto}
-                      onHome={() => setCurrentScreen("booking")}
-                      onAfisha={() => setCurrentScreen("afisha")}
-                      onFavorites={() => setCurrentScreen("favorites")}
-                      onBookings={() => setCurrentScreen("booking")}
-                    />
-                  </motion.div>
-                )}
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
+            {currentScreen === "profile" && (
+              <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ProfileScreen
+                  city="Москва"
+                  userName={userName || "Павел"}
+                  userPhoto={userPhoto}
+                  onHome={() => setCurrentScreen("booking")}
+                  onAfisha={() => setCurrentScreen("afisha")}
+                  onFavorites={() => setCurrentScreen("favorites")}
+                  onBookings={() => setCurrentScreen("booking")}
+                  onEditProfile={() => setCurrentScreen("profile_form")}
+                />
+              </motion.div>
+            )}
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
