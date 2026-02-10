@@ -26,6 +26,7 @@ from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME, SECRET_KEY
 from auth_token import validate_user_token
+from utils import format_date
 from payments.payment_service import PaymentService
 from payments.payment_config import YOOKASSA_SECRET_KEY
 from logger import get_api_logger
@@ -33,12 +34,6 @@ from admin_api import admin_router_api
 
 # Логгер для API
 logger = get_api_logger()
-
-# Режим отключения аутентификации для разработки
-AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
-
-if AUTH_DISABLED:
-    logger.warning("⚠️ AUTH_DISABLED=true - Аутентификация отключена! Не используйте в продакшене!")
 
 
 @asynccontextmanager
@@ -66,10 +61,7 @@ async def get_current_user_id(
 ) -> Optional[int]:
     """
     Извлекает user_id из JWT токена.
-    Если AUTH_DISABLED=true, возвращает None (эндпоинты должны обработать это).
     """
-    if AUTH_DISABLED:
-        return None
     
     if not credentials:
         raise HTTPException(status_code=401, detail="Missing authorization token")
@@ -83,22 +75,6 @@ async def get_current_user_id(
     return result['user_id']
 
 
-def get_user_id_or_param(
-    auth_user_id: Optional[int],
-    param_user_id: Optional[int]
-) -> int:
-    """
-    Возвращает user_id из токена или из параметра (для режима AUTH_DISABLED).
-    """
-    if AUTH_DISABLED:
-        if param_user_id is None:
-            raise HTTPException(status_code=400, detail="userId parameter required in AUTH_DISABLED mode")
-        return param_user_id
-    
-    if auth_user_id is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
-    return auth_user_id
 
 
 # CORS для MiniApp
@@ -262,10 +238,10 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 async def save_profile_endpoint(
     request: ProfileRequest,
     session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    auth_user_id: int = Depends(get_current_user_id)
 ):
     """Сохранить профиль пользователя."""
-    user_id = get_user_id_or_param(auth_user_id, request.userId)
+    user_id = auth_user_id
     
     logger.info(f"Saving profile for user {user_id}")
     profile_dict = request.profile.model_dump(exclude_none=False)
@@ -284,12 +260,11 @@ async def save_profile_endpoint(
 
 @app.get("/api/profile")
 async def get_profile_endpoint(
-    userId: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    auth_user_id: int = Depends(get_current_user_id)
 ):
     """Получить профиль пользователя."""
-    user_id = get_user_id_or_param(auth_user_id, userId)
+    user_id = auth_user_id
     
     try:
         user_repo = UserRepo(session)
@@ -328,12 +303,11 @@ async def get_profile_endpoint(
 
 @app.get("/api/bookings")
 async def get_user_bookings_endpoint(
-    userId: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    auth_user_id: int = Depends(get_current_user_id)
 ):
     """Получить бронирования пользователя."""
-    user_id = get_user_id_or_param(auth_user_id, userId)
+    user_id = auth_user_id
     
     try:
         logger.info(f"Getting bookings for user {user_id}")
@@ -378,10 +352,10 @@ async def get_user_bookings_endpoint(
 async def create_booking_endpoint(
     request: BookingRequest,
     session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    auth_user_id: int = Depends(get_current_user_id)
 ):
     """Создать бронирование."""
-    user_id = get_user_id_or_param(auth_user_id, request.userId)
+    user_id = auth_user_id
     
     try:
         logger.info(f"Creating booking: user={user_id}, slot={request.slotId}")

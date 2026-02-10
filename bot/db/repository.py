@@ -25,6 +25,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from schemas import UserProfile
+from utils import parse_date
 from logger import get_db_logger
 
 logger = get_db_logger()
@@ -99,15 +100,9 @@ class SlotRepo(BaseRepo):
         """Создает новый слот."""
         # Парсим дату из строки "DD.MM.YYYY" в date object
         try:
-            date_obj = datetime.strptime(date, "%d.%m.%Y").date()
-        except ValueError:
-            # Резервный вариант для формата ISO или других
-            try:
-                date_obj = datetime.fromisoformat(date).date()
-            except ValueError:
-                # Если совсем не вышло, пробуем как есть (хотя это вызовет ошибку БД если тип Date)
-                # Но лучше кинуть ошибку здесь
-                raise ValueError(f"Invalid date format: {date}")
+            date_obj = parse_date(date)
+        except ValueError as e:
+            raise ValueError(str(e))
 
         new_slot = DinnerSlot(
             date=date_obj,
@@ -383,12 +378,9 @@ class AdminRepo(BaseRepo):
                 # Специальная обработка для даты
                 if key == 'date' and isinstance(value, str):
                     try:
-                        value = datetime.strptime(value, "%d.%m.%Y").date()
+                        value = parse_date(value)
                     except ValueError:
-                        try:
-                            value = datetime.fromisoformat(value).date()
-                        except ValueError:
-                             pass # Оставляем как есть, упадет ниже или в БД
+                        pass # Оставляем как есть, упадет ниже или в БД
                 
                 setattr(slot, key, value)
         await self.session.commit()

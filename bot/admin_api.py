@@ -14,6 +14,7 @@ from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo
 from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN
 from auth_token import validate_user_token
 from logger import get_api_logger
+from utils import format_date
 
 logger = get_api_logger()
 
@@ -23,8 +24,9 @@ security = HTTPBearer(auto_error=False)
 
 async def require_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: AsyncSession = Depends(get_session),
 ) -> int:
-    """Проверяет JWT и что user_id в ADMIN_IDS. Возвращает user_id."""
+    """Проверяет JWT и что user_id в ADMIN_IDS или is_admin=True в БД. Возвращает user_id."""
     if not credentials:
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
@@ -33,10 +35,21 @@ async def require_admin(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user_id = result["user_id"]
-    if user_id not in ADMIN_IDS:
-        raise HTTPException(status_code=403, detail="Not an admin")
+    
+    # 1. Проверка по конфигу (супер-админы)
+    if user_id in ADMIN_IDS:
+        return user_id
 
-    return user_id
+    # 2. Проверка по БД
+    # Импортируем внутри функции чтобы избежать циклических импортов если они есть
+    from db.repository import UserRepo
+    user_repo = UserRepo(session)
+    user = await user_repo.get_user(user_id)
+    
+    if user and user.is_admin:
+        return user_id
+
+    raise HTTPException(status_code=403, detail="Not an admin")
 
 
 # ===== Pydantic модели =====
@@ -136,7 +149,7 @@ async def admin_slots(
         "slots": [
             {
                 "id": s.id,
-                "date": s.date.strftime("%d.%m.%Y"),
+                "date": format_date(s.date),
                 "time": s.time,
                 "city": s.city,
                 "restaurant": s.restaurant,
@@ -168,7 +181,7 @@ async def admin_create_slot(
     logger.info(f"Admin {admin_id} created slot {slot.id}")
     return {
         "id": slot.id,
-        "date": slot.date.strftime("%d.%m.%Y"),
+        "date": format_date(slot.date),
         "time": slot.time,
         "city": slot.city,
         "restaurant": slot.restaurant,
@@ -194,7 +207,7 @@ async def admin_update_slot(
     logger.info(f"Admin {admin_id} updated slot {slot_id}: {list(updates.keys())}")
     return {
         "id": slot.id,
-        "date": slot.date.strftime("%d.%m.%Y"),
+        "date": format_date(slot.date),
         "time": slot.time,
         "city": slot.city,
         "restaurant": slot.restaurant,

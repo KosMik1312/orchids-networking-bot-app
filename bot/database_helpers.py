@@ -10,6 +10,7 @@ from typing import List, Optional
 from db.session import get_session_factory
 from db.models import User, DinnerSlot, Booking
 from db.repository import SlotRepo, UserRepo, BookingRepo
+from utils import format_date
 
 
 async def create_slot(date: str, time: str, city: str, restaurant: str, max_people: int) -> dict:
@@ -26,7 +27,7 @@ async def create_slot(date: str, time: str, city: str, restaurant: str, max_peop
         )
         return {
             "id": slot.id,
-            "date": slot.date.strftime("%d.%m.%Y"),
+            "date": format_date(slot.date),
             "time": slot.time,
             "city": slot.city,
             "restaurant": slot.restaurant,
@@ -43,7 +44,7 @@ async def get_all_slots() -> List[dict]:
         return [
             {
                 "id": slot.id,
-                "date": slot.date.strftime("%d.%m.%Y"),
+                "date": format_date(slot.date),
                 "time": slot.time,
                 "city": slot.city,
                 "restaurant": slot.restaurant,

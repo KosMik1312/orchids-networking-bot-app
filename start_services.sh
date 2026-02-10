@@ -49,7 +49,9 @@ show_menu() {
     echo -e "${YELLOW}6.${NC} Запустить только FastAPI"
     echo -e "${YELLOW}7.${NC} Запустить только Бот"
     echo -e "${YELLOW}8.${NC} Очистить базу данных (ВНИМАНИЕ: удаляет все данные)"
-    echo -e "${YELLOW}9.${NC} Настроить ADMIN_IDS (администраторы)"
+    echo -e "${YELLOW}9.${NC} Настроить ADMIN_IDS (администраторы в конфиге)"
+    echo -e "${YELLOW}10.${NC} Добавить администратора в БД"
+    echo -e "${YELLOW}11.${NC} Пересоздать базу данных (ПОЛНАЯ ОЧИСТКА)"
     echo -e "${YELLOW}0.${NC} Выход"
 
     if [ "$FORCE" = "true" ]; then
@@ -459,6 +461,76 @@ configure_admin_ids() {
 }
 
 
+add_admin_db() {
+    echo ""
+    echo -e "${BLUE}Добавление администратора в базу данных${NC}"
+    echo -e "Введите Telegram ID пользователя:"
+    read -p "User ID: " USER_ID
+
+    if [ -z "$USER_ID" ]; then
+        echo -e "${RED}❌ ID не может быть пустым${NC}"
+        return
+    fi
+    
+    # Проверка на число
+    if ! [[ "$USER_ID" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}❌ ID должен состоять только из цифр${NC}"
+        return
+    fi
+    
+    echo -e "${YELLOW}Добавляю администратора...${NC}"
+    python bot/manage_db.py add_admin "$USER_ID"
+    
+    PY_EXIT=$?
+    if [ $PY_EXIT -eq 0 ]; then
+        echo -e "${GREEN}✅ Операция выполнена${NC}"
+    else
+        echo -e "${RED}❌ Ошибка при выполнении (код: $PY_EXIT)${NC}"
+    fi
+    # Пауза чтобы увидеть результат
+}
+
+
+recreate_database() {
+    echo ""
+    echo -e "${RED}╔════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║      ВНИМАНИЕ: ОПАСНАЯ ОПЕРАЦИЯ        ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════╝${NC}"
+    echo -e "Вы собираетесь полностью удалить и пересоздать базу данных."
+    echo -e "${RED}ВСЕ ДАННЫЕ БУДУТ ПОТЕРЯНЫ!${NC}"
+    echo ""
+    
+    if [ "$FORCE" != "true" ]; then
+        echo -e "Для подтверждения введите фразу '${RED}DELETE ALL DATA${NC}':"
+        read -p "> " CONFIRM
+        
+        if [ "$CONFIRM" != "DELETE ALL DATA" ]; then
+            echo -e "${GREEN}Операция отменена.${NC}"
+            return
+        fi
+    fi 
+
+    echo -e "${YELLOW}🛑 Останавливаю процессы перед операцией с БД...${NC}"
+    stop_all
+    sleep 2
+
+    echo -e "${YELLOW}🧹 Пересоздаю базу данных...${NC}"
+    # Передаем 'y' в stdin
+    echo "y" | python bot/manage_db.py recreate
+    
+    PY_EXIT=$?
+    if [ $PY_EXIT -eq 0 ]; then
+        echo -e "${GREEN}✅ База данных успешно пересоздана${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: DB recreated" >> "$LOG_FILE"
+    else
+        echo -e "${RED}❌ Ошибка при пересоздании БД (код: $PY_EXIT)${NC}"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: DB recreate failed (exit $PY_EXIT)" >> "$LOG_FILE"
+    fi
+    
+    SKIP_PAUSE=true
+}
+
+
 # ============ ОСНОВНОЙ ЦИКЛ ============
 
 while true; do
@@ -492,6 +564,12 @@ while true; do
             ;;
         9)
             configure_admin_ids
+            ;;
+        10)
+            add_admin_db
+            ;;
+        11)
+            recreate_database
             ;;
         0)
             echo -e "${BLUE}👋 До свидания!${NC}"
