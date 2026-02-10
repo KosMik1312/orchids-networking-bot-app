@@ -127,7 +127,6 @@ export default function Home() {
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (token) {
       try {
@@ -274,10 +273,10 @@ export default function Home() {
                   onComplete={() => { }}
                   onPromotions={() => setCurrentScreen("promotions")}
                   onAfisha={() => setCurrentScreen("afisha")}
-                      onProfile={() => setCurrentScreen("profile")}
-                      onSettings={() => setCurrentScreen("settings")}
-                      onContacts={() => setCurrentScreen("contacts")}
-                    />
+                  onProfile={() => setCurrentScreen("profile")}
+                  onSettings={() => setCurrentScreen("settings")}
+                  onContacts={() => setCurrentScreen("contacts")}
+                />
               </motion.div>
             )}
 
@@ -290,14 +289,14 @@ export default function Home() {
             {currentScreen === "afisha" && (
               <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <AfishaScreen
-                    city="Москва"
-                    favoriteIds={favoriteIds}
-                    onToggleFavorite={toggleFavorite}
-                    onFavorites={() => setCurrentScreen("favorites")}
-                    onHome={() => setCurrentScreen("booking")}
-                    onProfile={() => setCurrentScreen("profile")}
-                    onBook={() => setCurrentScreen("booking")}
-                  />
+                  city="Москва"
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={toggleFavorite}
+                  onFavorites={() => setCurrentScreen("favorites")}
+                  onHome={() => setCurrentScreen("booking")}
+                  onProfile={() => setCurrentScreen("profile")}
+                  onBook={() => setCurrentScreen("booking")}
+                />
               </motion.div>
             )}
 
@@ -312,42 +311,42 @@ export default function Home() {
               </motion.div>
             )}
 
-              {currentScreen === "profile" && (
-                <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <ProfileScreen
-                    city="Москва"
-                    userName={userName || "Павел"}
-                    userPhoto={userPhoto}
-                    onHome={() => setCurrentScreen("booking")}
-                    onAfisha={() => setCurrentScreen("afisha")}
-                    onFavorites={() => setCurrentScreen("favorites")}
-                    onBookings={() => setCurrentScreen("booking")}
-                    onEditProfile={() => setCurrentScreen("profile_form")}
-                    onSettings={() => setCurrentScreen("settings")}
-                  />
-                </motion.div>
-              )}
+            {currentScreen === "profile" && (
+              <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ProfileScreen
+                  city="Москва"
+                  userName={userName || "Павел"}
+                  userPhoto={userPhoto}
+                  onHome={() => setCurrentScreen("booking")}
+                  onAfisha={() => setCurrentScreen("afisha")}
+                  onFavorites={() => setCurrentScreen("favorites")}
+                  onBookings={() => setCurrentScreen("booking")}
+                  onEditProfile={() => setCurrentScreen("profile_form")}
+                  onSettings={() => setCurrentScreen("settings")}
+                />
+              </motion.div>
+            )}
 
-                {currentScreen === "settings" && (
-                  <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <SettingsScreen onBack={() => setCurrentScreen("booking")} />
-                  </motion.div>
-                )}
+            {currentScreen === "settings" && (
+              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <SettingsScreen onBack={() => setCurrentScreen("booking")} />
+              </motion.div>
+            )}
 
-                {currentScreen === "contacts" && (
-                  <motion.div key="contacts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <MyContactsScreen onBack={() => setCurrentScreen("booking")} />
-                  </motion.div>
-                )}
+            {currentScreen === "contacts" && (
+              <motion.div key="contacts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <MyContactsScreen onBack={() => setCurrentScreen("booking")} />
+              </motion.div>
+            )}
 
-                {currentScreen === "admin" && adminToken && (
-                  <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <AdminScreen token={adminToken} />
-                  </motion.div>
-                )}
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
+            {currentScreen === "admin" && adminToken && (
+              <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <AdminScreen token={adminToken} />
+              </motion.div>
+            )}
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
