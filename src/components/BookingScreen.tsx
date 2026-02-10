@@ -22,9 +22,10 @@ interface BookingScreenProps {
   onAfisha?: () => void;
   onProfile?: () => void;
   onSettings?: () => void;
+  onContacts?: () => void;
 }
 
-export function BookingScreen({ city = "Москва", onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings }: BookingScreenProps) {
+export function BookingScreen({ city = "Москва", onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
   const [step, setStep] = useState<BookingStep>("slots");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -50,24 +51,6 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
-      {/* Header */}
-      <div className="flex justify-between items-center px-6 pt-12 pb-4">
-        <button onClick={onBack} className="text-[#2A2021] font-medium text-[17px]">
-          Cancel
-        </button>
-        <div className="flex flex-col items-center">
-          <span className="font-serif text-xl leading-tight" style={{ fontFamily: "'Times New Roman', serif" }}>Allora</span>
-          <span className="text-[10px] text-[#8E8E93] tracking-wide">bot</span>
-        </div>
-        <button className="w-10 h-10 flex items-center justify-center rounded-full bg-black">
-          <div className="flex gap-0.5">
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-          </div>
-        </button>
-      </div>
-
       <AnimatePresence mode="wait">
         {/* Step 1: Slot Selection */}
         {step === "slots" && (
@@ -131,14 +114,22 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
               ))}
             </div>
 
-            {/* Promo Button */}
-            <button
-              onClick={onPromotions}
-              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
-            >
-              Акции и предложения
-            </button>
-          </motion.div>
+              {/* Promo Button */}
+              <button
+                onClick={onPromotions}
+                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
+              >
+                Акции и предложения
+              </button>
+
+              {/* Contacts Button */}
+              <button
+                onClick={onContacts}
+                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
+              >
+                Мои контакты
+              </button>
+            </motion.div>
         )}
 
         {/* Step 2: Payment */}

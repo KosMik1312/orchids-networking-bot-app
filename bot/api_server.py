@@ -29,6 +29,7 @@ from auth_token import validate_user_token
 from payments.payment_service import PaymentService
 from payments.payment_config import YOOKASSA_SECRET_KEY
 from logger import get_api_logger
+from admin_api import admin_router_api
 
 # Логгер для API
 logger = get_api_logger()
@@ -53,7 +54,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Orchids Networking Bot API", lifespan=lifespan)
 
-# Security для токенов
+# Подключаем админские эндпоинты
+app.include_router(admin_router_api)
+
+# Настройки безопасности для токенов
 security = HTTPBearer(auto_error=False)
 
 
@@ -116,7 +120,7 @@ app.add_middleware(
 
 class UserProfile(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
-    
+
     name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
@@ -134,6 +138,11 @@ class UserProfile(BaseModel):
     photo: Optional[str] = None
     about_me: Optional[str] = None
     city: Optional[str] = None
+    meeting_metro: Optional[List[str]] = None
+    meeting_days: Optional[List[str]] = None
+    meeting_time_from: Optional[str] = None
+    meeting_time_to: Optional[str] = None
+    format: Optional[str] = None
     is_profile_completed: bool = False
 
 class ProfileRequest(BaseModel):
@@ -177,7 +186,7 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
             "slots": [
                 {
                     "id": slot.id,
-                    "date": slot.date,
+                    "date": slot.date.strftime("%d.%m.%Y"),
                     "time": slot.time,
                     "city": slot.city,
                     "restaurant": slot.restaurant,
@@ -227,7 +236,7 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
         slots_data = [
             {
                 "id": slot.id,
-                "date": slot.date,
+                "date": slot.date.strftime("%d.%m.%Y"),
                 "time": slot.time,
                 "city": slot.city,
                 "restaurant": slot.restaurant,
@@ -346,7 +355,7 @@ async def get_user_bookings_endpoint(
                     "slot_id": booking.slot_id,
                     "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
                     "status": booking.status,
-                    "date": slot.date if slot else None,
+                    "date": slot.date.strftime("%d.%m.%Y") if slot else None,
                     "time": slot.time if slot else None,
                     "city": slot.city if slot else None,
                     "restaurant": slot.restaurant if slot else None,
@@ -454,7 +463,7 @@ async def create_payment_endpoint(
             return_url=request.returnUrl
         )
         
-        # Save payment to database
+        # Сохраняем платеж в базу данных
         payment_repo = PaymentRepo(session)
         db_payment = await payment_repo.create_payment(
             user_id=user_id,
@@ -498,11 +507,11 @@ async def get_payment_status(
         if not AUTH_DISABLED and auth_user_id and payment.user_id != auth_user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        # Get latest status from Yookassa
+        # Получаем актуальный статус от ЮКассы
         payment_service = PaymentService()
         yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
         
-        # Update status in database
+        # Обновляем статус в базе данных
         await payment_repo.update_payment_status(payment_id, yookassa_payment['status'])
         
         return {

@@ -49,6 +49,7 @@ show_menu() {
     echo -e "${YELLOW}6.${NC} Запустить только FastAPI"
     echo -e "${YELLOW}7.${NC} Запустить только Бот"
     echo -e "${YELLOW}8.${NC} Очистить базу данных (ВНИМАНИЕ: удаляет все данные)"
+    echo -e "${YELLOW}9.${NC} Настроить ADMIN_IDS (администраторы)"
     echo -e "${YELLOW}0.${NC} Выход"
 
     if [ "$FORCE" = "true" ]; then
@@ -397,6 +398,67 @@ PY
 }
 
 
+configure_admin_ids() {
+    echo ""
+    ENV_FILE="$PWD/.env"
+
+    # Показываем текущее значение
+    if [ -f "$ENV_FILE" ]; then
+        CURRENT=$(grep -E "^ADMIN_IDS=" "$ENV_FILE" | tail -1 | cut -d'=' -f2-)
+        if [ -n "$CURRENT" ]; then
+            echo -e "${BLUE}Текущие ADMIN_IDS: ${GREEN}$CURRENT${NC}"
+        else
+            echo -e "${YELLOW}ADMIN_IDS не задан${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Файл .env не найден, будет создан${NC}"
+    fi
+
+    echo ""
+    echo -e "Введите Telegram ID администраторов через запятую (без пробелов)."
+    echo -e "Пример: ${GREEN}123456789,987654321${NC}"
+    echo -e "Оставьте пустым и нажмите Enter, чтобы очистить список."
+    read -p "ADMIN_IDS: " NEW_IDS
+
+    # Валидация: только цифры и запятые
+    CLEAN_IDS=$(echo "$NEW_IDS" | tr -d ' ' | sed 's/,\+/,/g' | sed 's/^,//' | sed 's/,$//')
+
+    if [ -n "$CLEAN_IDS" ]; then
+        if ! echo "$CLEAN_IDS" | grep -qE '^[0-9]+(,[0-9]+)*$'; then
+            echo -e "${RED}❌ Неверный формат. Используйте только числа через запятую.${NC}"
+            return
+        fi
+    fi
+
+    # Создаём .env если не существует
+    if [ ! -f "$ENV_FILE" ]; then
+        touch "$ENV_FILE"
+        echo -e "${GREEN}✓ Создан файл .env${NC}"
+    fi
+
+    # Заменяем или добавляем ADMIN_IDS
+    if grep -qE "^ADMIN_IDS=" "$ENV_FILE"; then
+        # Заменяем все вхождения ADMIN_IDS
+        sed -i "s/^ADMIN_IDS=.*/ADMIN_IDS=$CLEAN_IDS/" "$ENV_FILE"
+    else
+        echo "ADMIN_IDS=$CLEAN_IDS" >> "$ENV_FILE"
+    fi
+
+    echo -e "${GREEN}✅ ADMIN_IDS обновлён: ${CLEAN_IDS:-<пусто>}${NC}"
+
+    # Предлагаем перезапуск
+    echo ""
+    read -p "Перезапустить сервисы для применения? (y/n): " RESTART
+    if [ "$RESTART" = "y" ] || [ "$RESTART" = "Y" ]; then
+        stop_all
+        sleep 1
+        start_both
+    fi
+
+    SKIP_PAUSE=true
+}
+
+
 # ============ ОСНОВНОЙ ЦИКЛ ============
 
 while true; do
@@ -428,12 +490,15 @@ while true; do
         8)
             clear_database
             ;;
+        9)
+            configure_admin_ids
+            ;;
         0)
             echo -e "${BLUE}👋 До свидания!${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-8${NC}"
+            echo -e "${RED}❌ Неверный выбор. Пожалуйста, выберите опцию 0-9${NC}"
             ;;
     esac
     

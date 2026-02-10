@@ -15,9 +15,12 @@ import { PromotionsScreen } from "@/components/PromotionsScreen";
 import { AfishaScreen } from "@/components/AfishaScreen";
 import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
+import { SettingsScreen } from "@/components/SettingsScreen";
+import { MyContactsScreen } from "@/components/MyContactsScreen";
+import { AdminScreen } from "@/components/AdminScreen";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking" | "promotions" | "afisha" | "favorites" | "profile";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "admin";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -43,6 +46,7 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   const toggleFavorite = (id: number) => {
     setFavoriteIds((prev) => {
@@ -67,6 +71,15 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("screen") === "admin" && params.get("token")) {
+      setAdminToken(params.get("token"));
+      setCurrentScreen("admin");
+      setIsLoading(false);
+      setProfileLoaded(true);
+      return;
+    }
+
     if (DEV_SKIP_PROFILE_LOADING) {
       setUserId(123456789);
       setIsLoading(false);
@@ -261,8 +274,10 @@ export default function Home() {
                   onComplete={() => { }}
                   onPromotions={() => setCurrentScreen("promotions")}
                   onAfisha={() => setCurrentScreen("afisha")}
-                  onProfile={() => setCurrentScreen("profile")}
-                />
+                      onProfile={() => setCurrentScreen("profile")}
+                      onSettings={() => setCurrentScreen("settings")}
+                      onContacts={() => setCurrentScreen("contacts")}
+                    />
               </motion.div>
             )}
 
@@ -275,13 +290,14 @@ export default function Home() {
             {currentScreen === "afisha" && (
               <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <AfishaScreen
-                  city="Москва"
-                  favoriteIds={favoriteIds}
-                  onToggleFavorite={toggleFavorite}
-                  onFavorites={() => setCurrentScreen("favorites")}
-                  onHome={() => setCurrentScreen("booking")}
-                  onBook={() => setCurrentScreen("booking")}
-                />
+                    city="Москва"
+                    favoriteIds={favoriteIds}
+                    onToggleFavorite={toggleFavorite}
+                    onFavorites={() => setCurrentScreen("favorites")}
+                    onHome={() => setCurrentScreen("booking")}
+                    onProfile={() => setCurrentScreen("profile")}
+                    onBook={() => setCurrentScreen("booking")}
+                  />
               </motion.div>
             )}
 
@@ -296,23 +312,42 @@ export default function Home() {
               </motion.div>
             )}
 
-            {currentScreen === "profile" && (
-              <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ProfileScreen
-                  city="Москва"
-                  userName={userName || "Павел"}
-                  userPhoto={userPhoto}
-                  onHome={() => setCurrentScreen("booking")}
-                  onAfisha={() => setCurrentScreen("afisha")}
-                  onFavorites={() => setCurrentScreen("favorites")}
-                  onBookings={() => setCurrentScreen("booking")}
-                  onEditProfile={() => setCurrentScreen("profile_form")}
-                />
-              </motion.div>
-            )}
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+              {currentScreen === "profile" && (
+                <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <ProfileScreen
+                    city="Москва"
+                    userName={userName || "Павел"}
+                    userPhoto={userPhoto}
+                    onHome={() => setCurrentScreen("booking")}
+                    onAfisha={() => setCurrentScreen("afisha")}
+                    onFavorites={() => setCurrentScreen("favorites")}
+                    onBookings={() => setCurrentScreen("booking")}
+                    onEditProfile={() => setCurrentScreen("profile_form")}
+                    onSettings={() => setCurrentScreen("settings")}
+                  />
+                </motion.div>
+              )}
+
+                {currentScreen === "settings" && (
+                  <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <SettingsScreen onBack={() => setCurrentScreen("booking")} />
+                  </motion.div>
+                )}
+
+                {currentScreen === "contacts" && (
+                  <motion.div key="contacts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <MyContactsScreen onBack={() => setCurrentScreen("booking")} />
+                  </motion.div>
+                )}
+
+                {currentScreen === "admin" && adminToken && (
+                  <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <AdminScreen token={adminToken} />
+                  </motion.div>
+                )}
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }

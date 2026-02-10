@@ -17,6 +17,7 @@ interface AfishaScreenProps {
   city?: string;
   onFavorites?: () => void;
   onHome?: () => void;
+  onProfile?: () => void;
   onBook?: (eventId: number) => void;
   favoriteIds?: Set<number>;
   onToggleFavorite?: (eventId: number) => void;
@@ -28,28 +29,10 @@ const EVENTS: Event[] = [
   { id: 3, title: "Боулинг", date: "7 января", time: "17:00", seatsAvailable: 8, seatsTotal: 10 },
 ];
 
-export function AfishaScreen({ city = "Москва", onFavorites, onHome, onBook, favoriteIds = new Set(), onToggleFavorite }: AfishaScreenProps) {
+export function AfishaScreen({ city = "Москва", onFavorites, onHome, onProfile, onBook, favoriteIds = new Set(), onToggleFavorite }: AfishaScreenProps) {
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
-      {/* Header */}
-      <div className="flex justify-between items-center px-6 pt-12 pb-4">
-        <button className="text-[#2A2021] font-medium text-[17px]">
-          Cancel
-        </button>
-        <div className="flex flex-col items-center">
-          <span className="font-serif text-xl leading-tight" style={{ fontFamily: "'Times New Roman', serif" }}>Allora</span>
-          <span className="text-[10px] text-[#8E8E93] tracking-wide">bot</span>
-        </div>
-        <button className="w-10 h-10 flex items-center justify-center rounded-full bg-black">
-          <div className="flex gap-0.5">
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-            <div className="w-1 h-1 bg-white rounded-full"></div>
-          </div>
-        </button>
-      </div>
-
-      <div className="flex-1 flex flex-col px-6 pb-32">
+      <div className="flex-1 flex flex-col px-6 pt-12 pb-32">
         {/* Location & Favorites */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
@@ -117,9 +100,10 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onBoo
         </div>
       </div>
 
-      <BottomNav activeTab="afisha" onTabChange={(tab) => {
-        if (tab === "home") onHome?.();
-      }} />
+    <BottomNav activeTab="afisha" onTabChange={(tab) => {
+      if (tab === "home") onHome?.();
+      if (tab === "profile") onProfile?.();
+    }} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ ORM модели для базы данных.
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean, Index
+    Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean, Index, Date
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
@@ -35,7 +35,7 @@ class User(Base):
     instagram = Column(String)
     photo = Column(String)
     about_me = Column(Text)
-    # Meeting preferences (JSONB для PostgreSQL)
+    # Настройки встреч (JSONB для PostgreSQL)
     meeting_metro = Column(JSONB, nullable=True)
     meeting_days = Column(JSONB, nullable=True)
     meeting_time_from = Column(String, nullable=True)
@@ -52,7 +52,7 @@ class DinnerSlot(Base):
     __tablename__ = 'dinner_slots'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    date = Column(String, nullable=False)
+    date = Column(Date, nullable=False)
     time = Column(String, nullable=False)
     city = Column(String, nullable=False)
     restaurant = Column(String, nullable=False)
@@ -107,4 +107,29 @@ class Payment(Base):
     # Составной индекс для поиска платежей пользователя
     __table_args__ = (
         Index('ix_payments_user_status', 'user_id', 'status'),
+    )
+
+
+class Group(Base):
+    __tablename__ = 'groups'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False, unique=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    members = relationship("UserGroup", back_populates="group", cascade="all, delete-orphan")
+
+
+class UserGroup(Base):
+    __tablename__ = 'user_groups'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
+    group_id = Column(Integer, ForeignKey('groups.id', ondelete="CASCADE"), nullable=False)
+
+    user = relationship("User")
+    group = relationship("Group", back_populates="members")
+
+    __table_args__ = (
+        Index('ix_user_groups_unique', 'user_id', 'group_id', unique=True),
     )

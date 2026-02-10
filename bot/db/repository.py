@@ -10,9 +10,10 @@ from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
+from datetime import datetime
 
 from . import models
-from .models import User, DinnerSlot, Booking, Payment
+from .models import User, DinnerSlot, Booking, Payment, Group, UserGroup
 
 # Импортируем из родительского пакета
 import sys
@@ -63,7 +64,7 @@ class UserRepo(BaseRepo):
         # Используем model_dump(exclude_none=True) чтобы не затирать существующие данные на None
         profile_dict = profile_data.model_dump(exclude_none=True)
         
-        # Map frontend 'format' key to DB 'communication_format'
+        # Сопоставление ключа 'format' с фронтенда с полем БД 'communication_format'
         if 'format' in profile_dict:
             profile_dict['communication_format'] = profile_dict.pop('format')
         
@@ -96,8 +97,20 @@ class SlotRepo(BaseRepo):
         self, date: str, time: str, city: str, restaurant: str, max_people: int
     ) -> DinnerSlot:
         """Создает новый слот."""
+        # Парсим дату из строки "DD.MM.YYYY" в date object
+        try:
+            date_obj = datetime.strptime(date, "%d.%m.%Y").date()
+        except ValueError:
+            # Резервный вариант для формата ISO или других
+            try:
+                date_obj = datetime.fromisoformat(date).date()
+            except ValueError:
+                # Если совсем не вышло, пробуем как есть (хотя это вызовет ошибку БД если тип Date)
+                # Но лучше кинуть ошибку здесь
+                raise ValueError(f"Invalid date format: {date}")
+
         new_slot = DinnerSlot(
-            date=date,
+            date=date_obj,
             time=time,
             city=city,
             restaurant=restaurant,
@@ -330,3 +343,204 @@ class PaymentRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+
+class AdminRepo(BaseRepo):
+    """Репозиторий для админских операций."""
+
+    async def get_all_users(self, limit: int = 50, offset: int = 0) -> tuple[List[User], int]:
+        """Возвращает список пользователей с пагинацией и общее количество."""
+        total_result = await self.session.execute(select(func.count(User.user_id)))
+        total = total_result.scalar_one()
+
+        stmt = (
+            select(User)
+            .order_by(User.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(stmt)
+        users = list(result.scalars().all())
+        return users, total
+
+    async def get_all_slots_admin(self) -> List[DinnerSlot]:
+        """Возвращает все слоты (включая неактивные)."""
+        stmt = select(DinnerSlot).order_by(DinnerSlot.date.desc(), DinnerSlot.time.desc())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_slot_by_id(self, slot_id: int) -> Optional[DinnerSlot]:
+        """Возвращает слот по ID."""
+        return await self.session.get(DinnerSlot, slot_id)
+
+    async def update_slot(self, slot_id: int, **kwargs) -> Optional[DinnerSlot]:
+        """Обновляет поля слота."""
+        slot = await self.session.get(DinnerSlot, slot_id)
+        if not slot:
+            return None
+        for key, value in kwargs.items():
+            if hasattr(slot, key):
+                # Специальная обработка для даты
+                if key == 'date' and isinstance(value, str):
+                    try:
+                        value = datetime.strptime(value, "%d.%m.%Y").date()
+                    except ValueError:
+                        try:
+                            value = datetime.fromisoformat(value).date()
+                        except ValueError:
+                             pass # Оставляем как есть, упадет ниже или в БД
+                
+                setattr(slot, key, value)
+        await self.session.commit()
+        await self.session.refresh(slot)
+        return slot
+
+    async def get_slot_participants(self, slot_id: int) -> List[dict]:
+        """Возвращает участников слота с информацией об оплате."""
+        stmt = (
+            select(Booking, User, Payment)
+            .join(User, Booking.user_id == User.user_id)
+            .outerjoin(Payment, (Payment.booking_id == Booking.id) & (Payment.status == 'succeeded'))
+            .where(Booking.slot_id == slot_id)
+            .order_by(Booking.booking_date)
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        participants = []
+        for booking, user, payment in rows:
+            participants.append({
+                "user_id": user.user_id,
+                "name": user.name,
+                "telegram": user.telegram,
+                "instagram": user.instagram,
+                "city": user.city,
+                "booking_id": booking.id,
+                "booking_status": booking.status,
+                "booking_date": booking.booking_date.isoformat() if booking.booking_date else None,
+                "paid": payment is not None,
+                "payment_amount": payment.amount if payment else None,
+            })
+        return participants
+
+    async def get_stats(self) -> dict:
+        """Возвращает общую статистику."""
+        users_count = (await self.session.execute(select(func.count(User.user_id)))).scalar_one()
+        slots_count = (await self.session.execute(select(func.count(DinnerSlot.id)))).scalar_one()
+        active_slots = (await self.session.execute(
+            select(func.count(DinnerSlot.id)).where(DinnerSlot.is_active == True)
+        )).scalar_one()
+        bookings_count = (await self.session.execute(select(func.count(Booking.id)))).scalar_one()
+        paid_count = (await self.session.execute(
+            select(func.count(Payment.id)).where(Payment.status == 'succeeded')
+        )).scalar_one()
+
+        return {
+            "total_users": users_count,
+            "total_slots": slots_count,
+            "active_slots": active_slots,
+            "total_bookings": bookings_count,
+            "total_paid": paid_count,
+        }
+
+
+class GroupRepo(BaseRepo):
+    """Репозиторий для работы с группами."""
+
+    async def get_all_groups(self) -> List[dict]:
+        """Возвращает все группы с количеством участников."""
+        stmt = (
+            select(Group, func.count(UserGroup.id).label("member_count"))
+            .outerjoin(UserGroup, Group.id == UserGroup.group_id)
+            .group_by(Group.id)
+            .order_by(Group.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "id": group.id,
+                "name": group.name,
+                "created_at": group.created_at.isoformat() if group.created_at else None,
+                "member_count": count,
+            }
+            for group, count in rows
+        ]
+
+    async def create_group(self, name: str) -> Group:
+        """Создаёт новую группу."""
+        group = Group(name=name)
+        self.session.add(group)
+        await self.session.commit()
+        await self.session.refresh(group)
+        return group
+
+    async def delete_group(self, group_id: int) -> bool:
+        """Удаляет группу (CASCADE удалит связи)."""
+        group = await self.session.get(Group, group_id)
+        if not group:
+            return False
+        await self.session.delete(group)
+        await self.session.commit()
+        return True
+
+    async def add_members(self, group_id: int, user_ids: List[int]) -> dict:
+        """Добавляет пользователей в группу. Возвращает отчёт."""
+        group = await self.session.get(Group, group_id)
+        if not group:
+            return {"error": "group_not_found"}
+
+        added = []
+        skipped = []
+        not_found = []
+
+        for uid in user_ids:
+            user = await self.session.get(User, uid)
+            if not user:
+                not_found.append(uid)
+                continue
+
+            existing = await self.session.execute(
+                select(UserGroup).where(UserGroup.user_id == uid, UserGroup.group_id == group_id)
+            )
+            if existing.scalar_one_or_none():
+                skipped.append(uid)
+                continue
+
+            self.session.add(UserGroup(user_id=uid, group_id=group_id))
+            added.append(uid)
+
+        await self.session.commit()
+        return {"added": added, "skipped": skipped, "not_found": not_found}
+
+    async def remove_member(self, group_id: int, user_id: int) -> bool:
+        """Удаляет пользователя из группы."""
+        stmt = select(UserGroup).where(UserGroup.user_id == user_id, UserGroup.group_id == group_id)
+        result = await self.session.execute(stmt)
+        ug = result.scalar_one_or_none()
+        if not ug:
+            return False
+        await self.session.delete(ug)
+        await self.session.commit()
+        return True
+
+    async def get_group_members(self, group_id: int) -> List[User]:
+        """Возвращает участников группы."""
+        stmt = (
+            select(User)
+            .join(UserGroup, User.user_id == UserGroup.user_id)
+            .where(UserGroup.group_id == group_id)
+            .order_by(User.name)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_group_member_ids(self, group_ids: List[int]) -> List[int]:
+        """Возвращает уникальные user_id из нескольких групп."""
+        stmt = (
+            select(UserGroup.user_id)
+            .where(UserGroup.group_id.in_(group_ids))
+            .distinct()
+        )
+        result = await self.session.execute(stmt)
+        return [row[0] for row in result.all()]

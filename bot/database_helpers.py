@@ -26,7 +26,7 @@ async def create_slot(date: str, time: str, city: str, restaurant: str, max_peop
         )
         return {
             "id": slot.id,
-            "date": slot.date,
+            "date": slot.date.strftime("%d.%m.%Y"),
             "time": slot.time,
             "city": slot.city,
             "restaurant": slot.restaurant,
@@ -43,7 +43,7 @@ async def get_all_slots() -> List[dict]:
         return [
             {
                 "id": slot.id,
-                "date": slot.date,
+                "date": slot.date.strftime("%d.%m.%Y"),
                 "time": slot.time,
                 "city": slot.city,
                 "restaurant": slot.restaurant,
