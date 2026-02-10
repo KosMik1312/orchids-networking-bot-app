@@ -87,22 +87,22 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
                 <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                  <div className="w-8 h-8 relative">
-                    <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                      <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
-                    </svg>
-                  </div>
-                </button>
-              </div>
+                <div className="w-8 h-8 relative">
+                  <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
+                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
+                  </svg>
+                </div>
+              </button>
+            </div>
 
-              {/* Dining Image */}
-              <div className="rounded-[24px] overflow-hidden shadow-lg h-[220px] mb-8">
-              <img 
-                src="https://images.unsplash.com/photo-1529543544277-8cd5c3fc25e2?w=800&auto=format&fit=crop&q=80" 
-                alt="Dining" 
+            {/* Dining Image */}
+            <div className="rounded-[24px] overflow-hidden shadow-lg h-[220px] mb-8">
+              <img
+                src="/images/dining.png"
+                alt="Dining"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -132,12 +132,12 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
             </div>
 
             {/* Promo Button */}
-              <button 
-                onClick={onPromotions}
-                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
-              >
-                Акции и предложения
-              </button>
+            <button
+              onClick={onPromotions}
+              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
+            >
+              Акции и предложения
+            </button>
           </motion.div>
         )}
 
@@ -150,31 +150,31 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 flex flex-col px-6"
           >
-              {/* Location & Settings (dimmed) */}
-              <div className="flex justify-between items-center mb-6 opacity-50">
-                <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
-                  <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
-                    <MapPin className="text-white" size={22} fill="white" />
-                  </div>
-                  <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
+            {/* Location & Settings (dimmed) */}
+            <div className="flex justify-between items-center mb-6 opacity-50">
+              <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
+                <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
+                  <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                  <div className="w-8 h-8 relative">
-                    <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                      <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
-                      <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
-                    </svg>
-                  </div>
-                </button>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
               </div>
+              <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 relative">
+                  <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
+                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
+                  </svg>
+                </div>
+              </button>
+            </div>
 
-              {/* Dining Image with overlay */}
+            {/* Dining Image with overlay */}
             <div className="rounded-[24px] overflow-hidden shadow-lg h-[180px] mb-0 relative">
-              <img 
-                src="https://images.unsplash.com/photo-1529543544277-8cd5c3fc25e2?w=800&auto=format&fit=crop&q=80" 
-                alt="Dining" 
+              <img
+                src="/images/dining.png"
+                alt="Dining"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -225,7 +225,7 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
               </p>
 
               {/* Offer Checkbox */}
-              <button 
+              <button
                 onClick={() => setAcceptedOffer(!acceptedOffer)}
                 className="flex items-center gap-3 mb-5"
               >
@@ -239,9 +239,8 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
               <button
                 disabled={!acceptedOffer}
                 onClick={handlePayment}
-                className={`w-full py-5 rounded-[20px] text-[17px] font-semibold transition-all ${
-                  acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
-                }`}
+                className={`w-full py-5 rounded-[20px] text-[17px] font-semibold transition-all ${acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
+                  }`}
               >
                 Оплатить
               </button>
@@ -268,10 +267,10 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
               <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <div className="w-8 h-8 relative">
                   <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2"/>
-                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
-                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
+                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
                   </svg>
                 </div>
               </button>
@@ -279,9 +278,9 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
 
             {/* Dining Image */}
             <div className="rounded-[24px] overflow-hidden shadow-lg h-[180px] mb-6">
-              <img 
-                src="https://images.unsplash.com/photo-1529543544277-8cd5c3fc25e2?w=800&auto=format&fit=crop&q=80" 
-                alt="Dining" 
+              <img
+                src="/images/dining.png"
+                alt="Dining"
                 className="w-full h-full object-cover"
               />
             </div>
