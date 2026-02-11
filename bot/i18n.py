@@ -2,9 +2,13 @@ import json
 import os
 from typing import Dict, Any
 
+# Путь к locales относительно расположения i18n.py (работает при любом CWD)
+_DEFAULT_LOCALES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locales")
+
+
 class I18n:
-    def __init__(self, locales_dir: str = "bot/locales", default_lang: str = "ru"):
-        self.locales_dir = locales_dir
+    def __init__(self, locales_dir: str = None, default_lang: str = "ru"):
+        self.locales_dir = locales_dir or _DEFAULT_LOCALES_DIR
         self.default_lang = default_lang
         self.translations: Dict[str, Dict[str, Any]] = {}
         self.load_locales()
