@@ -18,12 +18,16 @@ class AdminMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         
         # Добавляем информацию о том, является ли пользователь админом
-        data["is_admin"] = user_id in ADMIN_IDS
+        is_admin = user_id in ADMIN_IDS
+        data["is_admin"] = is_admin
+        
+        logger.info(f"🔍 AdminMiddleware: user_id={user_id}, is_admin={is_admin}, ADMIN_IDS={ADMIN_IDS}")
         
         # Логируем попытки доступа к админ-командам
         if hasattr(event, 'text') and event.text and event.text.startswith('/admin'):
-            if not data["is_admin"]:
-                logger.warning(f"Unauthorized admin access attempt by user {user_id}")
+            logger.info(f"👤 User {user_id} issued /admin command. is_admin={is_admin}")
+            if not is_admin:
+                logger.warning(f"❌ Unauthorized admin access attempt by user {user_id}")
                 await event.answer("❌ У вас нет прав для выполнения этой команды.")
                 return
         

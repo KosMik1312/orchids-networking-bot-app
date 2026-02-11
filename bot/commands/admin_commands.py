@@ -6,6 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime
 from urllib.parse import urlencode
+import logging
 
 from database_helpers import (
     create_slot,
@@ -15,8 +16,10 @@ from database_helpers import (
     get_total_bookings_count
 )
 from menu_setup import set_bot_commands
-from config import MINIAPP_URL
+from config import MINIAPP_URL, ADMIN_IDS
 from auth_token import generate_user_token
+
+logger = logging.getLogger(__name__)
 
 admin_router = Router()
 
@@ -32,8 +35,16 @@ class SlotStates(StatesGroup):
 @admin_router.message(Command("admin"))
 async def admin_panel(message: Message, is_admin: bool) -> None:
     """Открывает админ-панель в MiniApp."""
+    user_id = message.from_user.id
+    
     if not is_admin:
+        logger.error(f"❌ User {user_id} tried /admin but is not admin. is_admin={is_admin}, ADMIN_IDS from config={ADMIN_IDS}")
+        await message.answer(
+            "❌ У вас нет прав администратора. Обратитесь к владельцу бота."
+        )
         return
+
+    logger.info(f"✅ User {user_id} opened admin panel. is_admin=True")
 
     if not MINIAPP_URL:
         await message.answer(
@@ -41,10 +52,11 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
         )
         return
 
-    user_id = message.from_user.id
     token = generate_user_token(user_id)
     params = urlencode({"screen": "admin", "token": token})
     admin_url = f"{MINIAPP_URL}?{params}"
+    
+    logger.info(f"🔐 Generated token for admin {user_id}")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
