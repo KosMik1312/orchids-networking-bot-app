@@ -551,13 +551,15 @@ PY
         if [ "$CREATE_PG" = "y" ] || [ "$CREATE_PG" = "Y" ]; then
             # Получаем текущие значения по умолчанию из config
             CUR_USER=$(python - <<PY
-from config import DB_USER, DB_NAME
-print(DB_USER if 'DB_USER' in globals() else '')
+import importlib
+cfg = importlib.import_module('config')
+print(getattr(cfg, 'DB_USER', '') or '')
 PY
 )
             CUR_DB=$(python - <<PY
-from config import DB_NAME
-print(DB_NAME if 'DB_NAME' in globals() else '')
+import importlib
+cfg = importlib.import_module('config')
+print(getattr(cfg, 'DB_NAME', '') or '')
 PY
 )
             read -p "Имя роли (DB_USER) [${CUR_USER:-allora_user}]: " NEW_DB_USER
@@ -577,9 +579,19 @@ PY
             fi
 
             echo -e "${YELLOW}Создаю роль и базу в PostgreSQL...${NC}"
-            sudo -u postgres psql -c "DO \\$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${NEW_DB_USER}') THEN CREATE ROLE \"${NEW_DB_USER}\" WITH LOGIN PASSWORD '${NEW_DB_PASS}'; END IF; END \\$\$;"
-            sudo -u postgres psql -c "CREATE DATABASE \"${NEW_DB_NAME}\" OWNER \"${NEW_DB_USER}\";" || true
-            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${NEW_DB_NAME}\" TO \"${NEW_DB_USER}\";" || true
+            # Создаём роль, если её нет
+            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${NEW_DB_USER}'" | grep -q 1; then
+                echo "Role ${NEW_DB_USER} already exists"
+            else
+                sudo -u postgres psql -c "CREATE ROLE \"${NEW_DB_USER}\" WITH LOGIN PASSWORD '${NEW_DB_PASS}';"
+            fi
+            # Создаём базу, если её нет
+            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${NEW_DB_NAME}'" | grep -q 1; then
+                echo "Database ${NEW_DB_NAME} already exists"
+            else
+                sudo -u postgres psql -c "CREATE DATABASE \"${NEW_DB_NAME}\" OWNER \"${NEW_DB_USER}\";"
+            fi
+            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${NEW_DB_NAME}\" TO \"${NEW_DB_USER}\";"
 
             # Обновим .env (создаем, если нужно)
             ENV_FILE="$PWD/.env"
@@ -614,8 +626,8 @@ PY
         fi
     fi
 
-    # Передаем 'y' в stdin чтобы подтвердить операцию recreate
-    echo "y" | python bot/manage_db.py recreate
+        # Передаем 'y' в stdin чтобы подтвердить операцию recreate
+    echo "y" | python ./manage_db.py recreate
     
     PY_EXIT=$?
     if [ $PY_EXIT -eq 0 ]; then
