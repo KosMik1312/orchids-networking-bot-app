@@ -90,6 +90,20 @@ class UserRepo(BaseRepo):
         result = await self.session.execute(select(func.count(User.user_id)))
         return result.scalar_one()
 
+    async def set_user_admin(self, user_id: int, is_admin: bool = True) -> bool:
+        """Устанавливает или снимает флаг администратора для пользователя.
+
+        Возвращает True при успешном обновлении, False если пользователь не найден.
+        """
+        user = await self.session.get(User, user_id)
+        if user is None:
+            return False
+        user.is_admin = bool(is_admin)
+        await self.session.commit()
+        await self.session.refresh(user)
+        logger.info(f"User {user_id} admin flag set to {user.is_admin}")
+        return True
+
 
 class SlotRepo(BaseRepo):
     """Репозиторий для работы со слотами ужинов."""
