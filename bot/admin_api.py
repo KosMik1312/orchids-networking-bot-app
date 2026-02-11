@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo
-from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN
+from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN, AUTH_DISABLED
 from auth_token import validate_user_token
 from logger import get_api_logger
 from utils import format_date
@@ -35,6 +35,9 @@ async def require_admin(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user_id = result["user_id"]
+    # If auth is disabled (development), allow access
+    if AUTH_DISABLED:
+        return user_id or 0
     
     # 1. Проверка по конфигу (супер-админы)
     if user_id in ADMIN_IDS:

@@ -63,16 +63,26 @@ async def get_current_user_id(
     Извлекает user_id из JWT токена.
     """
     
+    # Если токен не передан — возвращаем None (некоторые эндпоинты работают с query param userId)
     if not credentials:
-        raise HTTPException(status_code=401, detail="Missing authorization token")
-    
+        return None
+
     token = credentials.credentials
     result = validate_user_token(token)
-    
+
     if not result:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
+
     return result['user_id']
+
+
+def get_user_id_or_param(auth_user_id: Optional[int], param_user_id: Optional[int]) -> int:
+    """Возвращает user_id приоритетно из токена, затем из query param; иначе бросает 401."""
+    if auth_user_id:
+        return auth_user_id
+    if param_user_id:
+        return param_user_id
+    raise HTTPException(status_code=401, detail="Missing user identification")
 
 
 
@@ -238,10 +248,10 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 async def save_profile_endpoint(
     request: ProfileRequest,
     session: AsyncSession = Depends(get_session),
-    auth_user_id: int = Depends(get_current_user_id)
+    auth_user_id: Optional[int] = Depends(get_current_user_id)
 ):
-    """Сохранить профиль пользователя."""
-    user_id = auth_user_id
+    """Сохранить профиль пользователя. Можно передавать JWT или userId в теле запроса."""
+    user_id = get_user_id_or_param(auth_user_id, request.userId)
     
     logger.info(f"Saving profile for user {user_id}")
     profile_dict = request.profile.model_dump(exclude_none=False)
@@ -261,10 +271,11 @@ async def save_profile_endpoint(
 @app.get("/api/profile")
 async def get_profile_endpoint(
     session: AsyncSession = Depends(get_session),
-    auth_user_id: int = Depends(get_current_user_id)
+    userId: Optional[int] = None,
+    auth_user_id: Optional[int] = Depends(get_current_user_id)
 ):
-    """Получить профиль пользователя."""
-    user_id = auth_user_id
+    """Получить профиль пользователя. Можно передавать JWT или query param userId."""
+    user_id = get_user_id_or_param(auth_user_id, userId)
     
     try:
         user_repo = UserRepo(session)

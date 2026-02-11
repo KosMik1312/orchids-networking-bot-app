@@ -26,12 +26,12 @@ if _admin_ids_env:
         ADMIN_IDS = [int(x.strip()) for x in _admin_ids_env.split(",") if x.strip()]
     except ValueError:
         ADMIN_IDS = []
-
-        # Отключить проверку JWT (для разработки). Если true — все защищённые эндпоинты пропускают аутентификацию.
-        AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
+# По умолчанию список админов пуст — укажите ADMIN_IDS в .env
 else:
-    # По умолчанию список админов пуст — укажите ADMIN_IDS в .env
     ADMIN_IDS = []
+
+# Отключить проверку JWT (для разработки). Если true — все защищённые эндпоинты пропускают аутентификацию.
+AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
 
 # ===== КОНФИГУРАЦИЯ БД =====
 # Поддерживает как SQLite (локальная разработка), так и PostgreSQL (production)
