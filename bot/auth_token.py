@@ -5,6 +5,9 @@
 import jwt
 import time
 from config import SECRET_KEY
+from logger import get_api_logger
+
+logger = get_api_logger()
 
 # Время жизни токена: 24 часа
 TOKEN_EXPIRY = 24 * 60 * 60
@@ -27,6 +30,7 @@ def generate_user_token(user_id: int) -> str:
         'exp': int(time.time()) + TOKEN_EXPIRY
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+    logger.info(f"🔐 Generated token for user_id={user_id}, token={token[:50]}...")
     return token
 
 
@@ -42,13 +46,15 @@ def validate_user_token(token: str) -> dict | None:
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload['user_id']
+        logger.info(f"✅ Token valid for user_id={user_id}")
         return {
-            'user_id': payload['user_id'],
+            'user_id': user_id,
             'valid': True
         }
     except jwt.ExpiredSignatureError:
-        print(f"Token expired")
+        logger.warning(f"⏰ Token expired")
         return None
     except jwt.InvalidTokenError as e:
-        print(f"Invalid token: {e}")
+        logger.error(f"❌ Invalid token: {e}")
         return None

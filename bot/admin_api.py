@@ -28,19 +28,26 @@ async def require_admin(
 ) -> int:
     """Проверяет JWT и что user_id в ADMIN_IDS или is_admin=True в БД. Возвращает user_id."""
     if not credentials:
+        logger.error("❌ No authorization token provided")
         raise HTTPException(status_code=401, detail="Missing authorization token")
 
     result = validate_user_token(credentials.credentials)
     if not result:
+        logger.error("❌ Invalid or expired token")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user_id = result["user_id"]
+    logger.info(f"🔍 Checking admin access for user_id={user_id}")
+    logger.info(f"📋 ADMIN_IDS from config: {ADMIN_IDS}")
+    
     # If auth is disabled (development), allow access
     if AUTH_DISABLED:
+        logger.warning(f"⚠️ AUTH_DISABLED=True, allowing access for user_id={user_id}")
         return user_id or 0
     
     # 1. Проверка по конфигу (супер-админы)
     if user_id in ADMIN_IDS:
+        logger.info(f"✅ User {user_id} is in ADMIN_IDS")
         return user_id
 
     # 2. Проверка по БД
@@ -49,9 +56,15 @@ async def require_admin(
     user_repo = UserRepo(session)
     user = await user_repo.get_user(user_id)
     
-    if user and user.is_admin:
-        return user_id
+    if user:
+        logger.info(f"👤 User {user_id} found in DB. is_admin={user.is_admin}")
+        if user.is_admin:
+            logger.info(f"✅ User {user_id} has is_admin=True in DB")
+            return user_id
+    else:
+        logger.warning(f"⚠️ User {user_id} not found in DB")
 
+    logger.error(f"❌ User {user_id} is not an admin (not in ADMIN_IDS and not in DB)")
     raise HTTPException(status_code=403, detail="Not an admin")
 
 
