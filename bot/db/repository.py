@@ -55,6 +55,10 @@ class UserRepo(BaseRepo):
         """Получает профиль пользователя по ID."""
         return await self.session.get(User, user_id)
 
+    async def get_user(self, user_id: int) -> Optional[User]:
+        """Backwards-compatible alias used in older code: возвращает User или None."""
+        return await self.session.get(User, user_id)
+
     async def save_user_profile(self, user_id: int, profile_data: UserProfile) -> User:
         """Обновляет или создает профиль пользователя."""
         user = await self.session.get(User, user_id)

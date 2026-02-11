@@ -26,6 +26,9 @@ if _admin_ids_env:
         ADMIN_IDS = [int(x.strip()) for x in _admin_ids_env.split(",") if x.strip()]
     except ValueError:
         ADMIN_IDS = []
+
+        # Отключить проверку JWT (для разработки). Если true — все защищённые эндпоинты пропускают аутентификацию.
+        AUTH_DISABLED = os.getenv("AUTH_DISABLED", "false").lower() == "true"
 else:
     # По умолчанию список админов пуст — укажите ADMIN_IDS в .env
     ADMIN_IDS = []
