@@ -49,6 +49,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Orchids Networking Bot API", lifespan=lifespan)
 
+# Логирующий middleware для отладки
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        logger.info(f"📨 Incoming request: {request.method} {request.url.path}")
+        if request.headers.get("authorization"):
+            logger.info(f"   Authorization: {request.headers['authorization'][:50]}...")
+        try:
+            response = await call_next(request)
+            logger.info(f"✅ Response: {request.method} {request.url.path} → {response.status_code}")
+            return response
+        except Exception as e:
+            logger.error(f"❌ Error in {request.method} {request.url.path}: {e}")
+            raise
+
+app.add_middleware(LoggingMiddleware)
+
 # Подключаем админские эндпоинты
 app.include_router(admin_router_api)
 

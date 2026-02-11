@@ -72,8 +72,12 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("screen") === "admin" && params.get("token")) {
-      setAdminToken(params.get("token"));
+    const urlScreen = params.get("screen");
+    const token = params.get("token");
+
+    // 1. Админ — бэкенд определил через /admin
+    if (urlScreen === "admin" && token) {
+      setAdminToken(token);
       setCurrentScreen("admin");
       setIsLoading(false);
       setProfileLoaded(true);
@@ -91,6 +95,11 @@ export default function Home() {
     }
 
     let isMounted = true;
+    const cleanup = () => {
+      isMounted = false;
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+
     async function tryLoadProfile(foundId: number, authToken?: string) {
       setUserId(foundId);
       try {
@@ -119,6 +128,39 @@ export default function Home() {
       }
     }
 
+    // 2. screen=welcome или screen=booking — бэкенд определил при /start, доверяем URL
+    if (token && (urlScreen === "welcome" || urlScreen === "booking")) {
+      (async () => {
+        try {
+          const decoded = jwtDecode<{ user_id: number }>(token);
+          setUserId(decoded.user_id);
+          setCurrentScreen(urlScreen as "welcome" | "booking");
+
+          if (urlScreen === "booking") {
+            try {
+              const result = await getProfile(decoded.user_id, token);
+              const profile = (result as any)?.profile ?? (result as any);
+              if (isMounted && profile) {
+                setFullProfile(profile);
+                setUserName(profile.name || "");
+                setUserGender((profile.gender as "male" | "female") || null);
+              }
+            } catch {
+              if (isMounted) setCurrentScreen("welcome");
+            }
+          }
+
+          if (isMounted) {
+            setProfileLoaded(true);
+            setIsLoading(false);
+          }
+        } catch {
+          // Невалидный токен — fallback не сработает, т.к. уже return
+        }
+      })();
+      return cleanup;
+    }
+
     function getTelegramId() {
       const webApp = (window as any).Telegram?.WebApp;
       return webApp?.initDataUnsafe?.user?.id;
@@ -129,13 +171,15 @@ export default function Home() {
       return;
     }
 
-    const token = params.get('token');
+    // 3. Fallback: только token (старые ссылки) — фронт определяет по getProfile
     if (token) {
       try {
         const decoded = jwtDecode<{ user_id: number }>(token);
         tryLoadProfile(decoded.user_id, token);
         return;
-      } catch (e) { }
+      } catch {
+        // Невалидный токен
+      }
     }
 
     let foundId = getTelegramId();
@@ -152,10 +196,7 @@ export default function Home() {
       }
     }, 200);
 
-    return () => {
-      isMounted = false;
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
+    return cleanup;
   }, [userId]);
 
   const handleStartOnboarding = () => setCurrentScreen("onboarding");

@@ -82,3 +82,18 @@ async def get_total_bookings_count() -> int:
         stmt = select(func.count(Booking.id))
         result = await session.execute(stmt)
         return result.scalar() or 0
+
+
+async def get_user_initial_screen(user_id: int) -> str:
+    """
+    Определяет начальный экран для пользователя на основе данных в БД.
+    Возвращает 'welcome' (анкета не заполнена) или 'booking' (анкета заполнена).
+    Вызывается ботом при /start — определение типа пользователя в бэкенде.
+    """
+    async_session = get_session_factory()
+    async with async_session() as session:
+        user_repo = UserRepo(session)
+        user = await user_repo.get_user_profile(user_id)
+        if user and user.is_profile_completed:
+            return "booking"
+        return "welcome"
