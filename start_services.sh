@@ -49,9 +49,9 @@ show_menu() {
     echo -e "${YELLOW}6.${NC} Запустить только FastAPI"
     echo -e "${YELLOW}7.${NC} Запустить только Бот"
     echo -e "${YELLOW}8.${NC} Очистить базу данных (ВНИМАНИЕ: удаляет все данные)"
-    echo -e "${YELLOW}9.${NC} Настроить ADMIN_IDS (администраторы в конфиге)"
+    echo -e "${YELLOW}9.${NC} Настроить ADMIN_IDS (администраторы: конфиг + БД)"
     echo -e "${YELLOW}10.${NC} Добавить администратора в БД"
-    echo -e "${YELLOW}11.${NC} Пересоздать базу данных (ПОЛНАЯ ОЧИСТКА)"
+    echo -e "${YELLOW}11.${NC} Пересоздать базу данных (ПОЛНАЯ ОЧИСТКА) — расширено (создать роль/базу PostgreSQL)"
     echo -e "${YELLOW}0.${NC} Выход"
 
     if [ "$FORCE" = "true" ]; then
@@ -448,6 +448,27 @@ configure_admin_ids() {
 
     echo -e "${GREEN}✅ ADMIN_IDS обновлён: ${CLEAN_IDS:-<пусто>}${NC}"
 
+    # После записи в .env предлагаем также добавить этих ID в БД
+    echo ""
+    read -p "Добавить эти ADMIN_IDS также в базу данных? (y/n): " ADD_TO_DB
+    if [ "$ADD_TO_DB" = "y" ] || [ "$ADD_TO_DB" = "Y" ]; then
+        # Проверяем есть ли значения
+        if [ -z "$CLEAN_IDS" ]; then
+            echo -e "${YELLOW}ADMIN_IDS пуст, пропускаю добавление в БД${NC}"
+        else
+            IFS=',' read -ra IDS_ARR <<< "$CLEAN_IDS"
+            for id in "${IDS_ARR[@]}"; do
+                echo -e "${YELLOW}Добавляю $id в БД...${NC}"
+                python bot/manage_db.py add_admin "$id"
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}✓ $id добавлен в БД${NC}"
+                else
+                    echo -e "${RED}✗ Ошибка при добавлении $id в БД${NC}"
+                fi
+            done
+        fi
+    fi
+
     # Предлагаем перезапуск
     echo ""
     read -p "Перезапустить сервисы для применения? (y/n): " RESTART
@@ -515,7 +536,85 @@ recreate_database() {
     sleep 2
 
     echo -e "${YELLOW}🧹 Пересоздаю базу данных...${NC}"
-    # Передаем 'y' в stdin
+
+    # Опционально: если используется PostgreSQL — предложим создать роль/базу на сервере
+    DB_URL=$(python - <<PY
+from config import DATABASE_URL
+print(DATABASE_URL or "")
+PY
+)
+    DB_SCHEME=$(echo "$DB_URL" | awk -F: '{print $1}')
+
+    if [ "$DB_SCHEME" = "postgresql+asyncpg" ] || [ "$DB_SCHEME" = "postgresql" ]; then
+        echo ""
+        read -p "Создать/обновить роль и базу PostgreSQL на этом сервере? (y/n): " CREATE_PG
+        if [ "$CREATE_PG" = "y" ] || [ "$CREATE_PG" = "Y" ]; then
+            # Получаем текущие значения по умолчанию из config
+            CUR_USER=$(python - <<PY
+from config import DB_USER, DB_NAME
+print(DB_USER if 'DB_USER' in globals() else '')
+PY
+)
+            CUR_DB=$(python - <<PY
+from config import DB_NAME
+print(DB_NAME if 'DB_NAME' in globals() else '')
+PY
+)
+            read -p "Имя роли (DB_USER) [${CUR_USER:-allora_user}]: " NEW_DB_USER
+            NEW_DB_USER=${NEW_DB_USER:-${CUR_USER:-allora_user}}
+            read -p "Имя базы (DB_NAME) [${CUR_DB:-allora_db}]: " NEW_DB_NAME
+            NEW_DB_NAME=${NEW_DB_NAME:-${CUR_DB:-allora_db}}
+            read -s -p "Пароль для роли (оставьте пустым, чтобы сгенерировать): " NEW_DB_PASS
+            echo ""
+            if [ -z "$NEW_DB_PASS" ]; then
+                NEW_DB_PASS=$(python - <<PY
+import secrets
+print(secrets.token_urlsafe(16))
+PY
+)
+                echo -e "${YELLOW}Сгенерирован пароль для роли: (скопируйте и сохраните)${NC}"
+                echo "$NEW_DB_PASS"
+            fi
+
+            echo -e "${YELLOW}Создаю роль и базу в PostgreSQL...${NC}"
+            sudo -u postgres psql -c "DO \\$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${NEW_DB_USER}') THEN CREATE ROLE \"${NEW_DB_USER}\" WITH LOGIN PASSWORD '${NEW_DB_PASS}'; END IF; END \\$\$;"
+            sudo -u postgres psql -c "CREATE DATABASE \"${NEW_DB_NAME}\" OWNER \"${NEW_DB_USER}\";" || true
+            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${NEW_DB_NAME}\" TO \"${NEW_DB_USER}\";" || true
+
+            # Обновим .env (создаем, если нужно)
+            ENV_FILE="$PWD/.env"
+            if [ ! -f "$ENV_FILE" ]; then
+                touch "$ENV_FILE"
+            fi
+            # Заменяем или добавляем переменные
+            if grep -qE "^DB_USER=" "$ENV_FILE"; then
+                sed -i "s/^DB_USER=.*/DB_USER=${NEW_DB_USER}/" "$ENV_FILE"
+            else
+                echo "DB_USER=${NEW_DB_USER}" >> "$ENV_FILE"
+            fi
+            if grep -qE "^DB_PASSWORD=" "$ENV_FILE"; then
+                sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${NEW_DB_PASS}/" "$ENV_FILE"
+            else
+                echo "DB_PASSWORD=${NEW_DB_PASS}" >> "$ENV_FILE"
+            fi
+            if grep -qE "^DB_NAME=" "$ENV_FILE"; then
+                sed -i "s/^DB_NAME=.*/DB_NAME=${NEW_DB_NAME}/" "$ENV_FILE"
+            else
+                echo "DB_NAME=${NEW_DB_NAME}" >> "$ENV_FILE"
+            fi
+            # Обновим полную строку DATABASE_URL
+            NEW_DATABASE_URL="postgresql+asyncpg://${NEW_DB_USER}:${NEW_DB_PASS}@localhost:5432/${NEW_DB_NAME}"
+            if grep -qE "^DATABASE_URL=" "$ENV_FILE"; then
+                sed -i "s#^DATABASE_URL=.*#DATABASE_URL=${NEW_DATABASE_URL}#" "$ENV_FILE"
+            else
+                echo "DATABASE_URL=${NEW_DATABASE_URL}" >> "$ENV_FILE"
+            fi
+
+            echo -e "${GREEN}✓ Роль и база созданы/обновлены, .env обновлён${NC}"
+        fi
+    fi
+
+    # Передаем 'y' в stdin чтобы подтвердить операцию recreate
     echo "y" | python bot/manage_db.py recreate
     
     PY_EXIT=$?
