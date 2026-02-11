@@ -30,7 +30,7 @@ interface MeetingConditionsData {
   format: string;
 }
 
-const DEV_SKIP_PROFILE_LOADING = true;
+const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'true' || false;
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -81,7 +81,9 @@ export default function Home() {
     }
 
     if (DEV_SKIP_PROFILE_LOADING) {
-      setUserId(123456789);
+      // В режиме разработчика можно задать фиктивный userId через переменную окружения.
+      const devId = process.env.NEXT_PUBLIC_DEV_USER_ID ? parseInt(process.env.NEXT_PUBLIC_DEV_USER_ID) : undefined;
+      if (devId) setUserId(devId);
       setIsLoading(false);
       setProfileLoaded(true);
       setCurrentScreen("welcome");
