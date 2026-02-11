@@ -459,7 +459,7 @@ configure_admin_ids() {
             IFS=',' read -ra IDS_ARR <<< "$CLEAN_IDS"
             for id in "${IDS_ARR[@]}"; do
                 echo -e "${YELLOW}Добавляю $id в БД...${NC}"
-                python bot/manage_db.py add_admin "$id"
+                python ./manage_db.py add_admin "$id"
                 if [ $? -eq 0 ]; then
                     echo -e "${GREEN}✓ $id добавлен в БД${NC}"
                 else
@@ -500,7 +500,7 @@ add_admin_db() {
     fi
     
     echo -e "${YELLOW}Добавляю администратора...${NC}"
-    python bot/manage_db.py add_admin "$USER_ID"
+    python ./manage_db.py add_admin "$USER_ID"
     
     PY_EXIT=$?
     if [ $PY_EXIT -eq 0 ]; then
@@ -579,11 +579,27 @@ PY
             fi
 
             echo -e "${YELLOW}Создаю роль и базу в PostgreSQL...${NC}"
-            # Создаём роль, если её нет
+            # Создаём роль, если её нет; если есть — спросим, сбросить ли пароль
             if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${NEW_DB_USER}'" | grep -q 1; then
                 echo "Role ${NEW_DB_USER} already exists"
+                read -p "Сбросить пароль роли ${NEW_DB_USER}? (y/n): " RESET_ROLE_PW
+                if [ "$RESET_ROLE_PW" = "y" ] || [ "$RESET_ROLE_PW" = "Y" ]; then
+                    sudo -u postgres psql -c "ALTER ROLE \"${NEW_DB_USER}\" WITH PASSWORD '${NEW_DB_PASS}';"
+                    PW_TO_WRITE="$NEW_DB_PASS"
+                else
+                    # Попробуем взять пароль из .env, если он там есть
+                    ENV_FILE="$PWD/.env"
+                    if [ -f "$ENV_FILE" ] && grep -qE "^DB_PASSWORD=" "$ENV_FILE"; then
+                        PW_TO_WRITE=$(grep -E "^DB_PASSWORD=" "$ENV_FILE" | tail -1 | cut -d'=' -f2-)
+                    else
+                        read -s -p "Введите текущий пароль роли (оставьте пустым, чтобы не менять .env): " INPUT_EXIST_PW
+                        echo ""
+                        PW_TO_WRITE="$INPUT_EXIST_PW"
+                    fi
+                fi
             else
                 sudo -u postgres psql -c "CREATE ROLE \"${NEW_DB_USER}\" WITH LOGIN PASSWORD '${NEW_DB_PASS}';"
+                PW_TO_WRITE="$NEW_DB_PASS"
             fi
             # Создаём базу, если её нет
             if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${NEW_DB_NAME}'" | grep -q 1; then
