@@ -87,9 +87,23 @@ async def get_total_bookings_count() -> int:
 async def get_user_initial_screen(user_id: int) -> str:
     """
     Определяет начальный экран для пользователя на основе данных в БД.
-    Возвращает 'welcome' (анкета не заполнена) или 'booking' (анкета заполнена).
-    Вызывается ботом при /start — определение типа пользователя в бэкенде.
+    
+    ВАЖНО! Определение типа пользователя происходит в БЭКЕНДЕ:
+    1. Если пользователь администратор → "admin"
+    2. Если профиль заполнен → "booking"
+    3. Если новый пользователь → "welcome"
+    
+    Эта функция вызывается:
+    - При /start команде в боте
+    - При API запросе /api/user/initial-screen (используется фронтендом)
     """
+    from config import ADMIN_IDS
+    
+    # 1. Проверяем, является ли пользователь администратором
+    if user_id in ADMIN_IDS:
+        return "admin"
+    
+    # 2. Проверяем, заполнен ли профиль
     async_session = get_session_factory()
     async with async_session() as session:
         user_repo = UserRepo(session)

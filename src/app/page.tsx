@@ -72,17 +72,10 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const urlScreen = params.get("screen");
     const token = params.get("token");
 
-    // 1. Админ — бэкенд определил через /admin
-    if (urlScreen === "admin" && token) {
-      setAdminToken(token);
-      setCurrentScreen("admin");
-      setIsLoading(false);
-      setProfileLoaded(true);
-      return;
-    }
+    // ✅ НОВАЯ АРХИТЕКТУРА: Фронтенд получает ТОЛЬКО токен
+    // Определение типа пользователя происходит через API на бэкенде
 
     if (DEV_SKIP_PROFILE_LOADING) {
       // В режиме разработчика можно задать фиктивный userId через переменную окружения.
@@ -100,7 +93,81 @@ export default function Home() {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
 
-    async function tryLoadProfile(foundId: number, authToken?: string) {
+    async function initializeApp(userToken: string) {
+      try {
+        // 1. Декодируем токен чтобы получить user_id
+        const decoded = jwtDecode<{ user_id: number }>(userToken);
+        const uid = decoded.user_id;
+        
+        if (!isMounted) return;
+        setUserId(uid);
+
+        // 2. ✅ КРИТИЧЕСКОЕ: Запрашиваем у бэкенда актуальный тип пользователя
+        // Это гарантирует, что информация ВСЕГДА в синхронизации с БД
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
+        const initialScreenResponse = await fetch(
+          `${apiBase}/api/user/initial-screen?token=${encodeURIComponent(userToken)}`,
+          {
+            cache: 'no-store',
+            headers: {
+              'Authorization': `Bearer ${userToken}`
+            }
+          }
+        );
+
+        if (!isMounted) return;
+
+        if (initialScreenResponse.ok) {
+          const screenData = await initialScreenResponse.json();
+          const screen = screenData.screen || 'welcome';
+
+          console.log(`✅ Initial screen from backend: ${screen} (user_id: ${uid})`);
+
+          // 3. Определяем, что делать в зависимости от типа пользователя
+          if (screen === 'admin') {
+            // Администратор
+            setAdminToken(userToken);
+            setCurrentScreen('admin' as any);
+          } else if (screen === 'booking') {
+            // Пользователь с заполненным профилем
+            setCurrentScreen('booking');
+            try {
+              const result = await getProfile(uid, userToken);
+              const profile = (result as any)?.profile ?? (result as any);
+              if (isMounted && profile) {
+                setFullProfile(profile);
+                setUserName(profile.name || '');
+                setUserGender((profile.gender as 'male' | 'female') || null);
+              }
+            } catch (error) {
+              console.warn('Failed to load profile data:', error);
+              // Даже если профиль не загрузился, экран booking уже установлен
+            }
+          } else {
+            // welcome — новый пользователь
+            setCurrentScreen('welcome');
+          }
+        } else {
+          // Ошибка получения типа пользователя
+          console.error('Failed to determine initial screen');
+          setCurrentScreen('welcome');
+        }
+
+        if (isMounted) {
+          setProfileLoaded(true);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        if (isMounted) {
+          setCurrentScreen('welcome');
+          setProfileLoaded(true);
+          setIsLoading(false);
+        }
+      }
+    }
+
+    async function tryLoadProfileFallback(foundId: number, authToken?: string) {
       setUserId(foundId);
       try {
         const result = await getProfile(foundId, authToken);
@@ -115,7 +182,6 @@ export default function Home() {
           if (profile.is_profile_completed) {
             setCurrentScreen("booking");
           } else {
-            // Если профиль не завершен, начинаем сначала
             setCurrentScreen("welcome");
           }
         }
@@ -128,36 +194,9 @@ export default function Home() {
       }
     }
 
-    // 2. screen=welcome или screen=booking — бэкенд определил при /start, доверяем URL
-    if (token && (urlScreen === "welcome" || urlScreen === "booking")) {
-      (async () => {
-        try {
-          const decoded = jwtDecode<{ user_id: number }>(token);
-          setUserId(decoded.user_id);
-          setCurrentScreen(urlScreen as "welcome" | "booking");
-
-          if (urlScreen === "booking") {
-            try {
-              const result = await getProfile(decoded.user_id, token);
-              const profile = (result as any)?.profile ?? (result as any);
-              if (isMounted && profile) {
-                setFullProfile(profile);
-                setUserName(profile.name || "");
-                setUserGender((profile.gender as "male" | "female") || null);
-              }
-            } catch {
-              if (isMounted) setCurrentScreen("welcome");
-            }
-          }
-
-          if (isMounted) {
-            setProfileLoaded(true);
-            setIsLoading(false);
-          }
-        } catch {
-          // Невалидный токен — fallback не сработает, т.к. уже return
-        }
-      })();
+    // ✅ ГЛАВНАЯ ЛОГИКА: Если есть token — используем новую архитектуру
+    if (token) {
+      initializeApp(token);
       return cleanup;
     }
 
@@ -171,28 +210,19 @@ export default function Home() {
       return;
     }
 
-    // 3. Fallback: только token (старые ссылки) — фронт определяет по getProfile
-    if (token) {
-      try {
-        const decoded = jwtDecode<{ user_id: number }>(token);
-        tryLoadProfile(decoded.user_id, token);
-        return;
-      } catch {
-        // Невалидный токен
-      }
-    }
-
+    // Fallback: Старый режим (без токена) — ищем Telegram ID
     let foundId = getTelegramId();
     if (foundId) {
-      tryLoadProfile(foundId);
+      tryLoadProfileFallback(foundId);
       return;
     }
 
+    // Polling для ожидания инициализации Telegram WebApp
     pollingRef.current = setInterval(() => {
       const id = getTelegramId();
       if (id) {
         clearInterval(pollingRef.current!);
-        tryLoadProfile(id);
+        tryLoadProfileFallback(id);
       }
     }, 200);
 

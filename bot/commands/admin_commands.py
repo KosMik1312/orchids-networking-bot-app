@@ -34,7 +34,16 @@ class SlotStates(StatesGroup):
 
 @admin_router.message(Command("admin"))
 async def admin_panel(message: Message, is_admin: bool) -> None:
-    """Открывает админ-панель в MiniApp."""
+    """Открывает админ-панель в MiniApp.
+    
+    ✅ ПРАВИЛЬНАЯ АРХИТЕКТУРА:
+    - Бэкенд проверяет, что пользователь администратор (is_admin=True)
+    - Генерирует токен
+    - Передает ТОЛЬКО токен в URL (БЕЗ screen параметра)
+    - Фронтенд при загрузке запрашивает /api/user/initial-screen
+    - Бэкенд возвращает screen=admin
+    - Фронтенд отображает админ-панель
+    """
     user_id = message.from_user.id
     
     if not is_admin:
@@ -53,10 +62,13 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
         return
 
     token = generate_user_token(user_id)
-    params = urlencode({"screen": "admin", "token": token})
+    
+    # ТОЛЬКО ТОКЕН, БЕЗ SCREEN!
+    # Фронтенд определит, что это админ, через /api/user/initial-screen
+    params = urlencode({"token": token})
     admin_url = f"{MINIAPP_URL}?{params}"
     
-    logger.info(f"🔐 Generated token for admin {user_id}")
+    logger.info(f"🔐 Generated token for admin {user_id}. Frontend will determine screen type via /api/user/initial-screen")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(

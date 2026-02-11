@@ -206,6 +206,62 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
         return {"error": str(e)}
 
 
+@app.get("/api/user/initial-screen")
+async def get_user_initial_screen_endpoint(token: str):
+    """
+    ✅ КЛЮЧЕВОЙ ЭНДПОИНТ ДЛЯ АРХИТЕКТУРЫ
+    
+    Определяет тип пользователя и нужный экран при ЛЮБОЙ загрузке фронтенда.
+    
+    Вызывается:
+    - После загрузки фронт-приложения (холодная или горячая загрузка)
+    - Является ИСТОЧНИКОМ ИСТИНЫ о типе пользователя
+    
+    Возвращает:
+    - screen: "admin" | "booking" | "welcome"
+    
+    Гарантирует АКТУАЛЬНОСТЬ при:
+    - Обновлении страницы (F5)
+    - Повторном открытии приложения
+    - Изменении прав пользователя (добавлении в админы)
+    - Заполнении профиля
+    """
+    try:
+        # Валидируем токен и получаем user_id
+        user_id = validate_user_token(token)
+        
+        # Определяем тип пользователя в БД
+        from database_helpers import get_user_initial_screen
+        screen = await get_user_initial_screen(user_id)
+        
+        logger.info(f"✅ User {user_id} screen determination: {screen}")
+        
+        return {
+            "screen": screen,
+            "user_id": user_id,
+            "success": True
+        }
+    
+    except ValueError as e:
+        # Невалидный токен
+        logger.warning(f"⚠️  Invalid token for initial-screen endpoint: {e}")
+        return {
+            "screen": "welcome",
+            "user_id": None,
+            "success": False,
+            "error": "Invalid token"
+        }
+    
+    except Exception as e:
+        logger.error(f"❌ Error in initial-screen endpoint: {e}")
+        return {
+            "screen": "welcome",
+            "user_id": None,
+            "success": False,
+            "error": str(e)
+        }
+
+
 @app.get("/api/slots")
 async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession = Depends(get_session)):
     """
