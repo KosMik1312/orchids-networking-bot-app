@@ -66,8 +66,8 @@ check_process() {
     local process_pattern=$2
     
     if pgrep -f "$process_pattern" > /dev/null; then
-        local pid=$(pgrep -f "$process_pattern")
-        echo -e "${GREEN}✓${NC} $process_name запущен (PID: $pid)"
+        local pids=$(pgrep -f "$process_pattern" | tr '\n' ', ' | sed 's/,$//')
+        echo -e "${GREEN}✓${NC} $process_name запущен (PID: $pids)"
         return 0
     else
         echo -e "${RED}✗${NC} $process_name не запущен"
@@ -78,8 +78,8 @@ check_process() {
 check_status() {
     echo ""
     echo -e "${BLUE}📊 Статус процессов:${NC}"
-    check_process "FastAPI (Uvicorn)" "uvicorn|api_server"
-    check_process "Бот" "python.*start_all|bot\.py"
+    check_process "FastAPI (Uvicorn)" "uvicorn.*api_server"
+    check_process "Бот" "start_all\.py"
     echo ""
 }
 
@@ -104,14 +104,14 @@ stop_all() {
     echo ""
     echo -e "${YELLOW}🛑 Остановка всех процессов...${NC}"
     
-    if pgrep -f "uvicorn|api_server" > /dev/null; then
-        pkill -f "uvicorn|api_server"
+    if pgrep -f "uvicorn.*api_server" > /dev/null; then
+        pkill -f "uvicorn.*api_server"
         echo -e "${GREEN}✓${NC} FastAPI остановлен"
         sleep 1
     fi
     
-    if pgrep -f "python.*start_all|bot\.py" > /dev/null; then
-        pkill -f "python.*start_all|bot\.py"
+    if pgrep -f "start_all\.py" > /dev/null; then
+        pkill -f "start_all\.py"
         echo -e "${GREEN}✓${NC} Бот остановлен"
         sleep 1
     fi
@@ -129,8 +129,8 @@ stop_selective() {
     
     case $choice in
         1)
-            if pgrep -f "python.*start_all|bot\.py" > /dev/null; then
-                pkill -f "python.*start_all|bot\.py"
+            if pgrep -f "start_all\.py" > /dev/null; then
+                pkill -f "start_all\.py"
                 echo -e "${GREEN}✓ Бот остановлен${NC}"
                 sleep 1
             else
@@ -138,8 +138,8 @@ stop_selective() {
             fi
             ;;
         2)
-            if pgrep -f "uvicorn|api_server" > /dev/null; then
-                pkill -f "uvicorn|api_server"
+            if pgrep -f "uvicorn.*api_server" > /dev/null; then
+                pkill -f "uvicorn.*api_server"
                 echo -e "${GREEN}✓ FastAPI остановлен${NC}"
                 sleep 1
             else
@@ -211,7 +211,7 @@ start_fastapi() {
     echo ""
     echo -e "${YELLOW}🚀 Запуск FastAPI (Uvicorn)...${NC}"
     
-    if pgrep -f "uvicorn|api_server" > /dev/null; then
+    if pgrep -f "uvicorn.*api_server" > /dev/null; then
         echo -e "${YELLOW}⚠ FastAPI уже запущен${NC}"
         return
     fi
@@ -221,7 +221,7 @@ start_fastapi() {
     disown $FASTAPI_PID
     
     sleep 2
-    if pgrep -f "uvicorn|api_server" > /dev/null; then
+    if pgrep -f "uvicorn.*api_server" > /dev/null; then
         echo -e "${GREEN}✅ FastAPI запущен (PID: $FASTAPI_PID)${NC}"
         echo -e "${GREEN}   API доступен на http://localhost:8000${NC}"
     else
@@ -234,7 +234,7 @@ start_bot() {
     echo ""
     echo -e "${YELLOW}🤖 Запуск Бота...${NC}"
     
-    if pgrep -f "python.*start_all|bot\.py" > /dev/null; then
+    if pgrep -f "start_all\.py" > /dev/null; then
         echo -e "${YELLOW}⚠ Бот уже запущен${NC}"
         return
     fi
@@ -250,7 +250,7 @@ start_bot() {
     disown $BOT_PID
     
     sleep 2
-    if pgrep -f "python.*start_all|bot\.py" > /dev/null; then
+    if pgrep -f "start_all\.py" > /dev/null; then
         echo -e "${GREEN}✅ Бот запущен (PID: $BOT_PID)${NC}"
     else
         echo -e "${RED}❌ Ошибка запуска Бота${NC}"
