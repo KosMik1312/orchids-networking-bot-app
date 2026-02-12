@@ -98,16 +98,37 @@ async def get_user_initial_screen(user_id: int) -> str:
     - При API запросе /api/user/initial-screen (используется фронтендом)
     """
     from config import ADMIN_IDS
+    from logger import get_api_logger
+    
+    logger = get_api_logger()
+    logger.info(f"🔍 get_user_initial_screen() called for user_id={user_id}")
+    logger.info(f"📋 ADMIN_IDS={ADMIN_IDS}, type={type(ADMIN_IDS)}")
+    logger.info(f"❓ Checking: {user_id} in {ADMIN_IDS} = {user_id in ADMIN_IDS}")
     
     # 1. Проверяем, является ли пользователь администратором
     if user_id in ADMIN_IDS:
+        logger.info(f"✅ User {user_id} is ADMIN (found in ADMIN_IDS)")
         return "admin"
     
+    logger.info(f"ℹ️ User {user_id} is not in ADMIN_IDS, checking profile...")
+    
     # 2. Проверяем, заполнен ли профиль
-    async_session = get_session_factory()
-    async with async_session() as session:
-        user_repo = UserRepo(session)
-        user = await user_repo.get_user_profile(user_id)
-        if user and user.is_profile_completed:
-            return "booking"
+    try:
+        async_session = get_session_factory()
+        async with async_session() as session:
+            user_repo = UserRepo(session)
+            user = await user_repo.get_user_profile(user_id)
+            if user:
+                logger.info(f"👤 User {user_id} found in DB. is_profile_completed={user.is_profile_completed}")
+                if user.is_profile_completed:
+                    logger.info(f"✅ User {user_id} has completed profile")
+                    return "booking"
+                logger.info(f"❌ User {user_id} profile is NOT completed")
+            else:
+                logger.info(f"⚠️ User {user_id} not found in DB")
+            return "welcome"
+    except Exception as e:
+        logger.error(f"❌ Error checking user profile for {user_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return "welcome"

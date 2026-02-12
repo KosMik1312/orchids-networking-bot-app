@@ -66,7 +66,28 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             logger.error(f"❌ Error in {request.method} {request.url.path}: {e}")
             raise
 
+# ✅ ВАЖНО: Порядок middleware имеет значение!
+# Middleware добавляются в стек, поэтому добавлять нужно от внутренних к внешним.
+# CORS должен быть СНАРУЖИ (обрабатываться первым)
+# Logging должен быть ВНУТРИ (обрабатываться вторым после CORS)
+# Поэтому добавляем в ОБРАТНОМ порядке: сначала Logging, потом CORS
+
 app.add_middleware(LoggingMiddleware)
+
+# CORS для MiniApp - должен быть добавлен ПОСЛЕ LoggingMiddleware
+# (будет выполняться ПЕРЕД ним в цепи обработки)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://orchids-networking-bot-app.vercel.app",
+        "https://leracinema.ru",
+        "https://www.leracinema.ru",
+        "http://localhost:3000",  # Для локальной разработки
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Подключаем админские эндпоинты
 app.include_router(admin_router_api)
@@ -102,23 +123,6 @@ def get_user_id_or_param(auth_user_id: Optional[int], param_user_id: Optional[in
     if param_user_id:
         return param_user_id
     raise HTTPException(status_code=401, detail="Missing user identification")
-
-
-
-
-# CORS для MiniApp
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://orchids-networking-bot-app.vercel.app",
-        "https://leracinema.ru",
-        "https://www.leracinema.ru",
-        "http://localhost:3000",  # Для локальной разработки
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 # ===== Pydantic модели =====
@@ -227,17 +231,30 @@ async def get_user_initial_screen_endpoint(token: str):
     - Заполнении профиля
     """
     try:
+        logger.info(f"📨 /api/user/initial-screen called with token (first 50 chars): {token[:50] if token else 'EMPTY'}...")
+        
         # Валидируем токен и получаем user_id
         result = validate_user_token(token)
         if not result:
+            logger.error("❌ Token validation failed: result is None")
             raise ValueError("Invalid or expired token")
-        user_id = result['user_id']
+        user_id = result.get('user_id')
+        logger.info(f"✅ Token validated. user_id={user_id}")
+        
+        if not user_id:
+            logger.error("❌ Token validation succeeded but user_id is missing")
+            raise ValueError("Invalid token: no user_id")
         
         # Определяем тип пользователя в БД
         from database_helpers import get_user_initial_screen
-        screen = await get_user_initial_screen(user_id)
+        from config import ADMIN_IDS
         
-        logger.info(f"✅ User {user_id} screen determination: {screen}")
+        logger.info(f"🔍 Checking initial screen for user_id={user_id}")
+        logger.info(f"📋 Current ADMIN_IDS from config: {ADMIN_IDS}")
+        logger.info(f"❓ Is user_id {user_id} in ADMIN_IDS? {user_id in ADMIN_IDS}")
+        
+        screen = await get_user_initial_screen(user_id)
+        logger.info(f"✅ Determined screen for user {user_id}: {screen}")
         
         return {
             "screen": screen,
@@ -247,7 +264,7 @@ async def get_user_initial_screen_endpoint(token: str):
     
     except ValueError as e:
         # Невалидный токен
-        logger.warning(f"⚠️  Invalid token for initial-screen endpoint: {e}")
+        logger.warning(f"⚠️ Invalid token for initial-screen endpoint: {e}")
         return {
             "screen": "welcome",
             "user_id": None,
@@ -256,7 +273,9 @@ async def get_user_initial_screen_endpoint(token: str):
         }
     
     except Exception as e:
+        import traceback
         logger.error(f"❌ Error in initial-screen endpoint: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return {
             "screen": "welcome",
             "user_id": None,
@@ -331,18 +350,21 @@ async def save_profile_endpoint(
     """Сохранить профиль пользователя. Можно передавать JWT или userId в теле запроса."""
     user_id = get_user_id_or_param(auth_user_id, request.userId)
     
-    logger.info(f"Saving profile for user {user_id}")
+    logger.info(f"📦 POST /api/profile called for user {user_id}")
+    logger.info(f"   Authorization: {'Bearer token' if auth_user_id else 'userId in body'}")
     profile_dict = request.profile.model_dump(exclude_none=False)
+    logger.info(f"   Profile data keys: {list(profile_dict.keys())}")
     
     try:
         user_repo = UserRepo(session)
         profile_schema = UserProfileSchema(**profile_dict)
         await user_repo.save_user_profile(user_id, profile_schema)
-        logger.info(f"Profile saved successfully for user {user_id}")
+        logger.info(f"✅ Profile saved successfully for user {user_id}")
         return {"success": True}
     except Exception as e:
-        logger.error(f"Save profile failed: {e}")
-        traceback.print_exc()
+        logger.error(f"❌ Save profile failed for user {user_id}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -355,11 +377,16 @@ async def get_profile_endpoint(
     """Получить профиль пользователя. Можно передавать JWT или query param userId."""
     user_id = get_user_id_or_param(auth_user_id, userId)
     
+    logger.info(f"📦 GET /api/profile called for user {user_id}")
+    
     try:
         user_repo = UserRepo(session)
         user = await user_repo.get_user_profile(user_id)
         if not user:
+            logger.warning(f"⚠️ Profile not found for user {user_id}")
             raise HTTPException(status_code=404, detail="Profile not found")
+        
+        logger.info(f"✅ Retrieved profile for user {user_id}, is_profile_completed={user.is_profile_completed}")
         
         profile_dict = {
             "name": user.name,
