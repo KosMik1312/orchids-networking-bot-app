@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://81.177.6.20:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
 
 async function adminFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
