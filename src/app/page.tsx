@@ -30,7 +30,7 @@ interface MeetingConditionsData {
   format: string;
 }
 
-const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'true' || false;
+const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'false' || false;
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
