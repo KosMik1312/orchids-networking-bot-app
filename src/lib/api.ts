@@ -187,7 +187,7 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
 export async function getUserBookings(userId: number): Promise<{ bookings: Booking[] }> {
   console.log(`[API] Requesting bookings for userId=${userId} from ${API_BASE}/api/bookings`);
   const response = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
-  const result = await handleResponse(response);
+  const result = await handleResponse<{ bookings: Booking[] }>(response);
   console.log(`[API] Got bookings response:`, result);
   return result;
 }

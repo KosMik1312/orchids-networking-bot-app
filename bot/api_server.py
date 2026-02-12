@@ -228,7 +228,10 @@ async def get_user_initial_screen_endpoint(token: str):
     """
     try:
         # Валидируем токен и получаем user_id
-        user_id = validate_user_token(token)
+        result = validate_user_token(token)
+        if not result:
+            raise ValueError("Invalid or expired token")
+        user_id = result['user_id']
         
         # Определяем тип пользователя в БД
         from database_helpers import get_user_initial_screen
