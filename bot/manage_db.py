@@ -36,7 +36,10 @@ async def add_admin(user_id: int):
         # Сначала пробуем получить или создать пользователя (если его нет в БД)
         user = await repo.get_or_create_user(user_id)
         
-        if await repo.set_user_admin(user_id, True):
+        # ✅ ИСПРАВЛЕНИЕ: set_user_admin уже делает commit внутри
+        success = await repo.set_user_admin(user_id, True)
+        
+        if success:
             print(f"✅ Пользователь {user_id} теперь администратор.")
             logger.info(f"User {user_id} promoted to admin via CLI.")
         else:
