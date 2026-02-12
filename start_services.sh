@@ -78,7 +78,7 @@ check_process() {
 check_status() {
     echo ""
     echo -e "${BLUE}📊 Статус процессов:${NC}"
-    check_process "FastAPI (Uvicorn)" "uvicorn.*api_server"
+    check_process "FastAPI (Uvicorn)" "api_server\.py"
     check_process "Бот" "start_all\.py"
     echo ""
 }
@@ -104,8 +104,8 @@ stop_all() {
     echo ""
     echo -e "${YELLOW}🛑 Остановка всех процессов...${NC}"
     
-    if pgrep -f "uvicorn.*api_server" > /dev/null; then
-        pkill -f "uvicorn.*api_server"
+    if pgrep -f "api_server\.py" > /dev/null; then
+        pkill -f "api_server\.py"
         echo -e "${GREEN}✓${NC} FastAPI остановлен"
         sleep 1
     fi
@@ -138,8 +138,8 @@ stop_selective() {
             fi
             ;;
         2)
-            if pgrep -f "uvicorn.*api_server" > /dev/null; then
-                pkill -f "uvicorn.*api_server"
+            if pgrep -f "api_server\.py" > /dev/null; then
+                pkill -f "api_server\.py"
                 echo -e "${GREEN}✓ FastAPI остановлен${NC}"
                 sleep 1
             else
@@ -211,7 +211,7 @@ start_fastapi() {
     echo ""
     echo -e "${YELLOW}🚀 Запуск FastAPI (Uvicorn)...${NC}"
     
-    if pgrep -f "uvicorn.*api_server" > /dev/null; then
+    if pgrep -f "api_server\.py" > /dev/null; then
         echo -e "${YELLOW}⚠ FastAPI уже запущен${NC}"
         return
     fi
@@ -221,7 +221,7 @@ start_fastapi() {
     disown $FASTAPI_PID
     
     sleep 2
-    if pgrep -f "uvicorn.*api_server" > /dev/null; then
+    if pgrep -f "api_server\.py" > /dev/null; then
         echo -e "${GREEN}✅ FastAPI запущен (PID: $FASTAPI_PID)${NC}"
         echo -e "${GREEN}   API доступен на http://localhost:8000${NC}"
     else
