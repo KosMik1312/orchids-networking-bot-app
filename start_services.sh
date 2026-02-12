@@ -537,7 +537,11 @@ recreate_database() {
 
     echo -e "${YELLOW}🧹 Пересоздаю базу данных...${NC}"
 
-    # Опционально: если используется PostgreSQL — предложим создать роль/базу на сервере
+    # Фиксированные значения для БД
+    FIXED_DB_USER="allora_user"
+    FIXED_DB_NAME="allora_db"
+    FIXED_DB_PASS="31642300"
+
     DB_URL=$(python - <<PY
 from config import DATABASE_URL
 print(DATABASE_URL or "")
@@ -547,91 +551,43 @@ PY
 
     if [ "$DB_SCHEME" = "postgresql+asyncpg" ] || [ "$DB_SCHEME" = "postgresql" ]; then
         echo ""
+        echo -e "${BLUE}Используются фиксированные параметры БД:${NC}"
+        echo -e "  Пользователь: ${GREEN}${FIXED_DB_USER}${NC}"
+        echo -e "  База данных: ${GREEN}${FIXED_DB_NAME}${NC}"
+        echo -e "  Пароль: ${GREEN}${FIXED_DB_PASS}${NC}"
+        echo ""
+        
         read -p "Создать/обновить роль и базу PostgreSQL на этом сервере? (y/n): " CREATE_PG
         if [ "$CREATE_PG" = "y" ] || [ "$CREATE_PG" = "Y" ]; then
-            # Получаем текущие значения по умолчанию из config
-            CUR_USER=$(python - <<PY
-import importlib
-cfg = importlib.import_module('config')
-print(getattr(cfg, 'DB_USER', '') or '')
-PY
-)
-            CUR_DB=$(python - <<PY
-import importlib
-cfg = importlib.import_module('config')
-print(getattr(cfg, 'DB_NAME', '') or '')
-PY
-)
-            read -p "Имя роли (DB_USER) [${CUR_USER:-allora_user}]: " NEW_DB_USER
-            NEW_DB_USER=${NEW_DB_USER:-${CUR_USER:-allora_user}}
-            read -p "Имя базы (DB_NAME) [${CUR_DB:-allora_db}]: " NEW_DB_NAME
-            NEW_DB_NAME=${NEW_DB_NAME:-${CUR_DB:-allora_db}}
-            read -s -p "Пароль для роли (оставьте пустым, чтобы сгенерировать): " NEW_DB_PASS
-            echo ""
-            if [ -z "$NEW_DB_PASS" ]; then
-                NEW_DB_PASS=$(python - <<PY
-import secrets
-print(secrets.token_urlsafe(16))
-PY
-)
-                echo -e "${YELLOW}Сгенерирован пароль для роли: (скопируйте и сохраните)${NC}"
-                echo "$NEW_DB_PASS"
-            fi
-
             echo -e "${YELLOW}Создаю роль и базу в PostgreSQL...${NC}"
-            # Создаём роль, если её нет; если есть — спросим, сбросить ли пароль
-            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${NEW_DB_USER}'" | grep -q 1; then
-                echo "Role ${NEW_DB_USER} already exists"
-                read -p "Сбросить пароль роли ${NEW_DB_USER}? (y/n): " RESET_ROLE_PW
-                if [ "$RESET_ROLE_PW" = "y" ] || [ "$RESET_ROLE_PW" = "Y" ]; then
-                    sudo -u postgres psql -c "ALTER ROLE \"${NEW_DB_USER}\" WITH PASSWORD '${NEW_DB_PASS}';"
-                    PW_TO_WRITE="$NEW_DB_PASS"
-                else
-                    # Попробуем взять пароль из .env, если он там есть
-                    ENV_FILE="$PWD/.env"
-                    if [ -f "$ENV_FILE" ] && grep -qE "^DB_PASSWORD=" "$ENV_FILE"; then
-                        PW_TO_WRITE=$(grep -E "^DB_PASSWORD=" "$ENV_FILE" | tail -1 | cut -d'=' -f2-)
-                    else
-                        read -s -p "Введите текущий пароль роли (оставьте пустым, чтобы не менять .env): " INPUT_EXIST_PW
-                        echo ""
-                        PW_TO_WRITE="$INPUT_EXIST_PW"
-                    fi
-                fi
+            
+            # Создаём роль, если её нет
+            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${FIXED_DB_USER}'" | grep -q 1; then
+                echo "Роль ${FIXED_DB_USER} уже существует, обновляю пароль..."
+                sudo -u postgres psql -c "ALTER ROLE \"${FIXED_DB_USER}\" WITH PASSWORD '${FIXED_DB_PASS}';"
             else
-                sudo -u postgres psql -c "CREATE ROLE \"${NEW_DB_USER}\" WITH LOGIN PASSWORD '${NEW_DB_PASS}';"
-                PW_TO_WRITE="$NEW_DB_PASS"
+                echo "Создаю роль ${FIXED_DB_USER}..."
+                sudo -u postgres psql -c "CREATE ROLE \"${FIXED_DB_USER}\" WITH LOGIN PASSWORD '${FIXED_DB_PASS}';"
             fi
+            
             # Создаём базу, если её нет
-            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${NEW_DB_NAME}'" | grep -q 1; then
-                echo "Database ${NEW_DB_NAME} already exists"
+            if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${FIXED_DB_NAME}'" | grep -q 1; then
+                echo "База данных ${FIXED_DB_NAME} уже существует"
             else
-                sudo -u postgres psql -c "CREATE DATABASE \"${NEW_DB_NAME}\" OWNER \"${NEW_DB_USER}\";"
+                echo "Создаю базу данных ${FIXED_DB_NAME}..."
+                sudo -u postgres psql -c "CREATE DATABASE \"${FIXED_DB_NAME}\" OWNER \"${FIXED_DB_USER}\";"
             fi
-            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${NEW_DB_NAME}\" TO \"${NEW_DB_USER}\";"
+            
+            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${FIXED_DB_NAME}\" TO \"${FIXED_DB_USER}\";"
 
-            # Обновим .env (создаем, если нужно)
+            # Обновим .env
             ENV_FILE="$PWD/.env"
             if [ ! -f "$ENV_FILE" ]; then
                 touch "$ENV_FILE"
             fi
-            # Заменяем или добавляем переменные
-            if grep -qE "^DB_USER=" "$ENV_FILE"; then
-                sed -i "s/^DB_USER=.*/DB_USER=${NEW_DB_USER}/" "$ENV_FILE"
-            else
-                echo "DB_USER=${NEW_DB_USER}" >> "$ENV_FILE"
-            fi
-            if grep -qE "^DB_PASSWORD=" "$ENV_FILE"; then
-                sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${NEW_DB_PASS}/" "$ENV_FILE"
-            else
-                echo "DB_PASSWORD=${NEW_DB_PASS}" >> "$ENV_FILE"
-            fi
-            if grep -qE "^DB_NAME=" "$ENV_FILE"; then
-                sed -i "s/^DB_NAME=.*/DB_NAME=${NEW_DB_NAME}/" "$ENV_FILE"
-            else
-                echo "DB_NAME=${NEW_DB_NAME}" >> "$ENV_FILE"
-            fi
-            # Обновим полную строку DATABASE_URL
-            NEW_DATABASE_URL="postgresql+asyncpg://${NEW_DB_USER}:${NEW_DB_PASS}@localhost:5432/${NEW_DB_NAME}"
+            
+            # Обновляем DATABASE_URL с фиксированными значениями
+            NEW_DATABASE_URL="postgresql+asyncpg://${FIXED_DB_USER}:${FIXED_DB_PASS}@localhost:5432/${FIXED_DB_NAME}"
             if grep -qE "^DATABASE_URL=" "$ENV_FILE"; then
                 sed -i "s#^DATABASE_URL=.*#DATABASE_URL=${NEW_DATABASE_URL}#" "$ENV_FILE"
             else
@@ -642,7 +598,7 @@ PY
         fi
     fi
 
-        # Передаем 'y' в stdin чтобы подтвердить операцию recreate
+    # Передаем 'y' в stdin чтобы подтвердить операцию recreate
     echo "y" | python ./manage_db.py recreate
     
     PY_EXIT=$?

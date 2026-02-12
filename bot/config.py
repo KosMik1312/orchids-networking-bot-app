@@ -53,11 +53,11 @@ if not DATABASE_URL:
         DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
         DATABASE_NAME = db_path  # Для обратной совместимости
     elif DB_TYPE == "postgresql":
-        # PostgreSQL конфигурация
+        # PostgreSQL конфигурация (ФИКСИРОВАННЫЕ ЗНАЧЕНИЯ)
         DB_HOST = os.getenv("DB_HOST", "localhost")
         DB_PORT = os.getenv("DB_PORT", "5432")
         DB_USER = os.getenv("DB_USER", "allora_user")
-        DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+        DB_PASSWORD = os.getenv("DB_PASSWORD", "31642300")
         DB_NAME = os.getenv("DB_NAME", "allora_db")
         
         DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
