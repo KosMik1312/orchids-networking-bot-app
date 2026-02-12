@@ -83,6 +83,8 @@ app.add_middleware(
         "https://leracinema.ru",
         "https://www.leracinema.ru",
         "http://localhost:3000",  # Для локальной разработки
+        "http://81.177.6.20:8000",  # IP сервера
+        "http://81.177.6.20",  # IP сервера без порта
     ],
     allow_credentials=True,
     allow_methods=["*"],

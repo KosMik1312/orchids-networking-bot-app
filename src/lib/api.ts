@@ -1,6 +1,6 @@
 // API functions for communicating with the Python backend
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru'; // Из переменной окружения или значение по умолчанию
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://81.177.6.20:8000'; // Из переменной окружения или значение по умолчанию
 console.log('🔧 API_BASE:', API_BASE);
 
 // --- Custom Error Class ---
