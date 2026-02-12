@@ -357,6 +357,13 @@ async def save_profile_endpoint(
     
     try:
         user_repo = UserRepo(session)
+        
+        # ✅ ИСПРАВЛЕНИЕ: Создаём пользователя если его нет
+        user = await user_repo.get_user_profile(user_id)
+        if not user:
+            logger.info(f"👤 User {user_id} not found, creating...")
+            await user_repo.get_or_create_user(user_id)
+        
         profile_schema = UserProfileSchema(**profile_dict)
         await user_repo.save_user_profile(user_id, profile_schema)
         logger.info(f"✅ Profile saved successfully for user {user_id}")

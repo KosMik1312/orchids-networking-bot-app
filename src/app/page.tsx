@@ -133,7 +133,7 @@ export default function Home() {
           if (screen === 'admin') {
             // Администратор
             setAdminToken(userToken);
-            setCurrentScreen('admin' as any);
+            setCurrentScreen('admin');
           } else if (screen === 'booking') {
             // Пользователь с заполненным профилем
             setCurrentScreen('booking');
