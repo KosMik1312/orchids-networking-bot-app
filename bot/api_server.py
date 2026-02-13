@@ -187,6 +187,32 @@ async def health_check():
     return {"status": "OK"}
 
 
+@app.post("/api/debug/validate-initdata")
+async def debug_validate_initdata(request: InitDataRequest):
+    """
+    ⚠️ DEBUG ENDPOINT - тестирование валидации initData.
+    Это для локальной разработки и отладки.
+    """
+    logger.info(f"🔍 DEBUG: Validating initData")
+    logger.info(f"   Full initData: {request.initData}")
+    
+    result = validate_init_data(request.initData)
+    
+    if result:
+        logger.info(f"✅ DEBUG: InitData is valid for user {result['user_id']}")
+        return {
+            "valid": True,
+            "user_id": result['user_id'],
+            "user_data": result.get('user_data'),
+        }
+    else:
+        logger.error(f"❌ DEBUG: InitData validation failed")
+        return {
+            "valid": False,
+            "error": "InitData validation failed - see server logs for details"
+        }
+
+
 @app.get("/test")
 async def test_endpoint(session: AsyncSession = Depends(get_session)):
     """Тестовый эндпоинт для проверки (публичный)."""
@@ -362,43 +388,103 @@ async def save_profile_endpoint(
     # Извлекаем user_id из initData или из userId параметра
     user_id = None
     
+    logger.info(f"📦 POST /api/profile called")
+    logger.info(f"   Has initData: {bool(request.initData)}")
+    logger.info(f"   Has userId: {bool(request.userId)}")
+    
     if request.initData:
+        logger.info(f"   🔍 Validating initData...")
         result = validate_init_data(request.initData)
         if result:
             user_id = result.get('user_id')
+            logger.info(f"   ✅ InitData valid, extracted user_id={user_id}")
+        else:
+            logger.error(f"   ❌ InitData validation failed")
     elif request.userId:
         user_id = request.userId
+        logger.info(f"   ℹ️ Using userId from request: {user_id}")
     
     if not user_id:
+        logger.error(f"❌ Cannot extract user_id from request")
         raise HTTPException(status_code=401, detail="Invalid initData or missing userId")
     
-    logger.info(f"📦 POST /api/profile called for user {user_id}")
+    logger.info(f"📦 POST /api/profile for user {user_id}")
     profile_dict = request.profile.model_dump(exclude_none=False)
     logger.info(f"   Profile data keys: {list(profile_dict.keys())}")
-    logger.info(f"   Profile data values: {profile_dict}")
+    logger.info(f"   Profile data sample: name={profile_dict.get('name')}, age={profile_dict.get('age')}, gender={profile_dict.get('gender')}")
     
     try:
         user_repo = UserRepo(session)
         
-        # ✅ ИСПРАВЛЕНИЕ: Создаём пользователя если его нет
+        # ✅ Получаем или создаём пользователя
         user = await user_repo.get_user_profile(user_id)
         if not user:
-            logger.info(f"👤 User {user_id} not found, creating...")
+            logger.info(f"👤 User {user_id} not found in DB, creating...")
             await user_repo.get_or_create_user(user_id)
             logger.info(f"✅ User {user_id} created")
+        else:
+            logger.info(f"👤 User {user_id} found in DB, updating...")
         
         profile_schema = UserProfileSchema(**profile_dict)
-        logger.info(f"📝 Profile schema created: {profile_schema}")
+        logger.info(f"📝 Profile schema created with {len(profile_dict)} fields")
         
         saved_user = await user_repo.save_user_profile(user_id, profile_schema)
         logger.info(f"✅ Profile saved successfully for user {user_id}")
-        logger.info(f"   Saved user data: name={saved_user.name}, is_profile_completed={saved_user.is_profile_completed}")
+        logger.info(f"   Saved: name={saved_user.name}, age={saved_user.age}, gender={saved_user.gender}")
+        logger.info(f"   is_profile_completed={saved_user.is_profile_completed}")
         
         return {"success": True}
     except Exception as e:
         logger.error(f"❌ Save profile failed for user {user_id}: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/debug/profile-save")
+async def debug_save_profile_endpoint(
+    request: ProfileRequest,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    ⚠️ DEBUG ENDPOINT - сохранение профиля с тестовым user_id (для разработки).
+    Использует userId из request.userId, игнорируя initData.
+    """
+    if not request.userId:
+        raise HTTPException(status_code=400, detail="userId required for debug endpoint")
+    
+    user_id = request.userId
+    logger.info(f"🔧 DEBUG: Saving profile for test user {user_id}")
+    
+    profile_dict = request.profile.model_dump(exclude_none=False)
+    logger.info(f"   Profile keys: {list(profile_dict.keys())}")
+    
+    try:
+        user_repo = UserRepo(session)
+        
+        user = await user_repo.get_user_profile(user_id)
+        if not user:
+            logger.info(f"   Creating new user {user_id}")
+            await user_repo.get_or_create_user(user_id)
+        
+        profile_schema = UserProfileSchema(**profile_dict)
+        saved_user = await user_repo.save_user_profile(user_id, profile_schema)
+        
+        logger.info(f"✅ DEBUG: Profile saved: name={saved_user.name}, completed={saved_user.is_profile_completed}")
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "profile_saved": {
+                "name": saved_user.name,
+                "age": saved_user.age,
+                "gender": saved_user.gender,
+                "is_profile_completed": saved_user.is_profile_completed
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ DEBUG: Save profile failed: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

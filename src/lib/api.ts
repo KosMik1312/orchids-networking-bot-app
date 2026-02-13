@@ -106,12 +106,20 @@ export interface Contact {
 export async function saveProfile(userId: number, profile: Partial<UserProfile>, initData?: string): Promise<{ success: boolean }> {
   const url = `${API_BASE}/api/profile`;
   console.log('🔗 Запрос к:', url);
-  console.log('📤 Payload:', { userId, profile });
+  console.log('📤 userId:', userId);
+  console.log('📤 initData present:', !!initData);
+  if (initData) {
+    console.log('📤 initData (first 100 chars):', initData.substring(0, 100));
+  }
+  console.log('📤 profile keys:', Object.keys(profile));
+  console.log('📤 profile sample:', { name: profile.name, age: profile.age, gender: profile.gender });
 
   const body: any = { userId, profile };
   if (initData) {
     body.initData = initData;
   }
+
+  console.log('📤 Full payload keys:', Object.keys(body));
 
   const response = await fetch(url, {
     method: 'POST',
@@ -123,11 +131,6 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>,
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    console.log('❌ Текст ошибки:', text);
-  }
 
   return handleResponse(response);
 }

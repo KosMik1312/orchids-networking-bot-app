@@ -86,6 +86,8 @@ export default function Home() {
         if (!isMounted) return;
 
         console.log("✅ Initializing with Telegram initData...");
+        console.log("   initData length:", initData.length);
+        console.log("   initData sample (first 100 chars):", initData.substring(0, 100));
         setUserToken(initData);
 
         try {
@@ -99,6 +101,8 @@ export default function Home() {
           const userData = JSON.parse(userStr);
           const uid = userData.id;
           
+          console.log("✅ Extracted user_id from initData:", uid);
+          
           if (!isMounted) return;
           setUserId(uid);
 
@@ -106,6 +110,7 @@ export default function Home() {
           console.log(`📍 API_BASE: ${apiBase}`);
 
           // Отправляем initData на бэкенд для верификации
+          console.log("📤 Sending to /api/user/initial-screen...");
           const response = await fetch(`${apiBase}/api/user/initial-screen`, {
             method: 'POST',
             headers: {
@@ -195,12 +200,6 @@ export default function Home() {
        };
 
       startApp();
-      return cleanup;
-      //   setCurrentScreen("welcome");
-      // } else {
-      startApp();
-      // }
-
       return cleanup;
     }, []);
 

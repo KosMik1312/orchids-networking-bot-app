@@ -28,6 +28,8 @@ def validate_init_data(init_data: str) -> dict | None:
     if not init_data:
         logger.warning("❌ Empty initData")
         return None
+    
+    logger.info(f"🔍 Validating initData (first 100 chars): {init_data[:100]}...")
         
     try:
         # Парсим initData как URLSearchParams
@@ -37,11 +39,15 @@ def validate_init_data(init_data: str) -> dict | None:
                 key, value = part.split('=', 1)
                 params[unquote(key)] = unquote(value)
         
+        logger.info(f"📋 Parsed params keys: {list(params.keys())}")
+        
         # Извлекаем hash для верификации
         provided_hash = params.get('hash')
         if not provided_hash:
             logger.warning("⚠️ No hash in initData")
             return None
+        
+        logger.info(f"🔐 Found hash: {provided_hash[:20]}...")
         
         # Создаём data_check_string для верификации
         # Формат: ключ1=значение1\nключ2=значение2\n...
@@ -52,7 +58,7 @@ def validate_init_data(init_data: str) -> dict | None:
                 data_to_check.append(f"{key}={params[key]}")
         
         data_check_string = '\n'.join(data_to_check)
-        logger.info(f"📋 Data to check: {data_check_string[:100]}...")
+        logger.info(f"📋 Data to check (first 200 chars): {data_check_string[:200]}...")
         
         # Вычисляем HMAC-SHA256
         # SECRET_KEY это Bot Token, но мы должны использовать его как ключ для HMAC
@@ -67,22 +73,28 @@ def validate_init_data(init_data: str) -> dict | None:
             logger.warning("❌ Hash mismatch - initData is invalid")
             return None
         
+        logger.info(f"✅ Hash matches!")
+        
         # Проверяем timestamp (не старше 5 минут)
         auth_date = int(params.get('auth_date', 0))
         current_time = int(time.time())
         time_diff = current_time - auth_date
         
+        logger.info(f"⏰ Auth date: {auth_date}, current time: {current_time}, diff: {time_diff}s")
+        
         if time_diff > 300:  # 5 минут
             logger.warning(f"⏰ InitData too old: {time_diff} seconds ago")
             return None
         
-        logger.info(f"✅ InitData valid. Auth date: {auth_date}, current: {current_time}")
+        logger.info(f"✅ Timestamp valid")
         
         # Парсим user JSON
         user_str = params.get('user')
         if not user_str:
             logger.warning("⚠️ No user data in initData")
             return None
+        
+        logger.info(f"👤 User data (first 100 chars): {user_str[:100]}...")
         
         user_data = json.loads(user_str)
         user_id = user_data.get('id')
@@ -92,6 +104,7 @@ def validate_init_data(init_data: str) -> dict | None:
             return None
         
         logger.info(f"✅ InitData valid for user_id={user_id}")
+        logger.info(f"👤 User data: {user_data}")
         return {
             'user_id': user_id,
             'valid': True,
@@ -100,6 +113,7 @@ def validate_init_data(init_data: str) -> dict | None:
         
     except json.JSONDecodeError as e:
         logger.error(f"❌ JSON decode error in initData: {e}")
+        logger.error(f"   User string was: {params.get('user', 'NOT FOUND')}")
         return None
     except Exception as e:
         logger.error(f"❌ Error validating initData: {e}")
