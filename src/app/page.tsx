@@ -138,7 +138,9 @@ export default function Home() {
           setCurrentScreen(screen);
 
           if (screen === 'admin') {
+            console.log('✅ Admin screen detected, setting admin token and screen');
             setAdminToken(initData);
+            setCurrentScreen('admin');  // ← ИСПРАВЛЕНИЕ: явно устанавливаем админ-экран
           } else if (screen === 'booking') {
             try {
               const profileResponse = await getProfile(uid, initData);
@@ -210,8 +212,9 @@ export default function Home() {
     const genderValue = data.gender === "Мужской" ? "male" : "female";
     setUserName(data.name);
     setUserGender(genderValue);
-    setCurrentScreen("best_in_me");
-    updateProfile({
+    
+    // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
+    await updateProfile({
       name: data.name,
       gender: genderValue,
       age: data.age ? parseInt(data.age) : undefined,
@@ -219,23 +222,30 @@ export default function Home() {
       relationship_status: data.familyStatus || undefined,
       children: data.hasChildren || undefined,
     });
+    
+    setCurrentScreen("best_in_me");
   };
 
   const handleBestInMeComplete = async (data: any) => {
     setUserSocialLinks({ telegram: data.telegramNickname, instagram: data.instagramNickname });
     if (data.photo) setUserPhoto(data.photo);
-    setCurrentScreen("meeting_conditions");
-    updateProfile({
+    
+    // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
+    await updateProfile({
       telegram: data.telegramNickname,
       instagram: data.instagramNickname,
       photo: data.photo || undefined
     });
+    
+    setCurrentScreen("meeting_conditions");
   };
 
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
+    
+    // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     // Save meeting conditions to server (map to backend fields)
-    updateProfile({
+    await updateProfile({
       meeting_metro: data.metro,
       meeting_days: data.days,
       meeting_time_from: data.time.from,
@@ -244,6 +254,7 @@ export default function Home() {
       goal: data.goal,
       is_profile_completed: true
     });
+    
     setCurrentScreen("booking");
   };
 

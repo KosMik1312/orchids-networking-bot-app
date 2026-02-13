@@ -297,6 +297,8 @@ async def get_user_initial_screen_endpoint(
         screen = await get_user_initial_screen(user_id)
         logger.info(f"✅ Determined screen for user {user_id}: {screen}")
         
+        logger.info(f"📤 Returning response: screen={screen}, user_id={user_id}, success=True")
+        
         return {
             "screen": screen,
             "user_id": user_id,
