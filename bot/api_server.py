@@ -252,7 +252,7 @@ async def get_user_initial_screen_endpoint(token: str):
         from config import ADMIN_IDS
         
         logger.info(f"🔍 Checking initial screen for user_id={user_id}")
-        logger.info(f"📋 Current ADMIN_IDS from config: {ADMIN_IDS}")
+        logger.info(f"📋 Current ADMIN_IDS from config: {ADMIN_IDS}, type={type(ADMIN_IDS)}")
         logger.info(f"❓ Is user_id {user_id} in ADMIN_IDS? {user_id in ADMIN_IDS}")
         
         screen = await get_user_initial_screen(user_id)

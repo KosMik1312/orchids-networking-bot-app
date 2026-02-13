@@ -149,50 +149,50 @@ export default function Home() {
         }
       };
 
-      const startApp = () => {
-        // Для разработки: если токен задан в URL, используем его
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlToken = urlParams.get('token');
+       const startApp = () => {
+         // ✅ ПРИОРИТЕТ 1: Токен из URL (от бота через /start команду)
+         const urlParams = new URLSearchParams(window.location.search);
+         const urlToken = urlParams.get('token');
 
-        if (urlToken) {
-          console.log('Using token from URL parameter.');
-          initializeApp(urlToken);
-          return;
-        }
+         if (urlToken) {
+           console.log('✅ Using JWT token from URL parameter (from bot /start command).');
+           initializeApp(urlToken);
+           return;
+         }
 
-        // Основная логика для Telegram Mini App
-        const webApp = (window as any).Telegram?.WebApp;
+         // ✅ ПРИОРИТЕТ 2: Telegram WebApp initData (для локальной разработки)
+         const webApp = (window as any).Telegram?.WebApp;
 
-        if (webApp && webApp.initData) {
-          console.log('Telegram WebApp SDK is ready. Using initData.');
-          initializeApp(webApp.initData);
-        } else {
-          // Если SDK еще не готово, пробуем подождать
-          console.log('Telegram WebApp SDK not ready, polling...');
-          let attempts = 0;
+         if (webApp && webApp.initData) {
+           console.log('⚠️ Using Telegram WebApp initData (development mode).');
+           initializeApp(webApp.initData);
+         } else {
+           // Если SDK еще не готово, пробуем подождать
+           console.log('Telegram WebApp SDK not ready, polling...');
+           let attempts = 0;
 
-          pollingRef.current = setInterval(() => {
-            attempts++;
+           pollingRef.current = setInterval(() => {
+             attempts++;
 
-            const webApp = (window as any).Telegram?.WebApp;
+             const webApp = (window as any).Telegram?.WebApp;
 
-            if (webApp && webApp.initData) {
-              clearInterval(pollingRef.current!);
-              console.log('SDK became ready after polling.');
-              initializeApp(webApp.initData);
-            } else if (attempts > 25) { // ~5 seconds timeout
-              clearInterval(pollingRef.current!);
-              console.error('❌ Timed out waiting for Telegram WebApp SDK. Displaying welcome screen as a fallback.');
+             if (webApp && webApp.initData) {
+               clearInterval(pollingRef.current!);
+               console.log('SDK became ready after polling.');
+               initializeApp(webApp.initData);
+             } else if (attempts > 25) { // ~5 seconds timeout
+               clearInterval(pollingRef.current!);
+               console.error('❌ Timed out waiting for Telegram WebApp SDK. Displaying welcome screen as a fallback.');
 
-              if (isMounted) {
-                setCurrentScreen('welcome');
-                setIsLoading(false);
-                setProfileLoaded(true);
-              }
-            }
-          }, 200);
-        }
-      };
+               if (isMounted) {
+                 setCurrentScreen('welcome');
+                 setIsLoading(false);
+                 setProfileLoaded(true);
+               }
+             }
+           }, 200);
+         }
+       };
 
       // if (DEV_SKIP_PROFILE_LOADING) {
       //   console.warn("Skipping profile loading for development.");

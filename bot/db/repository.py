@@ -61,32 +61,43 @@ class UserRepo(BaseRepo):
 
     async def save_user_profile(self, user_id: int, profile_data: UserProfile) -> User:
         """Обновляет или создает профиль пользователя."""
+        logger.info(f"📝 save_user_profile called for user {user_id}")
+        
         user = await self.session.get(User, user_id)
         if user is None:
+            logger.info(f"👤 User {user_id} not found, creating new user")
             user = User(user_id=user_id)
             self.session.add(user)
         
         # Используем model_dump(exclude_none=True) чтобы не затирать существующие данные на None
         profile_dict = profile_data.model_dump(exclude_none=True)
+        logger.info(f"📋 Profile dict keys: {list(profile_dict.keys())}")
+        logger.info(f"📋 Profile dict values: {profile_dict}")
         
         # Сопоставление ключа 'format' с фронтенда с полем БД 'communication_format'
         if 'format' in profile_dict:
             profile_dict['communication_format'] = profile_dict.pop('format')
+            logger.info(f"🔄 Mapped 'format' to 'communication_format'")
         
         logger.debug(f"Saving profile for user {user_id}: {list(profile_dict.keys())}")
         
         for key, value in profile_dict.items():
             if hasattr(user, key):
+                logger.debug(f"  Setting {key}={value}")
                 setattr(user, key, value)
         
         # Если все обязательные поля заполнены, можно ставить True (опционально, или доверяем фронту)
         # В данном случае доверяем фронту, который присылает is_profile_completed=True в конце
         if 'is_profile_completed' in profile_dict:
              user.is_profile_completed = profile_dict['is_profile_completed']
+             logger.info(f"✅ Set is_profile_completed={user.is_profile_completed}")
         
+        logger.info(f"💾 Committing changes for user {user_id}...")
         await self.session.commit()
+        logger.info(f"✅ Commit successful for user {user_id}")
+        
         await self.session.refresh(user)
-        logger.info(f"Profile saved for user {user_id}")
+        logger.info(f"✅ Profile saved for user {user_id}: name={user.name}, is_profile_completed={user.is_profile_completed}")
         return user
     
     async def get_total_count(self) -> int:
