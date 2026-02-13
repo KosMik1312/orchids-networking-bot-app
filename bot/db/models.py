@@ -6,7 +6,7 @@ ORM модели для базы данных.
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, ForeignKey, TIMESTAMP, Boolean, Index, Date
+    Column, Integer, BigInteger, String, Text, ForeignKey, TIMESTAMP, Boolean, Index, Date
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
@@ -18,7 +18,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = 'users'
 
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)
     name = Column(String)
     age = Column(Integer)
     gender = Column(String)
@@ -75,7 +75,7 @@ class Booking(Base):
     __tablename__ = 'bookings'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
     slot_id = Column(Integer, ForeignKey('dinner_slots.id', ondelete="CASCADE"), nullable=False)
     booking_date = Column(TIMESTAMP, server_default=func.now())
     status = Column(String, default='active', index=True)  # Индекс для фильтрации по статусу
@@ -95,7 +95,7 @@ class Payment(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     yookassa_payment_id = Column(String, unique=True, nullable=False, index=True)  # Индекс для поиска по yookassa_id
-    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
     booking_id = Column(Integer, ForeignKey('bookings.id', ondelete="SET NULL"), nullable=True)
     amount = Column(String, nullable=False)
     status = Column(String, default='created', index=True)  # Индекс для фильтрации по статусу
@@ -125,7 +125,7 @@ class UserGroup(Base):
     __tablename__ = 'user_groups'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False)
     group_id = Column(Integer, ForeignKey('groups.id', ondelete="CASCADE"), nullable=False)
 
     user = relationship("User")
