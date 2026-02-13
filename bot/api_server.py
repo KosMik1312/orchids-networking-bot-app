@@ -179,6 +179,12 @@ class ContactsRequest(BaseModel):
     initData: str
 
 
+# ===== Pydantic модели (общие) =====
+
+class InitDataRequest(BaseModel):
+    initData: str
+
+
 # ===== Публичные эндпоинты (без аутентификации) =====
 
 @app.get("/api/health")
@@ -242,10 +248,6 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
     except Exception as e:
         logger.error(f"Test endpoint error: {e}")
         return {"error": str(e)}
-
-
-class InitDataRequest(BaseModel):
-    initData: str
 
 
 @app.post("/api/user/initial-screen")
