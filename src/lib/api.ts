@@ -102,20 +102,24 @@ export interface Contact {
   isSupport?: boolean; // For support contact
 }
 
-// Profile API
-export async function saveProfile(userId: number, profile: Partial<UserProfile>, token?: string): Promise<{ success: boolean }> {
+// Profile API - uses Telegram initData for authentication
+export async function saveProfile(userId: number, profile: Partial<UserProfile>, initData?: string): Promise<{ success: boolean }> {
   const url = `${API_BASE}/api/profile`;
   console.log('🔗 Запрос к:', url);
   console.log('📤 Payload:', { userId, profile });
+
+  const body: any = { userId, profile };
+  if (initData) {
+    body.initData = initData;
+  }
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
     cache: 'no-store',
-    body: JSON.stringify({ userId, profile }),
+    body: JSON.stringify(body),
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);
@@ -128,25 +132,32 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>,
   return handleResponse(response);
 }
 
-export async function getProfile(userId?: number, token?: string): Promise<{ profile: UserProfile }> {
-  // Если передан только токен, используем его
+export async function getProfile(userId?: number, initData?: string): Promise<{ profile: UserProfile }> {
+  // Если передан только initData, используем его
   // Если передан userId, используем его
   // Иначе выбрасываем ошибку
-  if (!userId && !token) {
-    throw new ApiError('Either userId or token must be provided', 400);
+  if (!userId && !initData) {
+    throw new ApiError('Either userId or initData must be provided', 400);
   }
 
-  const params = new URLSearchParams();
-  if (userId) params.append('userId', userId.toString());
-
-  const url = `${API_BASE}/api/profile${params.toString() ? '?' + params.toString() : ''}`;
+  const url = `${API_BASE}/api/profile/get`;
   console.log('🔗 Запрос к:', url);
 
+  const body: any = {};
+  if (initData) {
+    body.initData = initData;
+  }
+  if (userId) {
+    body.userId = userId;
+  }
+
   const response = await fetch(url, {
-    cache: 'no-store',
+    method: 'POST',
     headers: {
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      'Content-Type': 'application/json',
     },
+    cache: 'no-store',
+    body: JSON.stringify(body),
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);

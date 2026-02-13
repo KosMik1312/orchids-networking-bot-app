@@ -4,7 +4,7 @@
 """
 
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_session
 from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo
 from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN, AUTH_DISABLED
-from auth_token import validate_user_token
+from auth_token import validate_init_data
 from logger import get_api_logger
 from utils import format_date
 
@@ -22,19 +22,56 @@ admin_router_api = APIRouter(prefix="/api/admin", tags=["admin"])
 security = HTTPBearer(auto_error=False)
 
 
+# ===== Pydantic модели =====
+
+class InitDataRequest(BaseModel):
+    initData: str
+
+
+class SlotCreateRequest(InitDataRequest):
+    date: str
+    time: str
+    city: str
+    restaurant: str
+    max_people: int
+
+
+class SlotUpdateRequest(InitDataRequest):
+    date: Optional[str] = None
+    time: Optional[str] = None
+    city: Optional[str] = None
+    restaurant: Optional[str] = None
+    max_people: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class GroupCreateRequest(InitDataRequest):
+    name: str
+
+
+class GroupMembersRequest(InitDataRequest):
+    user_ids: List[int]
+
+
+class BroadcastRequest(InitDataRequest):
+    text: str
+    group_ids: Optional[List[int]] = None
+    slot_id: Optional[int] = None
+
+
 async def require_admin(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    init_data: str,
     session: AsyncSession = Depends(get_session),
 ) -> int:
-    """Проверяет JWT и что user_id в ADMIN_IDS или is_admin=True в БД. Возвращает user_id."""
-    if not credentials:
-        logger.error("❌ No authorization token provided")
-        raise HTTPException(status_code=401, detail="Missing authorization token")
+    """Проверяет initData и что user_id в ADMIN_IDS или is_admin=True в БД. Возвращает user_id."""
+    if not init_data:
+        logger.error("❌ No initData provided")
+        raise HTTPException(status_code=401, detail="Missing initData")
 
-    result = validate_user_token(credentials.credentials)
+    result = validate_init_data(init_data)
     if not result:
-        logger.error("❌ Invalid or expired token")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        logger.error("❌ Invalid or expired initData")
+        raise HTTPException(status_code=401, detail="Invalid or expired initData")
 
     user_id = result["user_id"]
     logger.info(f"🔍 Checking admin access for user_id={user_id}")
@@ -68,66 +105,33 @@ async def require_admin(
     raise HTTPException(status_code=403, detail="Not an admin")
 
 
-# ===== Pydantic модели =====
-
-class SlotCreateRequest(BaseModel):
-    date: str
-    time: str
-    city: str
-    restaurant: str
-    max_people: int
-
-
-class SlotUpdateRequest(BaseModel):
-    date: Optional[str] = None
-    time: Optional[str] = None
-    city: Optional[str] = None
-    restaurant: Optional[str] = None
-    max_people: Optional[int] = None
-    is_active: Optional[bool] = None
-
-
-class GroupCreateRequest(BaseModel):
-    name: str
-
-
-class GroupMembersRequest(BaseModel):
-    user_ids: List[int]
-
-
-class BroadcastRequest(BaseModel):
-    text: str
-    group_ids: Optional[List[int]] = None
-    slot_id: Optional[int] = None
-
-
 # ===== Эндпоинты =====
 
-@admin_router_api.get("/me")
-async def admin_me(admin_id: int = Depends(require_admin)):
+@admin_router_api.post("/me")
+async def admin_me(request: InitDataRequest, session: AsyncSession = Depends(get_session)):
     """Проверка: текущий пользователь — админ."""
+    admin_id = await require_admin(request.initData, session)
     return {"user_id": admin_id, "is_admin": True}
 
 
-@admin_router_api.get("/stats")
-async def admin_stats(
-    session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
-):
+@admin_router_api.post("/stats")
+async def admin_stats(request: InitDataRequest, session: AsyncSession = Depends(get_session)):
     """Общая статистика."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     stats = await repo.get_stats()
     return stats
 
 
-@admin_router_api.get("/users")
+@admin_router_api.post("/users")
 async def admin_users(
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Список пользователей с пагинацией."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     users, total = await repo.get_all_users(limit=limit, offset=offset)
     return {
@@ -153,12 +157,10 @@ async def admin_users(
 
 # ===== Слоты (мероприятия) =====
 
-@admin_router_api.get("/slots")
-async def admin_slots(
-    session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
-):
+@admin_router_api.post("/slots")
+async def admin_slots(request: InitDataRequest, session: AsyncSession = Depends(get_session)):
     """Все слоты (включая неактивные)."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     slots = await repo.get_all_slots_admin()
     return {
@@ -183,9 +185,9 @@ async def admin_slots(
 async def admin_create_slot(
     request: SlotCreateRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Создание мероприятия."""
+    admin_id = await require_admin(request.initData, session)
     repo = SlotRepo(session)
     slot = await repo.create_slot(
         date=request.date,
@@ -210,9 +212,9 @@ async def admin_update_slot(
     slot_id: int,
     request: SlotUpdateRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Редактирование слота."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     updates = request.model_dump(exclude_none=True)
     if not updates:
@@ -233,13 +235,14 @@ async def admin_update_slot(
     }
 
 
-@admin_router_api.get("/slots/{slot_id}")
+@admin_router_api.post("/slots/{slot_id}")
 async def admin_slot_detail(
     slot_id: int,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Детали слота."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     slot = await repo.get_slot_by_id(slot_id)
     if not slot:
@@ -257,13 +260,14 @@ async def admin_slot_detail(
     }
 
 
-@admin_router_api.get("/slots/{slot_id}/participants")
+@admin_router_api.post("/slots/{slot_id}/participants")
 async def admin_slot_participants(
     slot_id: int,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Участники мероприятия с информацией об оплате."""
+    admin_id = await require_admin(request.initData, session)
     repo = AdminRepo(session)
     slot = await repo.get_slot_by_id(slot_id)
     if not slot:
@@ -274,12 +278,13 @@ async def admin_slot_participants(
 
 # ===== Группы =====
 
-@admin_router_api.get("/groups")
+@admin_router_api.post("/groups")
 async def admin_groups(
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Список групп."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     groups = await repo.get_all_groups()
     return {"groups": groups}
@@ -289,9 +294,9 @@ async def admin_groups(
 async def admin_create_group(
     request: GroupCreateRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Создание группы."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     try:
         group = await repo.create_group(request.name)
@@ -301,13 +306,14 @@ async def admin_create_group(
     return {"id": group.id, "name": group.name}
 
 
-@admin_router_api.delete("/groups/{group_id}")
+@admin_router_api.post("/groups/{group_id}")
 async def admin_delete_group(
     group_id: int,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Удаление группы."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     ok = await repo.delete_group(group_id)
     if not ok:
@@ -316,13 +322,14 @@ async def admin_delete_group(
     return {"success": True}
 
 
-@admin_router_api.get("/groups/{group_id}/members")
+@admin_router_api.post("/groups/{group_id}/members")
 async def admin_group_members(
     group_id: int,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Участники группы."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     members = await repo.get_group_members(group_id)
     return {
@@ -344,9 +351,9 @@ async def admin_add_group_members(
     group_id: int,
     request: GroupMembersRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Добавление пользователей в группу."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     report = await repo.add_members(group_id, request.user_ids)
     if "error" in report:
@@ -355,14 +362,15 @@ async def admin_add_group_members(
     return report
 
 
-@admin_router_api.delete("/groups/{group_id}/members/{user_id}")
+@admin_router_api.post("/groups/{group_id}/members/{user_id}")
 async def admin_remove_group_member(
     group_id: int,
     user_id: int,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Удаление пользователя из группы."""
+    admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     ok = await repo.remove_member(group_id, user_id)
     if not ok:
@@ -376,9 +384,9 @@ async def admin_remove_group_member(
 async def admin_broadcast(
     request: BroadcastRequest,
     session: AsyncSession = Depends(get_session),
-    admin_id: int = Depends(require_admin),
 ):
     """Рассылка текстового сообщения по группам и/или участникам слота."""
+    admin_id = await require_admin(request.initData, session)
     import asyncio
     from aiogram import Bot
 

@@ -1,13 +1,17 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
 
-async function adminFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
+async function adminFetch<T>(path: string, initData: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    method: options?.method || 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
       ...(options?.headers || {}),
     },
+    body: JSON.stringify({
+      ...(options?.body ? JSON.parse(options.body as string) : {}),
+      initData,
+    }),
     cache: 'no-store',
   });
   if (!res.ok) {
@@ -84,67 +88,67 @@ export interface BroadcastResult {
 }
 
 // Проверка авторизации
-export async function checkAdmin(token: string): Promise<{ user_id: number; is_admin: boolean }> {
-  return adminFetch('/api/admin/me', token);
+export async function checkAdmin(initData: string): Promise<{ user_id: number; is_admin: boolean }> {
+  return adminFetch('/api/admin/me', initData);
 }
 
 // Статистика
-export async function getAdminStats(token: string): Promise<AdminStats> {
-  return adminFetch('/api/admin/stats', token);
+export async function getAdminStats(initData: string): Promise<AdminStats> {
+  return adminFetch('/api/admin/stats', initData);
 }
 
 // Пользователи
-export async function getAdminUsers(token: string, limit = 50, offset = 0): Promise<{ total: number; users: AdminUser[] }> {
-  return adminFetch(`/api/admin/users?limit=${limit}&offset=${offset}`, token);
+export async function getAdminUsers(initData: string, limit = 50, offset = 0): Promise<{ total: number; users: AdminUser[] }> {
+  return adminFetch(`/api/admin/users?limit=${limit}&offset=${offset}`, initData);
 }
 
 // Мероприятия (слоты)
-export async function getAdminSlots(token: string): Promise<{ slots: AdminSlot[] }> {
-  return adminFetch('/api/admin/slots', token);
+export async function getAdminSlots(initData: string): Promise<{ slots: AdminSlot[] }> {
+  return adminFetch('/api/admin/slots', initData);
 }
 
-export async function createAdminSlot(token: string, data: { date: string; time: string; city: string; restaurant: string; max_people: number }) {
-  return adminFetch('/api/admin/slots', token, { method: 'POST', body: JSON.stringify(data) });
+export async function createAdminSlot(initData: string, data: { date: string; time: string; city: string; restaurant: string; max_people: number }) {
+  return adminFetch('/api/admin/slots', initData, { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateAdminSlot(token: string, slotId: number, data: Partial<AdminSlot>) {
-  return adminFetch(`/api/admin/slots/${slotId}`, token, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateAdminSlot(initData: string, slotId: number, data: Partial<AdminSlot>) {
+  return adminFetch(`/api/admin/slots/${slotId}`, initData, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
-export async function getSlotDetail(token: string, slotId: number): Promise<AdminSlot> {
-  return adminFetch(`/api/admin/slots/${slotId}`, token);
+export async function getSlotDetail(initData: string, slotId: number): Promise<AdminSlot> {
+  return adminFetch(`/api/admin/slots/${slotId}`, initData);
 }
 
-export async function getSlotParticipants(token: string, slotId: number): Promise<{ slot_id: number; participants: SlotParticipant[] }> {
-  return adminFetch(`/api/admin/slots/${slotId}/participants`, token);
+export async function getSlotParticipants(initData: string, slotId: number): Promise<{ slot_id: number; participants: SlotParticipant[] }> {
+  return adminFetch(`/api/admin/slots/${slotId}/participants`, initData);
 }
 
 // Группы
-export async function getAdminGroups(token: string): Promise<{ groups: AdminGroup[] }> {
-  return adminFetch('/api/admin/groups', token);
+export async function getAdminGroups(initData: string): Promise<{ groups: AdminGroup[] }> {
+  return adminFetch('/api/admin/groups', initData);
 }
 
-export async function createAdminGroup(token: string, name: string) {
-  return adminFetch('/api/admin/groups', token, { method: 'POST', body: JSON.stringify({ name }) });
+export async function createAdminGroup(initData: string, name: string) {
+  return adminFetch('/api/admin/groups', initData, { method: 'POST', body: JSON.stringify({ name }) });
 }
 
-export async function deleteAdminGroup(token: string, groupId: number) {
-  return adminFetch(`/api/admin/groups/${groupId}`, token, { method: 'DELETE' });
+export async function deleteAdminGroup(initData: string, groupId: number) {
+  return adminFetch(`/api/admin/groups/${groupId}`, initData, { method: 'DELETE' });
 }
 
-export async function getGroupMembers(token: string, groupId: number): Promise<{ group_id: number; members: GroupMember[] }> {
-  return adminFetch(`/api/admin/groups/${groupId}/members`, token);
+export async function getGroupMembers(initData: string, groupId: number): Promise<{ group_id: number; members: GroupMember[] }> {
+  return adminFetch(`/api/admin/groups/${groupId}/members`, initData);
 }
 
-export async function addGroupMembers(token: string, groupId: number, userIds: number[]) {
-  return adminFetch(`/api/admin/groups/${groupId}/members`, token, { method: 'POST', body: JSON.stringify({ user_ids: userIds }) });
+export async function addGroupMembers(initData: string, groupId: number, userIds: number[]) {
+  return adminFetch(`/api/admin/groups/${groupId}/members`, initData, { method: 'POST', body: JSON.stringify({ user_ids: userIds }) });
 }
 
-export async function removeGroupMember(token: string, groupId: number, userId: number) {
-  return adminFetch(`/api/admin/groups/${groupId}/members/${userId}`, token, { method: 'DELETE' });
+export async function removeGroupMember(initData: string, groupId: number, userId: number) {
+  return adminFetch(`/api/admin/groups/${groupId}/members/${userId}`, initData, { method: 'DELETE' });
 }
 
 // Рассылка
-export async function sendBroadcast(token: string, data: { text: string; group_ids?: number[]; slot_id?: number }): Promise<BroadcastResult> {
-  return adminFetch('/api/admin/broadcast', token, { method: 'POST', body: JSON.stringify(data) });
+export async function sendBroadcast(initData: string, data: { text: string; group_ids?: number[]; slot_id?: number }): Promise<BroadcastResult> {
+  return adminFetch('/api/admin/broadcast', initData, { method: 'POST', body: JSON.stringify(data) });
 }

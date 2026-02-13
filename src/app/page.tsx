@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { jwtDecode } from "jwt-decode";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
@@ -83,61 +82,72 @@ export default function Home() {
         }
       };
 
-      const initializeApp = async (token: string) => {
+      const initializeApp = async (initData: string) => {
         if (!isMounted) return;
 
-        console.log("Initializing with token...");
-        setUserToken(token);
+        console.log("✅ Initializing with Telegram initData...");
+        setUserToken(initData);
 
         try {
-          const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
-          console.log(`🔧 API_BASE: ${apiBase}`);
+          // Парсим initData чтобы получить user_id
+          const initDataDecoded = new URLSearchParams(initData);
+          const userStr = initDataDecoded.get('user');
+          if (!userStr) {
+            throw new Error('No user data in initData');
+          }
 
+          const userData = JSON.parse(userStr);
+          const uid = userData.id;
+          
+          if (!isMounted) return;
+          setUserId(uid);
+
+          const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
+          console.log(`📍 API_BASE: ${apiBase}`);
+
+          // Отправляем initData на бэкенд для верификации
           const response = await fetch(`${apiBase}/api/user/initial-screen`, {
+            method: 'POST',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json',
             },
+            body: JSON.stringify({ initData }),
             cache: 'no-store'
           });
 
           if (!isMounted) return;
 
           if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            throw new Error(`Failed to fetch initial screen: ${response.status} ${errorText}`);
-          }
-
-          const data = await response.json();
-
-          if (data.success === false && data.error === 'Invalid token') {
-            console.error('❌ Backend rejected the token. This might be a server-side validation issue or an invalid initData string.');
+            const errorText = await response.text().catch(() => '');
+            console.error(`❌ Failed: ${response.status} ${errorText}`);
             setCurrentScreen('welcome');
             setIsLoading(false);
             setProfileLoaded(true);
             return;
           }
 
-          console.log('✅ Initial screen data:', data);
-          setUserId(data.user_id);
-          setCurrentScreen(data.screen || 'welcome');
+          const data = await response.json();
+          const screen = data.screen || 'welcome';
 
-          if (data.screen === 'admin') {
-            setAdminToken(token);
-          } else if (data.screen === 'booking') {
-            // Предзагрузка профиля для существующих пользователей
+          console.log(`✅ Screen: ${screen}`);
+          setCurrentScreen(screen);
+
+          if (screen === 'admin') {
+            setAdminToken(initData);
+          } else if (screen === 'booking') {
             try {
-              const profileResponse = await getProfile(data.user_id, token);
+              const profileResponse = await getProfile(uid, initData);
               if (isMounted && profileResponse.profile) {
                 setFullProfile(profileResponse.profile);
                 setUserName(profileResponse.profile.name || '');
                 setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
               }
             } catch (profileError) {
-              console.warn('Could not pre-load profile, but proceeding.', profileError);
+              console.warn('Could not pre-load profile:', profileError);
             }
           }
         } catch (error) {
-          console.error('❌ Fatal error during app initialization:', error);
+          console.error('❌ Error:', error);
           if (isMounted) {
             setCurrentScreen('welcome');
           }
@@ -150,25 +160,15 @@ export default function Home() {
       };
 
        const startApp = () => {
-         // ✅ ПРИОРИТЕТ 1: Токен из URL (от бота через /start команду)
-         const urlParams = new URLSearchParams(window.location.search);
-         const urlToken = urlParams.get('token');
-
-         if (urlToken) {
-           console.log('✅ Using JWT token from URL parameter (from bot /start command).');
-           initializeApp(urlToken);
-           return;
-         }
-
-         // ✅ ПРИОРИТЕТ 2: Telegram WebApp initData (для локальной разработки)
+         // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
          const webApp = (window as any).Telegram?.WebApp;
 
          if (webApp && webApp.initData) {
-           console.log('⚠️ Using Telegram WebApp initData (development mode).');
+           console.log('✅ Got Telegram initData');
            initializeApp(webApp.initData);
          } else {
-           // Если SDK еще не готово, пробуем подождать
-           console.log('Telegram WebApp SDK not ready, polling...');
+           // Ждём пока WebApp инициализируется
+           console.log('⏳ Waiting for Telegram WebApp...');
            let attempts = 0;
 
            pollingRef.current = setInterval(() => {
@@ -178,11 +178,11 @@ export default function Home() {
 
              if (webApp && webApp.initData) {
                clearInterval(pollingRef.current!);
-               console.log('SDK became ready after polling.');
+               console.log('✅ WebApp ready');
                initializeApp(webApp.initData);
-             } else if (attempts > 25) { // ~5 seconds timeout
+             } else if (attempts > 25) { // ~5 seconds
                clearInterval(pollingRef.current!);
-               console.error('❌ Timed out waiting for Telegram WebApp SDK. Displaying welcome screen as a fallback.');
+               console.error('❌ Timeout waiting for Telegram WebApp');
 
                if (isMounted) {
                  setCurrentScreen('welcome');
@@ -194,10 +194,8 @@ export default function Home() {
          }
        };
 
-      // if (DEV_SKIP_PROFILE_LOADING) {
-      //   console.warn("Skipping profile loading for development.");
-      //   setIsLoading(false);
-      //   setProfileLoaded(true);
+      startApp();
+      return cleanup;
       //   setCurrentScreen("welcome");
       // } else {
       startApp();

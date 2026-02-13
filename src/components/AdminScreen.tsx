@@ -18,7 +18,7 @@ interface AdminScreenProps {
   onBack?: () => void;
 }
 
-export function AdminScreen({ token, onBack }: AdminScreenProps) {
+export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
   const [tab, setTab] = useState<AdminTab>("dashboard");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -52,64 +52,64 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
   const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
 
   useEffect(() => {
-    checkAdmin(token)
+    checkAdmin(initData)
       .then(() => setAuthorized(true))
       .catch(() => setAuthorized(false));
-  }, [token]);
+  }, [initData]);
 
   const loadStats = useCallback(async () => {
     try {
-      const s = await getAdminStats(token);
+      const s = await getAdminStats(initData);
       setStats(s);
     } catch (e: any) { setError(e.message); }
-  }, [token]);
+  }, [initData]);
 
   const loadUsers = useCallback(async (page = 0) => {
     setLoading(true);
     try {
-      const res = await getAdminUsers(token, 50, page * 50);
+      const res = await getAdminUsers(initData, 50, page * 50);
       setUsers(res.users);
       setUsersTotal(res.total);
       setUsersPage(page);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
-  }, [token]);
+  }, [initData]);
 
   const loadSlots = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getAdminSlots(token);
+      const res = await getAdminSlots(initData);
       setSlots(res.slots);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
-  }, [token]);
+  }, [initData]);
 
   const loadParticipants = useCallback(async (slotId: number) => {
     setLoading(true);
     try {
-      const res = await getSlotParticipants(token, slotId);
+      const res = await getSlotParticipants(initData, slotId);
       setParticipants(res.participants);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
-  }, [token]);
+  }, [initData]);
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getAdminGroups(token);
+      const res = await getAdminGroups(initData);
       setGroups(res.groups);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
-  }, [token]);
+  }, [initData]);
 
   const loadGroupMembers = useCallback(async (groupId: number) => {
     setLoading(true);
     try {
-      const res = await getGroupMembers(token, groupId);
+      const res = await getGroupMembers(initData, groupId);
       setGroupMembers(res.members);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
-  }, [token]);
+  }, [initData]);
 
   useEffect(() => {
     if (authorized) loadStats();
@@ -154,7 +154,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
     if (!slotForm.date || !slotForm.time || !slotForm.city || !slotForm.restaurant || !slotForm.max_people) return;
     setLoading(true);
     try {
-      await createAdminSlot(token, { ...slotForm, max_people: parseInt(slotForm.max_people) });
+      await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people) });
       setShowSlotForm(false);
       setSlotForm({ date: "", time: "", city: "", restaurant: "", max_people: "" });
       await loadSlots();
@@ -164,7 +164,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
 
   const handleToggleSlotActive = async (slot: AdminSlot) => {
     try {
-      await updateAdminSlot(token, slot.id, { is_active: !slot.is_active });
+      await updateAdminSlot(initData, slot.id, { is_active: !slot.is_active });
       await loadSlots();
     } catch (e: any) { setError(e.message); }
   };
@@ -172,7 +172,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
     try {
-      await createAdminGroup(token, newGroupName.trim());
+      await createAdminGroup(initData, newGroupName.trim());
       setNewGroupName("");
       await loadGroups();
     } catch (e: any) { setError(e.message); }
@@ -180,7 +180,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
 
   const handleDeleteGroup = async (groupId: number) => {
     try {
-      await deleteAdminGroup(token, groupId);
+      await deleteAdminGroup(initData, groupId);
       await loadGroups();
     } catch (e: any) { setError(e.message); }
   };
@@ -190,7 +190,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
     const ids = addMemberIds.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
     if (ids.length === 0) return;
     try {
-      await addGroupMembers(token, selectedGroupId, ids);
+      await addGroupMembers(initData, selectedGroupId, ids);
       setAddMemberIds("");
       await loadGroupMembers(selectedGroupId);
     } catch (e: any) { setError(e.message); }
@@ -199,7 +199,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
   const handleRemoveMember = async (userId: number) => {
     if (!selectedGroupId) return;
     try {
-      await removeGroupMember(token, selectedGroupId, userId);
+      await removeGroupMember(initData, selectedGroupId, userId);
       await loadGroupMembers(selectedGroupId);
     } catch (e: any) { setError(e.message); }
   };
@@ -213,7 +213,7 @@ export function AdminScreen({ token, onBack }: AdminScreenProps) {
       if (broadcastTarget === "groups" && broadcastGroupIds.length > 0) data.group_ids = broadcastGroupIds;
       if (broadcastTarget === "slot" && broadcastSlotId) data.slot_id = broadcastSlotId;
       if (!data.group_ids && !data.slot_id) { setError("Выберите получателей"); setLoading(false); return; }
-      const result = await sendBroadcast(token, data);
+      const result = await sendBroadcast(initData, data);
       setBroadcastResult(result);
     } catch (e: any) { setError(e.message); }
     setLoading(false);

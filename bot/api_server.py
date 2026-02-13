@@ -25,7 +25,7 @@ from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME, SECRET_KEY, AUTH_DISABLED
-from auth_token import validate_user_token
+from auth_token import validate_init_data
 from utils import format_date
 from payments.payment_service import PaymentService
 from payments.payment_config import YOOKASSA_SECRET_KEY
@@ -157,20 +157,26 @@ class UserProfile(BaseModel):
     is_profile_completed: bool = False
 
 class ProfileRequest(BaseModel):
-    userId: int
+    userId: Optional[int] = None
     profile: UserProfile
+    initData: Optional[str] = None
 
 
 class BookingRequest(BaseModel):
-    userId: int
     slotId: int
+    initData: str
 
 
 class PaymentRequest(BaseModel):
-    userId: int
     amount: str
     bookingId: Optional[int] = None
     returnUrl: str
+    initData: str
+
+
+class ContactsRequest(BaseModel):
+    slotId: int
+    initData: str
 
 
 # ===== Публичные эндпоинты (без аутентификации) =====
@@ -212,8 +218,12 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
         return {"error": str(e)}
 
 
-@app.get("/api/user/initial-screen")
-async def get_user_initial_screen_endpoint(token: str):
+class InitDataRequest(BaseModel):
+    initData: str
+
+
+@app.post("/api/user/initial-screen")
+async def get_user_initial_screen_endpoint(request: InitDataRequest):
     """
     ✅ КЛЮЧЕВОЙ ЭНДПОИНТ ДЛЯ АРХИТЕКТУРЫ
     
@@ -233,19 +243,19 @@ async def get_user_initial_screen_endpoint(token: str):
     - Заполнении профиля
     """
     try:
-        logger.info(f"📨 /api/user/initial-screen called with token (first 50 chars): {token[:50] if token else 'EMPTY'}...")
+        logger.info(f"📨 /api/user/initial-screen called with initData")
         
-        # Валидируем токен и получаем user_id
-        result = validate_user_token(token)
+        # Валидируем initData и получаем user_id
+        result = validate_init_data(request.initData)
         if not result:
-            logger.error("❌ Token validation failed: result is None")
-            raise ValueError("Invalid or expired token")
+            logger.error("❌ InitData validation failed")
+            raise ValueError("Invalid or expired initData")
         user_id = result.get('user_id')
-        logger.info(f"✅ Token validated. user_id={user_id}")
+        logger.info(f"✅ InitData validated. user_id={user_id}")
         
         if not user_id:
-            logger.error("❌ Token validation succeeded but user_id is missing")
-            raise ValueError("Invalid token: no user_id")
+            logger.error("❌ InitData validation succeeded but user_id is missing")
+            raise ValueError("Invalid initData: no user_id")
         
         # Определяем тип пользователя в БД
         from database_helpers import get_user_initial_screen
@@ -265,13 +275,13 @@ async def get_user_initial_screen_endpoint(token: str):
         }
     
     except ValueError as e:
-        # Невалидный токен
-        logger.warning(f"⚠️ Invalid token for initial-screen endpoint: {e}")
+        # Невалидный initData
+        logger.warning(f"⚠️ Invalid initData for initial-screen endpoint: {e}")
         return {
             "screen": "welcome",
             "user_id": None,
             "success": False,
-            "error": "Invalid token"
+            "error": "Invalid initData"
         }
     
     except Exception as e:
@@ -346,14 +356,23 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 @app.post("/api/profile")
 async def save_profile_endpoint(
     request: ProfileRequest,
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    session: AsyncSession = Depends(get_session)
 ):
-    """Сохранить профиль пользователя. Можно передавать JWT или userId в теле запроса."""
-    user_id = get_user_id_or_param(auth_user_id, request.userId)
+    """Сохранить профиль пользователя используя initData."""
+    # Извлекаем user_id из initData или из userId параметра
+    user_id = None
+    
+    if request.initData:
+        result = validate_init_data(request.initData)
+        if result:
+            user_id = result.get('user_id')
+    elif request.userId:
+        user_id = request.userId
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid initData or missing userId")
     
     logger.info(f"📦 POST /api/profile called for user {user_id}")
-    logger.info(f"   Authorization: {'Bearer token' if auth_user_id else 'userId in body'}")
     profile_dict = request.profile.model_dump(exclude_none=False)
     logger.info(f"   Profile data keys: {list(profile_dict.keys())}")
     logger.info(f"   Profile data values: {profile_dict}")
@@ -383,14 +402,25 @@ async def save_profile_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/profile")
+@app.post("/api/profile/get")
 async def get_profile_endpoint(
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
-    userId: Optional[int] = None,
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    userId: Optional[int] = None
 ):
-    """Получить профиль пользователя. Можно передавать JWT или query param userId."""
-    user_id = get_user_id_or_param(auth_user_id, userId)
+    """Получить профиль пользователя используя initData или userId."""
+    # Извлекаем user_id из initData или из query param
+    user_id = None
+    
+    if request.initData:
+        result = validate_init_data(request.initData)
+        if result:
+            user_id = result.get('user_id')
+    elif userId:
+        user_id = userId
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid initData or missing userId")
     
     logger.info(f"📦 GET /api/profile called for user {user_id}")
     
@@ -432,16 +462,22 @@ async def get_profile_endpoint(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@app.get("/api/bookings")
+@app.post("/api/bookings/list")
 async def get_user_bookings_endpoint(
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: int = Depends(get_current_user_id)
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session)
 ):
-    """Получить бронирования пользователя."""
-    user_id = auth_user_id
-    
+    """Получить бронирования пользователя используя initData."""
     try:
+        # Валидируем initData
+        result = validate_init_data(request.initData)
+        if not result:
+            logger.error("❌ InitData validation failed for get bookings")
+            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        
+        user_id = result.get('user_id')
         logger.info(f"Getting bookings for user {user_id}")
+        
         booking_repo = BookingRepo(session)
         bookings = await booking_repo.get_user_bookings(user_id)
         
@@ -473,6 +509,8 @@ async def get_user_bookings_endpoint(
                 continue
         
         return {"bookings": bookings_data}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting bookings: {e}")
         traceback.print_exc()
@@ -482,14 +520,19 @@ async def get_user_bookings_endpoint(
 @app.post("/api/bookings")
 async def create_booking_endpoint(
     request: BookingRequest,
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: int = Depends(get_current_user_id)
+    session: AsyncSession = Depends(get_session)
 ):
-    """Создать бронирование."""
-    user_id = auth_user_id
-    
+    """Создать бронирование используя initData."""
     try:
+        # Валидируем initData
+        result = validate_init_data(request.initData)
+        if not result:
+            logger.error("❌ InitData validation failed for create booking")
+            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        
+        user_id = result.get('user_id')
         logger.info(f"Creating booking: user={user_id}, slot={request.slotId}")
+        
         booking_repo = BookingRepo(session)
         success = await booking_repo.create_booking(user_id, request.slotId)
         
@@ -506,19 +549,24 @@ async def create_booking_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/contacts")
+@app.post("/api/contacts")
 async def get_contacts_endpoint(
-    slotId: int,
-    userId: Optional[int] = None,
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    request: ContactsRequest,
+    session: AsyncSession = Depends(get_session)
 ):
-    """Получить контакты участников слота."""
-    user_id = get_user_id_or_param(auth_user_id, userId)
-    
+    """Получить контакты участников слота используя initData."""
     try:
+        # Валидируем initData
+        result = validate_init_data(request.initData)
+        if not result:
+            logger.error("❌ InitData validation failed for get contacts")
+            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        
+        user_id = result.get('user_id')
+        logger.info(f"Getting contacts for user {user_id}, slot {request.slotId}")
+        
         slot_repo = SlotRepo(session)
-        contacts_users = await slot_repo.get_slot_contacts(slotId, user_id)
+        contacts_users = await slot_repo.get_slot_contacts(request.slotId, user_id)
         
         contacts = []
         for user in contacts_users:
@@ -541,6 +589,8 @@ async def get_contacts_endpoint(
         })
         
         return {"contacts": contacts}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Get contacts error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -551,15 +601,19 @@ async def get_contacts_endpoint(
 @app.post("/api/payments")
 async def create_payment_endpoint(
     request: PaymentRequest,
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    session: AsyncSession = Depends(get_session)
 ):
-    """Создает новый платеж через Yookassa."""
-    user_id = get_user_id_or_param(auth_user_id, request.userId)
-    
-    logger.info(f"Creating payment: user={user_id}, amount={request.amount}")
-    
+    """Создает новый платеж через Yookassa используя initData."""
     try:
+        # Валидируем initData
+        result = validate_init_data(request.initData)
+        if not result:
+            logger.error("❌ InitData validation failed for create payment")
+            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        
+        user_id = result.get('user_id')
+        logger.info(f"Creating payment: user={user_id}, amount={request.amount}")
+        
         payment_service = PaymentService()
         payment_result = await payment_service.create_payment(
             user_id=user_id,
@@ -586,30 +640,40 @@ async def create_payment_endpoint(
             "confirmationUrl": payment_result.get('confirmation_url'),
             "status": payment_result['status']
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Create payment error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/payments/{payment_id}")
+@app.post("/api/payments/{payment_id}")
 async def get_payment_status(
     payment_id: int,
-    session: AsyncSession = Depends(get_session),
-    auth_user_id: Optional[int] = Depends(get_current_user_id)
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session)
 ):
-    """Получает статус платежа."""
+    """Получает статус платежа используя initData."""
     logger.info(f"Getting payment status: payment_id={payment_id}")
     
     try:
+        # Валидируем initData
+        result = validate_init_data(request.initData)
+        if not result:
+            logger.error("❌ InitData validation failed for get payment status")
+            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        
+        user_id = result.get('user_id')
+        
         payment_repo = PaymentRepo(session)
         payment = await payment_repo.get_payment(payment_id)
         
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
         
-        # Проверяем, что платеж принадлежит пользователю (если аутентификация включена)
-        if not AUTH_DISABLED and auth_user_id and payment.user_id != auth_user_id:
+        # Проверяем, что платеж принадлежит пользователю
+        if payment.user_id != user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Получаем актуальный статус от ЮКассы

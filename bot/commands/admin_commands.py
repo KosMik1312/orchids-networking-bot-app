@@ -5,7 +5,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramBadRequest
 from datetime import datetime
-from urllib.parse import urlencode
 import logging
 
 from database_helpers import (
@@ -17,7 +16,6 @@ from database_helpers import (
 )
 from menu_setup import set_bot_commands
 from config import MINIAPP_URL, ADMIN_IDS
-from auth_token import generate_user_token
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +34,10 @@ class SlotStates(StatesGroup):
 async def admin_panel(message: Message, is_admin: bool) -> None:
     """Открывает админ-панель в MiniApp.
     
-    ✅ ПРАВИЛЬНАЯ АРХИТЕКТУРА:
-    - Бэкенд проверяет, что пользователь администратор (is_admin=True)
-    - Генерирует токен
-    - Передает ТОЛЬКО токен в URL (БЕЗ screen параметра)
-    - Фронтенд при загрузке запрашивает /api/user/initial-screen
-    - Бэкенд возвращает screen=admin
-    - Фронтенд отображает админ-панель
+    ✅ АРХИТЕКТУРА С INITDATA:
+    - Telegram MiniApp автоматически передаёт initData (подписано Telegram)
+    - Не нужно генерировать токены - инициализация встроена в WebApp API
+    - Фронтенд использует initData для всех API запросов
     """
     user_id = message.from_user.id
     
@@ -61,14 +56,10 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
         )
         return
 
-    token = generate_user_token(user_id)
+    # initData передаётся автоматически в MiniApp API
+    admin_url = MINIAPP_URL
     
-    # ТОЛЬКО ТОКЕН, БЕЗ SCREEN!
-    # Фронтенд определит, что это админ, через /api/user/initial-screen
-    params = urlencode({"token": token})
-    admin_url = f"{MINIAPP_URL}?{params}"
-    
-    logger.info(f"🔐 Generated token for admin {user_id}. Frontend will determine screen type via /api/user/initial-screen")
+    logger.info(f"🔒 Sending admin to {user_id}. MiniApp will authenticate via Telegram initData")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
