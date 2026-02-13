@@ -30,7 +30,7 @@ interface MeetingConditionsData {
   format: string;
 }
 
-const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'false' || false;
+// const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'false' || false;
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
@@ -194,14 +194,14 @@ export default function Home() {
         }
       };
 
-      if (DEV_SKIP_PROFILE_LOADING) {
-        console.warn("Skipping profile loading for development.");
-        setIsLoading(false);
-        setProfileLoaded(true);
-        setCurrentScreen("welcome");
-      } else {
-        startApp();
-      }
+      // if (DEV_SKIP_PROFILE_LOADING) {
+      //   console.warn("Skipping profile loading for development.");
+      //   setIsLoading(false);
+      //   setProfileLoaded(true);
+      //   setCurrentScreen("welcome");
+      // } else {
+      startApp();
+      // }
 
       return cleanup;
     }, []);

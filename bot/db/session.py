@@ -93,7 +93,14 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     Используется в репозиториях для выполнения запросов.
     """
     async with async_session_factory() as session:
-        yield session
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Session error, rolling back: {e}")
+            raise
+        finally:
+            await session.close()
 
 
 async def close_db():

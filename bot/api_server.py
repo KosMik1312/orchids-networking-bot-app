@@ -24,7 +24,7 @@ from db.session import init_db, get_session
 from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
-from config import DATABASE_NAME, SECRET_KEY
+from config import DATABASE_NAME, SECRET_KEY, AUTH_DISABLED
 from auth_token import validate_user_token
 from utils import format_date
 from payments.payment_service import PaymentService
@@ -356,6 +356,7 @@ async def save_profile_endpoint(
     logger.info(f"   Authorization: {'Bearer token' if auth_user_id else 'userId in body'}")
     profile_dict = request.profile.model_dump(exclude_none=False)
     logger.info(f"   Profile data keys: {list(profile_dict.keys())}")
+    logger.info(f"   Profile data values: {profile_dict}")
     
     try:
         user_repo = UserRepo(session)
@@ -365,10 +366,15 @@ async def save_profile_endpoint(
         if not user:
             logger.info(f"👤 User {user_id} not found, creating...")
             await user_repo.get_or_create_user(user_id)
+            logger.info(f"✅ User {user_id} created")
         
         profile_schema = UserProfileSchema(**profile_dict)
-        await user_repo.save_user_profile(user_id, profile_schema)
+        logger.info(f"📝 Profile schema created: {profile_schema}")
+        
+        saved_user = await user_repo.save_user_profile(user_id, profile_schema)
         logger.info(f"✅ Profile saved successfully for user {user_id}")
+        logger.info(f"   Saved user data: name={saved_user.name}, is_profile_completed={saved_user.is_profile_completed}")
+        
         return {"success": True}
     except Exception as e:
         logger.error(f"❌ Save profile failed for user {user_id}: {e}")
