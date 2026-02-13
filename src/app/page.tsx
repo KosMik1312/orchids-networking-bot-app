@@ -72,138 +72,138 @@ export default function Home() {
     }
   };
 
-    useEffect(() => {
-      let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-      const cleanup = () => {
-        isMounted = false;
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
+    const cleanup = () => {
+      isMounted = false;
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+
+    const initializeApp = async (initData: string) => {
+      if (!isMounted) return;
+
+      console.log("✅ Initializing with Telegram initData...");
+      console.log("   initData length:", initData.length);
+      console.log("   initData sample (first 100 chars):", initData.substring(0, 100));
+      setUserToken(initData);
+
+      try {
+        // Парсим initData чтобы получить user_id
+        const initDataDecoded = new URLSearchParams(initData);
+        const userStr = initDataDecoded.get('user');
+        if (!userStr) {
+          throw new Error('No user data in initData');
         }
-      };
 
-      const initializeApp = async (initData: string) => {
+        const userData = JSON.parse(userStr);
+        const uid = userData.id;
+
+        console.log("✅ Extracted user_id from initData:", uid);
+
+        if (!isMounted) return;
+        setUserId(uid);
+
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
+        console.log(`📍 API_BASE: ${apiBase}`);
+
+        // 🎯 Отправляем initData в Authorization заголовке (гибридная аутентификация)
+        console.log("📤 Sending to /api/user/initial-screen with auth header...");
+        const response = await fetch(`${apiBase}/api/user/initial-screen`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${initData}`,
+          },
+          cache: 'no-store'
+        });
+
         if (!isMounted) return;
 
-        console.log("✅ Initializing with Telegram initData...");
-        console.log("   initData length:", initData.length);
-        console.log("   initData sample (first 100 chars):", initData.substring(0, 100));
-        setUserToken(initData);
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.error(`❌ Failed: ${response.status} ${errorText}`);
+          setCurrentScreen('welcome');
+          setIsLoading(false);
+          setProfileLoaded(true);
+          return;
+        }
 
-        try {
-          // Парсим initData чтобы получить user_id
-          const initDataDecoded = new URLSearchParams(initData);
-          const userStr = initDataDecoded.get('user');
-          if (!userStr) {
-            throw new Error('No user data in initData');
-          }
+        const data = await response.json();
+        const screen = data.screen || 'welcome';
 
-          const userData = JSON.parse(userStr);
-          const uid = userData.id;
-          
-          console.log("✅ Extracted user_id from initData:", uid);
-          
-          if (!isMounted) return;
-          setUserId(uid);
+        console.log(`✅ Screen: ${screen}`);
+        setCurrentScreen(screen);
 
-          const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
-          console.log(`📍 API_BASE: ${apiBase}`);
-
-          // 🎯 Отправляем initData в Authorization заголовке (гибридная аутентификация)
-          console.log("📤 Sending to /api/user/initial-screen with auth header...");
-          const response = await fetch(`${apiBase}/api/user/initial-screen`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${initData}`,
-            },
-            cache: 'no-store'
-          });
-
-          if (!isMounted) return;
-
-          if (!response.ok) {
-            const errorText = await response.text().catch(() => '');
-            console.error(`❌ Failed: ${response.status} ${errorText}`);
-            setCurrentScreen('welcome');
-            setIsLoading(false);
-            setProfileLoaded(true);
-            return;
-          }
-
-          const data = await response.json();
-          const screen = data.screen || 'welcome';
-
-          console.log(`✅ Screen: ${screen}`);
-          setCurrentScreen(screen);
-
-          if (screen === 'admin') {
-            console.log('✅ Admin screen detected, setting admin token and screen');
-            setAdminToken(initData);
-            setCurrentScreen('admin');  // ← ИСПРАВЛЕНИЕ: явно устанавливаем админ-экран
-          } else if (screen === 'booking') {
-            try {
-              const profileResponse = await getProfile(uid, initData);
-              if (isMounted && profileResponse.profile) {
-                setFullProfile(profileResponse.profile);
-                setUserName(profileResponse.profile.name || '');
-                setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
-              }
-            } catch (profileError) {
-              console.warn('Could not pre-load profile:', profileError);
+        if (screen === 'admin') {
+          console.log('✅ Admin screen detected, setting admin token and screen');
+          setAdminToken(initData);
+          setCurrentScreen('admin');  // ← ИСПРАВЛЕНИЕ: явно устанавливаем админ-экран
+        } else if (screen === 'booking') {
+          try {
+            const profileResponse = await getProfile(uid, initData);
+            if (isMounted && profileResponse.profile) {
+              setFullProfile(profileResponse.profile);
+              setUserName(profileResponse.profile.name || '');
+              setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
             }
-          }
-        } catch (error) {
-          console.error('❌ Error:', error);
-          if (isMounted) {
-            setCurrentScreen('welcome');
-          }
-        } finally {
-          if (isMounted) {
-            setIsLoading(false);
-            setProfileLoaded(true);
+          } catch (profileError) {
+            console.warn('Could not pre-load profile:', profileError);
           }
         }
-      };
+      } catch (error) {
+        console.error('❌ Error:', error);
+        if (isMounted) {
+          setCurrentScreen('welcome');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          setProfileLoaded(true);
+        }
+      }
+    };
 
-       const startApp = () => {
-         // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
-         const webApp = (window as any).Telegram?.WebApp;
+    const startApp = () => {
+      // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
+      const webApp = (window as any).Telegram?.WebApp;
 
-         if (webApp && webApp.initData) {
-           console.log('✅ Got Telegram initData');
-           initializeApp(webApp.initData);
-         } else {
-           // Ждём пока WebApp инициализируется
-           console.log('⏳ Waiting for Telegram WebApp...');
-           let attempts = 0;
+      if (webApp && webApp.initData) {
+        console.log('✅ Got Telegram initData');
+        initializeApp(webApp.initData);
+      } else {
+        // Ждём пока WebApp инициализируется
+        console.log('⏳ Waiting for Telegram WebApp...');
+        let attempts = 0;
 
-           pollingRef.current = setInterval(() => {
-             attempts++;
+        pollingRef.current = setInterval(() => {
+          attempts++;
 
-             const webApp = (window as any).Telegram?.WebApp;
+          const webApp = (window as any).Telegram?.WebApp;
 
-             if (webApp && webApp.initData) {
-               clearInterval(pollingRef.current!);
-               console.log('✅ WebApp ready');
-               initializeApp(webApp.initData);
-             } else if (attempts > 25) { // ~5 seconds
-               clearInterval(pollingRef.current!);
-               console.error('❌ Timeout waiting for Telegram WebApp');
+          if (webApp && webApp.initData) {
+            clearInterval(pollingRef.current!);
+            console.log('✅ WebApp ready');
+            initializeApp(webApp.initData);
+          } else if (attempts > 25) { // ~5 seconds
+            clearInterval(pollingRef.current!);
+            console.error('❌ Timeout waiting for Telegram WebApp');
 
-               if (isMounted) {
-                 setCurrentScreen('welcome');
-                 setIsLoading(false);
-                 setProfileLoaded(true);
-               }
-             }
-           }, 200);
-         }
-       };
+            if (isMounted) {
+              setCurrentScreen('welcome');
+              setIsLoading(false);
+              setProfileLoaded(true);
+            }
+          }
+        }, 200);
+      }
+    };
 
-      startApp();
-      return cleanup;
-    }, []);
+    startApp();
+    return cleanup;
+  }, []);
 
   const handleStartOnboarding = () => setCurrentScreen("onboarding");
   const handleOnboardingComplete = () => setCurrentScreen("profile_form");
@@ -212,7 +212,7 @@ export default function Home() {
     const genderValue = data.gender === "Мужской" ? "male" : "female";
     setUserName(data.name);
     setUserGender(genderValue);
-    
+
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     await updateProfile({
       name: data.name,
@@ -222,27 +222,27 @@ export default function Home() {
       relationship_status: data.familyStatus || undefined,
       children: data.hasChildren || undefined,
     });
-    
+
     setCurrentScreen("best_in_me");
   };
 
   const handleBestInMeComplete = async (data: any) => {
     setUserSocialLinks({ telegram: data.telegramNickname, instagram: data.instagramNickname });
     if (data.photo) setUserPhoto(data.photo);
-    
+
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     await updateProfile({
       telegram: data.telegramNickname,
       instagram: data.instagramNickname,
       photo: data.photo || undefined
     });
-    
+
     setCurrentScreen("meeting_conditions");
   };
 
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
-    
+
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     // Save meeting conditions to server (map to backend fields)
     await updateProfile({
@@ -254,7 +254,7 @@ export default function Home() {
       goal: data.goal,
       is_profile_completed: true
     });
-    
+
     setCurrentScreen("booking");
   };
 
@@ -334,6 +334,7 @@ export default function Home() {
               <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <BookingScreen
                   city="Москва"
+                  authToken={userToken || null}
                   onBack={() => setCurrentScreen("quiz")}
                   onComplete={() => { }}
                   onPromotions={() => setCurrentScreen("promotions")}

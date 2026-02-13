@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Settings, ChevronRight, Check } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { getSlots, createBooking } from "@/lib/api";
 
 type BookingStep = "slots" | "payment" | "success";
 
@@ -16,6 +17,7 @@ interface Slot {
 
 interface BookingScreenProps {
   city?: string;
+  authToken?: string | null;
   onBack?: () => void;
   onComplete?: () => void;
   onPromotions?: () => void;
@@ -25,24 +27,57 @@ interface BookingScreenProps {
   onContacts?: () => void;
 }
 
-export function BookingScreen({ city = "Москва", onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
+export function BookingScreen({ city = "Москва", authToken, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
   const [step, setStep] = useState<BookingStep>("slots");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [acceptedOffer, setAcceptedOffer] = useState(false);
 
-  const slots: Slot[] = [
-    { id: 1, date: "7 января", time: "17:00", address: "Г. Москва, ул. Скляренко д. 2" },
-    { id: 2, date: "7 января", time: "17:00", address: "Г. Москва, ул. Скляренко д. 2" },
-  ];
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchSlots() {
+      try {
+        setIsLoading(true);
+        const data = await getSlots(city);
+        if (isMounted) {
+          const mappedSlots: Slot[] = data.slots.map((s: any) => ({
+            id: s.id,
+            date: new Date(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+            time: s.time,
+            address: s.restaurant
+          }));
+          setSlots(mappedSlots);
+        }
+      } catch (err) {
+        if (isMounted) setError("Не удалось загрузить слоты");
+        console.error(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    fetchSlots();
+    return () => { isMounted = false; };
+  }, [city]);
 
   const handleSlotSelect = (slot: Slot) => {
     setSelectedSlot(slot);
     setStep("payment");
   };
 
-  const handlePayment = () => {
-    setStep("success");
+  const handlePayment = async () => {
+    if (!selectedSlot || !authToken) return;
+    try {
+      await createBooking(selectedSlot.id, authToken);
+      setStep("success");
+    } catch (e) {
+      console.error("Booking failed", e);
+      alert("Ошибка при бронировании. Попробуйте снова.");
+    }
   };
 
   const handleContinue = () => {
@@ -97,39 +132,47 @@ export function BookingScreen({ city = "Москва", onBack, onComplete, onPro
 
             {/* Slots List */}
             <div className="space-y-3 flex-1">
-              {slots.map((slot) => (
-                <button
-                  key={slot.id}
-                  onClick={() => handleSlotSelect(slot)}
-                  className="w-full flex items-center justify-between px-6 py-5 rounded-[20px] bg-white shadow-sm hover:shadow-md transition-all"
-                >
-                  <div className="text-left">
-                    <p className="text-[#404243] text-[17px] font-semibold">{slot.date}, {slot.time}</p>
-                    <p className="text-[#8E8E93] text-[13px] mt-0.5">{slot.address}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
-                    <ChevronRight className="text-white" size={24} />
-                  </div>
-                </button>
-              ))}
+              {isLoading ? (
+                <div className="text-center py-10 text-gray-500">Загрузка слотов...</div>
+              ) : error ? (
+                <div className="text-center py-10 text-red-500">{error}</div>
+              ) : slots.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">Нет доступных слотов</div>
+              ) : (
+                slots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    onClick={() => handleSlotSelect(slot)}
+                    className="w-full flex items-center justify-between px-6 py-5 rounded-[20px] bg-white shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="text-left">
+                      <p className="text-[#404243] text-[17px] font-semibold">{slot.date}, {slot.time}</p>
+                      <p className="text-[#8E8E93] text-[13px] mt-0.5">{slot.address}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
+                      <ChevronRight className="text-white" size={24} />
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
 
-              {/* Promo Button */}
-              <button
-                onClick={onPromotions}
-                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
-              >
-                Акции и предложения
-              </button>
+            {/* Promo Button */}
+            <button
+              onClick={onPromotions}
+              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
+            >
+              Акции и предложения
+            </button>
 
-              {/* Contacts Button */}
-              <button
-                onClick={onContacts}
-                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
-              >
-                Мои контакты
-              </button>
-            </motion.div>
+            {/* Contacts Button */}
+            <button
+              onClick={onContacts}
+              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
+            >
+              Мои контакты
+            </button>
+          </motion.div>
         )}
 
         {/* Step 2: Payment */}

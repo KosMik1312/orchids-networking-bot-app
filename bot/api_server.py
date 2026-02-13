@@ -352,7 +352,7 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
         slots_data = [
             {
                 "id": slot.id,
-                "date": slot.date.strftime("%d.%m.%Y"),
+                "date": slot.date.isoformat(),
                 "time": slot.time,
                 "city": slot.city,
                 "restaurant": slot.restaurant,
