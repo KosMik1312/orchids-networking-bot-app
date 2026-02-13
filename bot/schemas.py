@@ -38,6 +38,8 @@ class UserProfile(BaseModel):
     meeting_time_to: Optional[str] = Field(None, description="Preferred meeting time to")
     # Frontend sends 'format' — map it on save to `communication_format` in the DB
     format: Optional[str] = Field(None, description="Meeting format (frontend key 'format')")
+    # Флаг завершённости профиля
+    is_profile_completed: Optional[bool] = Field(None, description="Whether the profile is completed")
 
     model_config = ConfigDict(str_strip_whitespace=True)
 

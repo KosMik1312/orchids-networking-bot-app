@@ -21,6 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        {/* Telegram WebApp SDK — обязательно для работы MiniApp */}
+        <script src="https://telegram.org/js/telegram-web-app.js" />
+      </head>
       <body className="antialiased">
         {children}
         <VisualEditsMessenger />
