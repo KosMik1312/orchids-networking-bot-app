@@ -90,6 +90,7 @@ async def get_user_initial_screen(user_id: int) -> str:
     
     ВАЖНО! Определение типа пользователя происходит в БЭКЕНДЕ:
     1. Если пользователь администратор → "admin"
+       - Проверяются ОБА источника: ADMIN_IDS из конфига И поле is_admin в БД
     2. Если профиль заполнен → "booking"
     3. Если новый пользователь → "welcome"
     
@@ -102,31 +103,40 @@ async def get_user_initial_screen(user_id: int) -> str:
     
     logger = get_api_logger()
     logger.info(f"🔍 get_user_initial_screen() called for user_id={user_id}")
-    logger.info(f"📋 ADMIN_IDS={ADMIN_IDS}, type={type(ADMIN_IDS)}")
-    logger.info(f"❓ Checking: {user_id} in {ADMIN_IDS} = {user_id in ADMIN_IDS}")
     
-    # 1. Проверяем, является ли пользователь администратором
+    # 1. Проверяем ОБА источника администратора:
+    #    а) ADMIN_IDS из конфига (для быстрой проверки)
+    logger.info(f"📋 ADMIN_IDS from config: {ADMIN_IDS}")
     if user_id in ADMIN_IDS:
-        logger.info(f"✅ User {user_id} is ADMIN (found in ADMIN_IDS)")
+        logger.info(f"✅ User {user_id} is ADMIN (found in ADMIN_IDS config)")
         return "admin"
     
-    logger.info(f"ℹ️ User {user_id} is not in ADMIN_IDS, checking profile...")
-    
-    # 2. Проверяем, заполнен ли профиль
+    #    б) Проверяем поле is_admin в БД
     try:
         async_session = get_session_factory()
         async with async_session() as session:
             user_repo = UserRepo(session)
             user = await user_repo.get_user_profile(user_id)
+            
             if user:
-                logger.info(f"👤 User {user_id} found in DB. is_profile_completed={user.is_profile_completed}")
+                logger.info(f"👤 User {user_id} found in DB. is_admin={user.is_admin}, is_profile_completed={user.is_profile_completed}")
+                
+                # Проверяем администатора ИЗ БД
+                if user.is_admin:
+                    logger.info(f"✅ User {user_id} is ADMIN (is_admin=True in DB)")
+                    return "admin"
+                
+                # Если не администратор - проверяем профиль
                 if user.is_profile_completed:
                     logger.info(f"✅ User {user_id} has completed profile")
                     return "booking"
+                
                 logger.info(f"❌ User {user_id} profile is NOT completed")
+                return "welcome"
             else:
-                logger.info(f"⚠️ User {user_id} not found in DB")
-            return "welcome"
+                logger.info(f"⚠️ User {user_id} not found in DB - first time user")
+                return "welcome"
+                
     except Exception as e:
         logger.error(f"❌ Error checking user profile for {user_id}: {e}")
         import traceback
