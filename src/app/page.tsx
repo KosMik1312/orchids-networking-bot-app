@@ -211,7 +211,14 @@ export default function Home() {
     setUserName(data.name);
     setUserGender(genderValue);
     setCurrentScreen("best_in_me");
-    updateProfile({ name: data.name, gender: genderValue });
+    updateProfile({
+      name: data.name,
+      gender: genderValue,
+      age: data.age ? parseInt(data.age) : undefined,
+      occupation: data.career || undefined,
+      relationship_status: data.familyStatus || undefined,
+      children: data.hasChildren || undefined,
+    });
   };
 
   const handleBestInMeComplete = async (data: any) => {

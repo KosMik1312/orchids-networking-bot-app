@@ -108,7 +108,7 @@ export async function getAdminSlots(initData: string): Promise<{ slots: AdminSlo
 }
 
 export async function createAdminSlot(initData: string, data: { date: string; time: string; city: string; restaurant: string; max_people: number }) {
-  return adminFetch('/api/admin/slots', initData, { method: 'POST', body: JSON.stringify(data) });
+  return adminFetch('/api/admin/slots/create', initData, { body: JSON.stringify(data) });
 }
 
 export async function updateAdminSlot(initData: string, slotId: number, data: Partial<AdminSlot>) {
@@ -129,11 +129,11 @@ export async function getAdminGroups(initData: string): Promise<{ groups: AdminG
 }
 
 export async function createAdminGroup(initData: string, name: string) {
-  return adminFetch('/api/admin/groups', initData, { method: 'POST', body: JSON.stringify({ name }) });
+  return adminFetch('/api/admin/groups/create', initData, { body: JSON.stringify({ name }) });
 }
 
 export async function deleteAdminGroup(initData: string, groupId: number) {
-  return adminFetch(`/api/admin/groups/${groupId}`, initData, { method: 'DELETE' });
+  return adminFetch(`/api/admin/groups/${groupId}/delete`, initData);
 }
 
 export async function getGroupMembers(initData: string, groupId: number): Promise<{ group_id: number; members: GroupMember[] }> {
@@ -141,11 +141,11 @@ export async function getGroupMembers(initData: string, groupId: number): Promis
 }
 
 export async function addGroupMembers(initData: string, groupId: number, userIds: number[]) {
-  return adminFetch(`/api/admin/groups/${groupId}/members`, initData, { method: 'POST', body: JSON.stringify({ user_ids: userIds }) });
+  return adminFetch(`/api/admin/groups/${groupId}/members/add`, initData, { body: JSON.stringify({ user_ids: userIds }) });
 }
 
 export async function removeGroupMember(initData: string, groupId: number, userId: number) {
-  return adminFetch(`/api/admin/groups/${groupId}/members/${userId}`, initData, { method: 'DELETE' });
+  return adminFetch(`/api/admin/groups/${groupId}/members/${userId}/remove`, initData);
 }
 
 // Рассылка

@@ -181,7 +181,7 @@ async def admin_slots(request: InitDataRequest, session: AsyncSession = Depends(
     }
 
 
-@admin_router_api.post("/slots")
+@admin_router_api.post("/slots/create")
 async def admin_create_slot(
     request: SlotCreateRequest,
     session: AsyncSession = Depends(get_session),
@@ -290,7 +290,7 @@ async def admin_groups(
     return {"groups": groups}
 
 
-@admin_router_api.post("/groups")
+@admin_router_api.post("/groups/create")
 async def admin_create_group(
     request: GroupCreateRequest,
     session: AsyncSession = Depends(get_session),
@@ -306,7 +306,7 @@ async def admin_create_group(
     return {"id": group.id, "name": group.name}
 
 
-@admin_router_api.post("/groups/{group_id}")
+@admin_router_api.post("/groups/{group_id}/delete")
 async def admin_delete_group(
     group_id: int,
     request: InitDataRequest,
@@ -346,7 +346,7 @@ async def admin_group_members(
     }
 
 
-@admin_router_api.post("/groups/{group_id}/members")
+@admin_router_api.post("/groups/{group_id}/members/add")
 async def admin_add_group_members(
     group_id: int,
     request: GroupMembersRequest,
@@ -362,7 +362,7 @@ async def admin_add_group_members(
     return report
 
 
-@admin_router_api.post("/groups/{group_id}/members/{user_id}")
+@admin_router_api.post("/groups/{group_id}/members/{user_id}/remove")
 async def admin_remove_group_member(
     group_id: int,
     user_id: int,

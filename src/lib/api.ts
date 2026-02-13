@@ -142,7 +142,9 @@ export async function getProfile(userId?: number, authToken?: string): Promise<{
   console.log('📤 userId:', userId);
   console.log('📤 authToken present:', !!authToken);
 
-  const headers: HeadersInit = {};
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
 
   // 🎯 Передаём initData/JWT в Authorization заголовке
   if (authToken) {
@@ -150,20 +152,13 @@ export async function getProfile(userId?: number, authToken?: string): Promise<{
     console.log('📤 Auth header set');
   }
 
-  const params = new URLSearchParams();
-  if (userId) params.append('userId', userId.toString());
-
-  const response = await fetch(`${url}${params.toString() ? '?' + params.toString() : ''}`, {
+  const response = await fetch(url, {
+    method: 'POST',
     cache: 'no-store',
     headers,
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    console.log('❌ Текст ошибки:', text);
-  }
 
   return handleResponse(response);
 }
