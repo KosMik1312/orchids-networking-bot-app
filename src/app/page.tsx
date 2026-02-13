@@ -109,14 +109,14 @@ export default function Home() {
           const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
           console.log(`📍 API_BASE: ${apiBase}`);
 
-          // Отправляем initData на бэкенд для верификации
-          console.log("📤 Sending to /api/user/initial-screen...");
+          // 🎯 Отправляем initData в Authorization заголовке (гибридная аутентификация)
+          console.log("📤 Sending to /api/user/initial-screen with auth header...");
           const response = await fetch(`${apiBase}/api/user/initial-screen`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${initData}`,
             },
-            body: JSON.stringify({ initData }),
             cache: 'no-store'
           });
 

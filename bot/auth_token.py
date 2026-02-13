@@ -1,11 +1,14 @@
 """
 Модуль для работы с аутентификацией Telegram Users.
-Использует Telegram WebApp initData для безопасной валидации.
+Поддерживает гибридную аутентификацию:
+- Telegram WebApp initData (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app)
+- JWT токены (для локального тестирования / альтернативных клиентов)
 """
 import json
 import hmac
 import hashlib
 import time
+import jwt
 from urllib.parse import parse_qs, unquote
 from config import SECRET_KEY, BOT_TOKEN
 from logger import get_api_logger
@@ -120,3 +123,86 @@ def validate_init_data(init_data: str) -> dict | None:
         import traceback
         logger.error(traceback.format_exc())
         return None
+
+
+def generate_user_token(user_id: int) -> str:
+    """
+    Генерирует JWT токен для пользователя.
+    Используется для локального тестирования и альтернативных клиентов.
+    
+    Args:
+        user_id: Telegram ID пользователя
+        
+    Returns:
+        Подписанный JWT токен
+    """
+    payload = {
+        'user_id': user_id,
+        'iat': int(time.time()),
+        'exp': int(time.time()) + (24 * 60 * 60)  # 24 часа
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+    logger.info(f"📝 Generated JWT token for user_id={user_id}")
+    return token
+
+
+def validate_user_token(token: str) -> dict | None:
+    """
+    Проверяет JWT токен и возвращает данные пользователя.
+    
+    Args:
+        token: JWT токен
+        
+    Returns:
+        dict с 'user_id' если токен валиден, None если токен невалиден или истёк
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        logger.info(f"✅ JWT token valid for user_id={payload['user_id']}")
+        return {
+            'user_id': payload['user_id'],
+            'valid': True
+        }
+    except jwt.ExpiredSignatureError:
+        logger.warning(f"⏰ JWT token expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"❌ Invalid JWT token: {e}")
+        return None
+
+
+def validate_auth_header(auth_header: str) -> dict | None:
+    """
+    🎯 ГИБРИДНАЯ АУТЕНТИФИКАЦИЯ (по документации Telegram API)
+    https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+    
+    Валидирует аутентификацию в следующем порядке:
+    1. Как Telegram initData (основное для продакшена в Telegram MiniApp)
+    2. Как JWT токен (для локального тестирования и альтернативных клиентов)
+    
+    Args:
+        auth_header: Значение Authorization заголовка (без "Bearer " префикса)
+        
+    Returns:
+        dict с 'user_id' если аутентификация успешна, None если ошибка
+    """
+    if not auth_header:
+        logger.warning("❌ Empty auth header")
+        return None
+    
+    # 1️⃣ Сначала пытаемся валидировать как Telegram initData
+    logger.info(f"🔍 Attempting validation as Telegram initData...")
+    result = validate_init_data(auth_header)
+    if result:
+        logger.info(f"✅ Authentication successful via Telegram initData")
+        return result
+    
+    # 2️⃣ Если initData не работает - пытаемся как JWT токен
+    logger.info(f"🔍 Attempting validation as JWT token...")
+    jwt_result = validate_user_token(auth_header)
+    if jwt_result:
+        logger.info(f"✅ Authentication successful via JWT token")
+        return jwt_result
+    
+    logger.error(f"❌ Authentication failed - invalid initData and invalid JWT token")
+    return None

@@ -25,7 +25,7 @@ from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME, SECRET_KEY, AUTH_DISABLED
-from auth_token import validate_init_data
+from auth_token import validate_init_data, validate_auth_header
 from utils import format_date
 from payments.payment_service import PaymentService
 from payments.payment_config import YOOKASSA_SECRET_KEY
@@ -102,7 +102,12 @@ async def get_current_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> Optional[int]:
     """
-    Извлекает user_id из JWT токена.
+    🎯 ГИБРИДНАЯ АУТЕНТИФИКАЦИЯ
+    Извлекает user_id из:
+    1. Telegram initData (продакшн через Telegram MiniApp)
+    2. JWT токена (локальное тестирование / альтернативные клиенты)
+    
+    Соответствует документации: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
     """
     
     # Если токен не передан — возвращаем None (некоторые эндпоинты работают с query param userId)
@@ -110,10 +115,12 @@ async def get_current_user_id(
         return None
 
     token = credentials.credentials
-    result = validate_user_token(token)
+    
+    # 🔐 Используем гибридную валидацию
+    result = validate_auth_header(token)
 
     if not result:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid authentication - neither initData nor JWT token valid")
 
     return result['user_id']
 
@@ -159,24 +166,20 @@ class UserProfile(BaseModel):
 class ProfileRequest(BaseModel):
     userId: Optional[int] = None
     profile: UserProfile
-    initData: Optional[str] = None
 
 
 class BookingRequest(BaseModel):
     slotId: int
-    initData: str
 
 
 class PaymentRequest(BaseModel):
     amount: str
     bookingId: Optional[int] = None
     returnUrl: str
-    initData: str
 
 
 class ContactsRequest(BaseModel):
     slotId: int
-    initData: str
 
 
 # ===== Pydantic модели (общие) =====
@@ -251,9 +254,16 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
 
 
 @app.post("/api/user/initial-screen")
-async def get_user_initial_screen_endpoint(request: InitDataRequest):
+async def get_user_initial_screen_endpoint(
+    user_id: Optional[int] = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)
+):
     """
-    ✅ КЛЮЧЕВОЙ ЭНДПОИНТ ДЛЯ АРХИТЕКТУРЫ
+    ✅ КЛЮЧЕВОЙ ЭНДПОИНТ ДЛЯ АРХИТЕКТУРЫ (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    🎯 Использует гибридную аутентификацию (документация Telegram API):
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
     
     Определяет тип пользователя и нужный экран при ЛЮБОЙ загрузке фронтенда.
     
@@ -263,27 +273,18 @@ async def get_user_initial_screen_endpoint(request: InitDataRequest):
     
     Возвращает:
     - screen: "admin" | "booking" | "welcome"
-    
-    Гарантирует АКТУАЛЬНОСТЬ при:
-    - Обновлении страницы (F5)
-    - Повторном открытии приложения
-    - Изменении прав пользователя (добавлении в админы)
-    - Заполнении профиля
     """
     try:
-        logger.info(f"📨 /api/user/initial-screen called with initData")
-        
-        # Валидируем initData и получаем user_id
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed")
-            raise ValueError("Invalid or expired initData")
-        user_id = result.get('user_id')
-        logger.info(f"✅ InitData validated. user_id={user_id}")
-        
         if not user_id:
-            logger.error("❌ InitData validation succeeded but user_id is missing")
-            raise ValueError("Invalid initData: no user_id")
+            logger.warning("❌ No user_id from authentication")
+            return {
+                "screen": "welcome",
+                "user_id": None,
+                "success": False,
+                "error": "Authentication failed"
+            }
+        
+        logger.info(f"✅ User authenticated. user_id={user_id}")
         
         # Определяем тип пользователя в БД
         from database_helpers import get_user_initial_screen
@@ -302,23 +303,13 @@ async def get_user_initial_screen_endpoint(request: InitDataRequest):
             "success": True
         }
     
-    except ValueError as e:
-        # Невалидный initData
-        logger.warning(f"⚠️ Invalid initData for initial-screen endpoint: {e}")
-        return {
-            "screen": "welcome",
-            "user_id": None,
-            "success": False,
-            "error": "Invalid initData"
-        }
-    
     except Exception as e:
         import traceback
         logger.error(f"❌ Error in initial-screen endpoint: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {
             "screen": "welcome",
-            "user_id": None,
+            "user_id": user_id,
             "success": False,
             "error": str(e)
         }
@@ -384,31 +375,22 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
 @app.post("/api/profile")
 async def save_profile_endpoint(
     request: ProfileRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Сохранить профиль пользователя используя initData."""
-    # Извлекаем user_id из initData или из userId параметра
-    user_id = None
+    """
+    🎯 Сохранить профиль пользователя (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     
     logger.info(f"📦 POST /api/profile called")
-    logger.info(f"   Has initData: {bool(request.initData)}")
-    logger.info(f"   Has userId: {bool(request.userId)}")
-    
-    if request.initData:
-        logger.info(f"   🔍 Validating initData...")
-        result = validate_init_data(request.initData)
-        if result:
-            user_id = result.get('user_id')
-            logger.info(f"   ✅ InitData valid, extracted user_id={user_id}")
-        else:
-            logger.error(f"   ❌ InitData validation failed")
-    elif request.userId:
-        user_id = request.userId
-        logger.info(f"   ℹ️ Using userId from request: {user_id}")
     
     if not user_id:
-        logger.error(f"❌ Cannot extract user_id from request")
-        raise HTTPException(status_code=401, detail="Invalid initData or missing userId")
+        logger.error(f"❌ Cannot extract user_id from Authorization header")
+        raise HTTPException(status_code=401, detail="Invalid authentication")
     
     logger.info(f"📦 POST /api/profile for user {user_id}")
     profile_dict = request.profile.model_dump(exclude_none=False)
@@ -492,34 +474,34 @@ async def debug_save_profile_endpoint(
 
 @app.post("/api/profile/get")
 async def get_profile_endpoint(
-    request: InitDataRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
     userId: Optional[int] = None
 ):
-    """Получить профиль пользователя используя initData или userId."""
-    # Извлекаем user_id из initData или из query param
-    user_id = None
+    """
+    🎯 Получить профиль пользователя (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
     
-    if request.initData:
-        result = validate_init_data(request.initData)
-        if result:
-            user_id = result.get('user_id')
-    elif userId:
-        user_id = userId
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid initData or missing userId")
+    # Используем user_id из Authorization заголовка, или queryParam userId как fallback
+    final_user_id = user_id or userId
     
-    logger.info(f"📦 GET /api/profile called for user {user_id}")
+    if not final_user_id:
+        raise HTTPException(status_code=401, detail="Invalid authentication or missing userId")
+    
+    logger.info(f"📦 GET /api/profile called for user {final_user_id}")
     
     try:
         user_repo = UserRepo(session)
-        user = await user_repo.get_user_profile(user_id)
+        user = await user_repo.get_user_profile(final_user_id)
         if not user:
-            logger.warning(f"⚠️ Profile not found for user {user_id}")
+            logger.warning(f"⚠️ Profile not found for user {final_user_id}")
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        logger.info(f"✅ Retrieved profile for user {user_id}, is_profile_completed={user.is_profile_completed}")
+        logger.info(f"✅ Retrieved profile for user {final_user_id}, is_profile_completed={user.is_profile_completed}")
         
         profile_dict = {
             "name": user.name,
@@ -552,19 +534,15 @@ async def get_profile_endpoint(
 
 @app.post("/api/bookings/list")
 async def get_user_bookings_endpoint(
-    request: InitDataRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Получить бронирования пользователя используя initData."""
+    """Получить бронирования пользователя (гибридная аутентификация)."""
     try:
-        # Валидируем initData
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed for get bookings")
-            raise HTTPException(status_code=401, detail="Invalid or expired initData")
-        
-        user_id = result.get('user_id')
-        logger.info(f"Getting bookings for user {user_id}")
+        if not user_id:
+            logger.error("❌ Authentication failed for get bookings")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
+        logger.info(f"📦 Getting bookings for user {user_id}")
         
         booking_repo = BookingRepo(session)
         bookings = await booking_repo.get_user_bookings(user_id)
@@ -608,18 +586,21 @@ async def get_user_bookings_endpoint(
 @app.post("/api/bookings")
 async def create_booking_endpoint(
     request: BookingRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Создать бронирование используя initData."""
+    """🎯 Создать бронирование (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     try:
-        # Валидируем initData
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed for create booking")
-            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        if not user_id:
+            logger.error("❌ Authentication failed for create booking")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
         
-        user_id = result.get('user_id')
-        logger.info(f"Creating booking: user={user_id}, slot={request.slotId}")
+        logger.info(f"📦 Creating booking: user={user_id}, slot={request.slotId}")
         
         booking_repo = BookingRepo(session)
         success = await booking_repo.create_booking(user_id, request.slotId)
@@ -627,7 +608,7 @@ async def create_booking_endpoint(
         if not success:
             raise HTTPException(status_code=400, detail="Slot is full or already booked")
         
-        logger.info(f"Booking created successfully")
+        logger.info(f"✅ Booking created successfully")
         return {"success": True}
     except HTTPException:
         raise
@@ -640,18 +621,21 @@ async def create_booking_endpoint(
 @app.post("/api/contacts")
 async def get_contacts_endpoint(
     request: ContactsRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Получить контакты участников слота используя initData."""
+    """🎯 Получить контакты участников слота (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     try:
-        # Валидируем initData
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed for get contacts")
-            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        if not user_id:
+            logger.error("❌ Authentication failed for get contacts")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
         
-        user_id = result.get('user_id')
-        logger.info(f"Getting contacts for user {user_id}, slot {request.slotId}")
+        logger.info(f"📦 Getting contacts for user {user_id}, slot {request.slotId}")
         
         slot_repo = SlotRepo(session)
         contacts_users = await slot_repo.get_slot_contacts(request.slotId, user_id)
@@ -689,18 +673,21 @@ async def get_contacts_endpoint(
 @app.post("/api/payments")
 async def create_payment_endpoint(
     request: PaymentRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Создает новый платеж через Yookassa используя initData."""
+    """🎯 Создать платеж (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     try:
-        # Валидируем initData
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed for create payment")
-            raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        if not user_id:
+            logger.error("❌ Authentication failed for create payment")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
         
-        user_id = result.get('user_id')
-        logger.info(f"Creating payment: user={user_id}, amount={request.amount}")
+        logger.info(f"💳 Creating payment: user={user_id}, amount={request.amount}")
         
         payment_service = PaymentService()
         payment_result = await payment_service.create_payment(
@@ -740,19 +727,21 @@ async def create_payment_endpoint(
 async def get_payment_status(
     payment_id: int,
     request: InitDataRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
-    """Получает статус платежа используя initData."""
+    """🎯 Получить статус платежа (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
     logger.info(f"Getting payment status: payment_id={payment_id}")
     
     try:
-        # Валидируем initData
-        result = validate_init_data(request.initData)
-        if not result:
-            logger.error("❌ InitData validation failed for get payment status")
-            raise HTTPException(status_code=401, detail="Invalid or expired initData")
-        
-        user_id = result.get('user_id')
+        if not user_id:
+            logger.error("❌ Authentication failed for get payment status")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
         
         payment_repo = PaymentRepo(session)
         payment = await payment_repo.get_payment(payment_id)

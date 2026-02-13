@@ -102,32 +102,33 @@ export interface Contact {
   isSupport?: boolean; // For support contact
 }
 
-// Profile API - uses Telegram initData for authentication
-export async function saveProfile(userId: number, profile: Partial<UserProfile>, initData?: string): Promise<{ success: boolean }> {
+// Profile API - uses hybrid authentication (Telegram initData or JWT)
+// https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+export async function saveProfile(userId: number, profile: Partial<UserProfile>, authToken?: string): Promise<{ success: boolean }> {
   const url = `${API_BASE}/api/profile`;
   console.log('🔗 Запрос к:', url);
   console.log('📤 userId:', userId);
-  console.log('📤 initData present:', !!initData);
-  if (initData) {
-    console.log('📤 initData (first 100 chars):', initData.substring(0, 100));
+  console.log('📤 authToken present:', !!authToken);
+  if (authToken) {
+    console.log('📤 authToken (first 100 chars):', authToken.substring(0, 100));
   }
   console.log('📤 profile keys:', Object.keys(profile));
-  console.log('📤 profile sample:', { name: profile.name, age: profile.age, gender: profile.gender });
 
-  const body: any = { userId, profile };
-  if (initData) {
-    body.initData = initData;
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  // 🎯 Передаём initData/JWT в Authorization заголовке
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
   }
-
-  console.log('📤 Full payload keys:', Object.keys(body));
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     cache: 'no-store',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ userId, profile }),
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);
@@ -135,32 +136,26 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>,
   return handleResponse(response);
 }
 
-export async function getProfile(userId?: number, initData?: string): Promise<{ profile: UserProfile }> {
-  // Если передан только initData, используем его
-  // Если передан userId, используем его
-  // Иначе выбрасываем ошибку
-  if (!userId && !initData) {
-    throw new ApiError('Either userId or initData must be provided', 400);
-  }
-
+export async function getProfile(userId?: number, authToken?: string): Promise<{ profile: UserProfile }> {
   const url = `${API_BASE}/api/profile/get`;
   console.log('🔗 Запрос к:', url);
+  console.log('📤 userId:', userId);
+  console.log('📤 authToken present:', !!authToken);
 
-  const body: any = {};
-  if (initData) {
-    body.initData = initData;
-  }
-  if (userId) {
-    body.userId = userId;
+  const headers: HeadersInit = {};
+
+  // 🎯 Передаём initData/JWT в Authorization заголовке
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  const params = new URLSearchParams();
+  if (userId) params.append('userId', userId.toString());
+
+  const response = await fetch(`${url}${params.toString() ? '?' + params.toString() : ''}`, {
     cache: 'no-store',
-    body: JSON.stringify(body),
+    headers,
   });
 
   console.log('📡 Ответ:', response.status, response.statusText);
@@ -197,25 +192,51 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   }
 }
 
-// Bookings API
-export async function getUserBookings(userId: number): Promise<{ bookings: Booking[] }> {
-  console.log(`[API] Requesting bookings for userId=${userId} from ${API_BASE}/api/bookings`);
-  const response = await fetch(`${API_BASE}/api/bookings?userId=${userId}`);
+// Bookings API - uses hybrid authentication (Telegram initData or JWT)
+export async function getUserBookings(userId: number, authToken?: string): Promise<{ bookings: Booking[] }> {
+  console.log(`[API] Requesting bookings for userId=${userId}`);
+  
+  const headers: HeadersInit = {};
+  
+  // 🎯 Передаём initData/JWT в Authorization заголовке
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
+  }
+  
+  const response = await fetch(`${API_BASE}/api/bookings/list`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    cache: 'no-store',
+  });
+  
+  console.log(`[API] Bookings response status: ${response.status}`);
   const result = await handleResponse<{ bookings: Booking[] }>(response);
   console.log(`[API] Got bookings response:`, result);
   return result;
 }
 
-export async function createBooking(userId: number, slotId: number): Promise<{ success: boolean }> {
-  console.log(`[API] Creating booking: userId=${userId}, slotId=${slotId}`);
-  console.log(`[API] Request body:`, JSON.stringify({ userId, slotId }));
+export async function createBooking(slotId: number, authToken?: string): Promise<{ success: boolean }> {
+  console.log(`[API] Creating booking: slotId=${slotId}`);
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  // 🎯 Передаём initData/JWT в Authorization заголовке
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
+  }
 
   const response = await fetch(`${API_BASE}/api/bookings`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ userId, slotId }),
+    headers,
+    cache: 'no-store',
+    body: JSON.stringify({ slotId }),
   });
 
   console.log(`[API] Booking response status: ${response.status}`);
@@ -228,8 +249,28 @@ export async function createBooking(userId: number, slotId: number): Promise<{ s
   return handleResponse(response);
 }
 
-// Contacts API
-export async function getContacts(slotId: number, userId: number): Promise<{ contacts: Contact[] }> {
-  const response = await fetch(`${API_BASE}/api/contacts?slotId=${slotId}&userId=${userId}`);
+// Contacts API - uses hybrid authentication (Telegram initData or JWT)
+export async function getContacts(slotId: number, authToken?: string): Promise<{ contacts: Contact[] }> {
+  console.log(`[API] Getting contacts for slotId=${slotId}`);
+  
+  const headers: HeadersInit = {};
+  
+  // 🎯 Передаём initData/JWT в Authorization заголовке
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
+  }
+  
+  const response = await fetch(`${API_BASE}/api/contacts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    cache: 'no-store',
+    body: JSON.stringify({ slotId }),
+  });
+  
+  console.log(`[API] Contacts response status: ${response.status}`);
   return handleResponse(response);
 }
