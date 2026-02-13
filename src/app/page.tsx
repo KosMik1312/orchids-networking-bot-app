@@ -74,248 +74,137 @@ export default function Home() {
   };
 
     useEffect(() => {
-       let isMounted = true;
+      let isMounted = true;
 
-       const cleanup = () => {
-         isMounted = false;
-         if (pollingRef.current) {
-           clearInterval(pollingRef.current);
-         }
-       };
-  
+      const cleanup = () => {
+        isMounted = false;
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+        }
+      };
 
       const initializeApp = async (token: string) => {
-
         if (!isMounted) return;
 
-  
-
         console.log("Initializing with token...");
-
         setUserToken(token);
 
-  
-
         try {
-
           const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
-
           console.log(`🔧 API_BASE: ${apiBase}`);
 
-  
-
           const response = await fetch(`${apiBase}/api/user/initial-screen`, {
-
             headers: {
-
               'Authorization': `Bearer ${token}`
-
             },
-
             cache: 'no-store'
-
           });
-
-  
 
           if (!isMounted) return;
 
-  
-
           if (!response.ok) {
-
             const errorText = await response.text().catch(() => 'Unknown error');
-
             throw new Error(`Failed to fetch initial screen: ${response.status} ${errorText}`);
-
           }
-
-          
 
           const data = await response.json();
 
-  
-
           if (data.success === false && data.error === 'Invalid token') {
-
-              console.error('❌ Backend rejected the token. This might be a server-side validation issue or an invalid initData string.');
-
-              // Показываем экран приветствия, чтобы пользователь не застрял
-
-              setCurrentScreen('welcome');
-
-              setIsLoading(false);
-
-              setProfileLoaded(true);
-
-              return;
-
+            console.error('❌ Backend rejected the token. This might be a server-side validation issue or an invalid initData string.');
+            setCurrentScreen('welcome');
+            setIsLoading(false);
+            setProfileLoaded(true);
+            return;
           }
 
-  
-
           console.log('✅ Initial screen data:', data);
-
           setUserId(data.user_id);
-
           setCurrentScreen(data.screen || 'welcome');
 
-  
-
           if (data.screen === 'admin') {
-
             setAdminToken(token);
-
           } else if (data.screen === 'booking') {
-
             // Предзагрузка профиля для существующих пользователей
-
             try {
-
-              const profile = await getProfile(data.user_id, token);
-
-              if (isMounted && profile) {
-
-                setFullProfile(profile);
-
-                setUserName(profile.name || '');
-
-                setUserGender(profile.gender as 'male' | 'female' | null);
-            try {
-              const response = await getProfile(data.user_id, token);
-              if (isMounted && response.profile) {
-                setFullProfile(response.profile);
-                setUserName(response.profile.name || '');
-                setUserGender(response.profile.gender as 'male' | 'female' | null);
+              const profileResponse = await getProfile(data.user_id, token);
+              if (isMounted && profileResponse.profile) {
+                setFullProfile(profileResponse.profile);
+                setUserName(profileResponse.profile.name || '');
+                setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
               }
             } catch (profileError) {
               console.warn('Could not pre-load profile, but proceeding.', profileError);
             }
+          }
+        } catch (error) {
           console.error('❌ Fatal error during app initialization:', error);
-
           if (isMounted) {
-
-            // В случае любой ошибки показываем "welcome", чтобы не блокировать пользователя
-
             setCurrentScreen('welcome');
-
           }
-
         } finally {
-
           if (isMounted) {
-
             setIsLoading(false);
-
             setProfileLoaded(true);
-
           }
-
         }
-
       };
 
-  
-
       const startApp = () => {
-
         // Для разработки: если токен задан в URL, используем его
-
         const urlParams = new URLSearchParams(window.location.search);
-
         const urlToken = urlParams.get('token');
 
         if (urlToken) {
-
           console.log('Using token from URL parameter.');
-
           initializeApp(urlToken);
-
           return;
-
         }
 
-  
-
         // Основная логика для Telegram Mini App
-
         const webApp = (window as any).Telegram?.WebApp;
 
         if (webApp && webApp.initData) {
-
           console.log('Telegram WebApp SDK is ready. Using initData.');
-
           initializeApp(webApp.initData);
-
         } else {
-
           // Если SDK еще не готово, пробуем подождать
-
           console.log('Telegram WebApp SDK not ready, polling...');
-
           let attempts = 0;
 
           pollingRef.current = setInterval(() => {
-
             attempts++;
 
             const webApp = (window as any).Telegram?.WebApp;
 
             if (webApp && webApp.initData) {
-
               clearInterval(pollingRef.current!);
-
               console.log('SDK became ready after polling.');
-
               initializeApp(webApp.initData);
-
             } else if (attempts > 25) { // ~5 seconds timeout
-
               clearInterval(pollingRef.current!);
-
               console.error('❌ Timed out waiting for Telegram WebApp SDK. Displaying welcome screen as a fallback.');
 
-              if(isMounted) {
-
+              if (isMounted) {
                 setCurrentScreen('welcome');
-
                 setIsLoading(false);
-
                 setProfileLoaded(true);
-
               }
-
             }
-
           }, 200);
-
         }
-
       };
 
-  
-
       if (DEV_SKIP_PROFILE_LOADING) {
-
-          console.warn("Skipping profile loading for development.");
-
-          setIsLoading(false);
-
-          setProfileLoaded(true);
-
-          setCurrentScreen("welcome");
-
+        console.warn("Skipping profile loading for development.");
+        setIsLoading(false);
+        setProfileLoaded(true);
+        setCurrentScreen("welcome");
       } else {
-
-          startApp();
-
+        startApp();
       }
 
-  
-
       return cleanup;
-
-    }, []); // Пустой массив зависимостей, чтобы этот эффект выполнялся один раз при монтировании
+    }, []);
 
   const handleStartOnboarding = () => setCurrentScreen("onboarding");
   const handleOnboardingComplete = () => setCurrentScreen("profile_form");
