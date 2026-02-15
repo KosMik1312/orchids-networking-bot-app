@@ -23,7 +23,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-[#E15859] text-[42px] leading-none"
+          className="text-[#E15859] text-[45px] leading-none"
           style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic" }}
         >
           {texts.logo}

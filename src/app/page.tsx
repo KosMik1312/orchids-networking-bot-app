@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
-import { QuizScreen } from "@/components/QuizScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { BestInMeScreen } from "@/components/BestInMeScreen";
@@ -19,7 +18,7 @@ import { MyContactsScreen } from "@/components/MyContactsScreen";
 import { AdminScreen } from "@/components/AdminScreen";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "quiz" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "admin";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "admin";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -321,21 +320,12 @@ export default function Home() {
               </motion.div>
             )}
 
-            {currentScreen === "quiz" && (
-              <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <QuizScreen onNext={() => {
-                  console.log("Moving to booking screen");
-                  setCurrentScreen("booking");
-                }} onBack={() => setCurrentScreen("meeting_conditions")} progress={6} />
-              </motion.div>
-            )}
-
             {currentScreen === "booking" && (
               <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <BookingScreen
                   city="Москва"
                   authToken={userToken || null}
-                  onBack={() => setCurrentScreen("quiz")}
+                  onBack={() => setCurrentScreen("meeting_conditions")}
                   onComplete={() => { }}
                   onPromotions={() => setCurrentScreen("promotions")}
                   onAfisha={() => setCurrentScreen("afisha")}
