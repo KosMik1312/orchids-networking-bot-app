@@ -196,7 +196,8 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
                   {/* Age Items */}
                   {ages.map((age, index) => {
                     const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
-                    const itemCenter = index * itemHeight + itemHeight / 2;
+                    // Правильный расчет центра элемента (с учетом спейсера вверху)
+                    const itemCenter = (index + 1) * itemHeight + itemHeight / 2;
                     const viewportCenter = scrollTop + 90; // 90 = half of 180px container
                     const distance = Math.abs(itemCenter - viewportCenter);
                     const isCenter = distance < itemHeight * 0.4;
