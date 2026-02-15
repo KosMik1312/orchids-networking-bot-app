@@ -77,7 +77,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
   };
 
   // Age Wheel Picker Logic
-  const itemHeight = 50;
+  const itemHeight = 60;
   const ages = Array.from({ length: 82 }, (_, i) => 18 + i);
 
   const handleScroll = () => {
@@ -178,20 +178,11 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
 
               {/* Wheel Picker Container */}
               <div className="relative flex flex-col items-center">
-                {/* Top Fade Gradient */}
-                <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-white via-white to-transparent z-10 pointer-events-none rounded-t-[12px]" />
-
-                {/* Center Highlight Line */}
-                <div className="absolute top-1/2 left-0 right-0 h-[3px] bg-[#E15859] z-20 transform -translate-y-1/2 rounded-full" />
-
-                {/* Bottom Fade Gradient */}
-                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white via-white to-transparent z-10 pointer-events-none rounded-b-[12px]" />
-
                 {/* Scrollable Numbers */}
                 <div
                   ref={scrollContainerRef}
                   onScroll={handleScroll}
-                  className="h-[150px] overflow-y-scroll scroll-smooth"
+                  className="h-[180px] overflow-y-scroll scroll-smooth"
                   style={{
                     scrollbarWidth: "none",
                     msOverflowStyle: "none",
@@ -199,17 +190,15 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
                   }}
                 >
                   {/* Spacer Top */}
-                  <div style={{ height: itemHeight * 1.5 }} />
+                  <div style={{ height: itemHeight }} />
 
                   {/* Age Items */}
                   {ages.map((age, index) => {
                     const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
                     const itemCenter = index * itemHeight + itemHeight / 2;
-                    const viewportCenter = scrollTop + 75; // 75 = half of 150px container
+                    const viewportCenter = scrollTop + 90; // 90 = half of 180px container
                     const distance = Math.abs(itemCenter - viewportCenter);
-                    const maxDistance = itemHeight * 1.5;
-                    const scale = Math.max(0.5, 1 - distance / maxDistance);
-                    const isCenter = distance < itemHeight * 0.5;
+                    const isCenter = distance < itemHeight * 0.4;
 
                     return (
                       <div
@@ -217,24 +206,37 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
                         style={{ height: itemHeight }}
                         className="flex items-center justify-center scroll-snap-align-center"
                       >
-                        <motion.span
+                        <motion.div
                           animate={{
-                            fontSize: isCenter ? "28px" : `${16 + scale * 12}px`,
-                            color: isCenter ? "#E15859" : "#2A2021",
-                            fontWeight: isCenter ? "900" : "600",
+                            backgroundColor: isCenter ? "#E15859" : "transparent",
+                            paddingLeft: isCenter ? "12px" : "0px",
+                            paddingRight: isCenter ? "12px" : "0px",
                           }}
                           transition={{ duration: 0.15 }}
-                          className="text-center"
-                          style={{ fontFamily: "'Montserrat', sans-serif" }}
+                          className={cn(
+                            "flex items-center justify-center rounded-full transition-all",
+                            isCenter ? "py-2" : ""
+                          )}
                         >
-                          {age}
-                        </motion.span>
+                          <motion.span
+                            animate={{
+                              fontSize: isCenter ? "24px" : "18px",
+                              color: isCenter ? "#FFFFFF" : "#2A2021",
+                              fontWeight: isCenter ? "900" : "600",
+                            }}
+                            transition={{ duration: 0.15 }}
+                            className="text-center"
+                            style={{ fontFamily: "'Montserrat', sans-serif" }}
+                          >
+                            {age}
+                          </motion.span>
+                        </motion.div>
                       </div>
                     );
                   })}
 
                   {/* Spacer Bottom */}
-                  <div style={{ height: itemHeight * 1.5 }} />
+                  <div style={{ height: itemHeight }} />
                 </div>
               </div>
             </div>
