@@ -22,6 +22,7 @@ class User(Base):
     name = Column(String)
     age = Column(Integer)
     gender = Column(String)
+    zodiac = Column(String, nullable=True)  # Зодиак
     relationship_status = Column(String)
     children = Column(String)
     occupation = Column(String)
@@ -35,6 +36,13 @@ class User(Base):
     instagram = Column(String)
     photo = Column(String)
     about_me = Column(Text)
+    # Поля из BestInMeScreen
+    strengths = Column(JSONB, nullable=True)  # Массив сильных сторон
+    weaknesses = Column(Text, nullable=True)  # Текстовое поле слабостей
+    values = Column(JSONB, nullable=True)  # Массив жизненных ценностей
+    love_language = Column(JSONB, nullable=True)  # Массив языков любви
+    goals = Column(Text, nullable=True)  # Мои цели
+    dreams = Column(Text, nullable=True)  # Мои мечты
     # Настройки встреч (JSONB для PostgreSQL)
     meeting_metro = Column(JSONB, nullable=True)
     meeting_days = Column(JSONB, nullable=True)

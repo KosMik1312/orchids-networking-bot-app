@@ -156,25 +156,23 @@ export function BestInMeScreen({ onContinue, onBack, initialData }: BestInMeScre
             selectedDisplay={getSelectedDisplay("strengths")}
           />
 
-          {/* Мои слабости - Text area with hint */}
+          {/* Мои слабости - Textarea */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.15 }}
           >
-            <div className="bg-white rounded-[24px] px-6 py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[16px] text-[#9CA3AF]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                  {texts.fields.weaknesses.placeholder}
-                </span>
-                <span className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                  ({texts.fields.weaknesses.optional})
-                </span>
-              </div>
-              <p className="text-[14px] text-[#2A2021] leading-relaxed" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                {texts.fields.weaknesses.hint}
-              </p>
-            </div>
+            <textarea
+              value={formData.weaknesses}
+              onChange={(e) => handleTextChange("weaknesses", e.target.value)}
+              placeholder={texts.fields.weaknesses.hint}
+              className="w-full bg-white rounded-[24px] px-6 py-4 text-[16px] text-[#2A2021] placeholder-[#9CA3AF] outline-none resize-none"
+              rows={3}
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            />
+            <span className="text-[12px] text-[#9CA3AF] mt-1 block px-2" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              ({texts.fields.weaknesses.placeholder})
+            </span>
           </motion.div>
 
           {/* Жизненные ценности - Multi-select dropdown */}

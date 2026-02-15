@@ -39,6 +39,7 @@ export interface UserProfile {
   name: string;
   age: number;
   gender?: string;
+  zodiac?: string;
   relationship_status?: string;
   children?: string;
   occupation?: string;
@@ -53,6 +54,13 @@ export interface UserProfile {
   photo?: string;
   about_me?: string;
   city?: string;
+  // BestInMeScreen fields
+  strengths?: string[];
+  weaknesses?: string;
+  values?: string[];
+  love_language?: string[];
+  goals?: string;
+  dreams?: string;
   // Meeting-related
   meeting_metro?: string[];
   meeting_days?: string[];

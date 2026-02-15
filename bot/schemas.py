@@ -17,6 +17,7 @@ class UserProfile(BaseModel):
     name: Optional[str] = Field(None, description="User display name")
     age: Optional[int] = Field(None, description="Age of the user")
     gender: Optional[str] = Field(None, description="Gender")
+    zodiac: Optional[str] = Field(None, description="Zodiac sign")
     relationship_status: Optional[str] = Field(None, description="Relationship status")
     children: Optional[str] = Field(None, description="Children status")
     occupation: Optional[str] = Field(None, description="Occupation type")
@@ -31,6 +32,13 @@ class UserProfile(BaseModel):
     photo: Optional[str] = Field(None, description="Photo URL")
     about_me: Optional[str] = Field(None, description="About me text")
     city: Optional[str] = Field(None, description="City")
+    # Fields from BestInMeScreen
+    strengths: Optional[List[str]] = Field(None, description="Strengths/strong sides")
+    weaknesses: Optional[str] = Field(None, description="Weaknesses text")
+    values: Optional[List[str]] = Field(None, description="Life values")
+    love_language: Optional[List[str]] = Field(None, description="Love languages")
+    goals: Optional[str] = Field(None, description="Goals text")
+    dreams: Optional[str] = Field(None, description="Dreams text")
     # New meeting-related fields
     meeting_metro: Optional[List[str]] = Field(None, description="Preferred metro stations")
     meeting_days: Optional[List[str]] = Field(None, description="Preferred meeting days")

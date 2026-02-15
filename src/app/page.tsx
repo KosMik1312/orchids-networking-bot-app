@@ -217,6 +217,7 @@ export default function Home() {
       name: data.name,
       gender: genderValue,
       age: data.age ? parseInt(data.age) : undefined,
+      zodiac: data.zodiac || undefined,
       occupation: data.career || undefined,
       relationship_status: data.familyStatus || undefined,
       children: data.hasChildren || undefined,
@@ -231,6 +232,13 @@ export default function Home() {
 
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     await updateProfile({
+      strengths: data.strengths || undefined,
+      weaknesses: data.weaknesses || undefined,
+      values: data.values || undefined,
+      love_language: data.loveLanguage || undefined,
+      goals: data.goals || undefined,
+      dreams: data.dreams || undefined,
+      interests: data.interests || undefined,
       telegram: data.telegramNickname,
       instagram: data.instagramNickname,
       photo: data.photo || undefined
@@ -290,12 +298,7 @@ export default function Home() {
                     name: fullProfile.name || "",
                     gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
                     age: fullProfile.age?.toString() || "",
-                    zodiac: "", // UserProfile doesn't seem to have zodiac yet in my view of api.ts? Wait, let me check api.ts again.
-                    // Checked api.ts: UserProfile has `interests`, `comfort_level`, etc. It has `children`, `familyStatus` as optional strings.
-                    // It does not explicitly have `zodiac` in the interface I saw?
-                    // Let me check UserProfile interface in api.ts again.
-                    // It DOES NOT have zodiac in `api.ts`. I should add it to `api.ts` too.
-                    // For now I will pass what I have.
+                    zodiac: fullProfile.zodiac || "",
                     career: fullProfile.occupation || "",
                     familyStatus: fullProfile.relationship_status || "",
                     hasChildren: fullProfile.children || ""
@@ -306,7 +309,22 @@ export default function Home() {
 
             {currentScreen === "best_in_me" && (
               <motion.div key="best_in_me" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <BestInMeScreen onContinue={handleBestInMeComplete} onBack={() => setCurrentScreen("profile_form")} />
+                <BestInMeScreen
+                  onContinue={handleBestInMeComplete}
+                  onBack={() => setCurrentScreen("profile_form")}
+                  initialData={{
+                    strengths: fullProfile.strengths || [],
+                    weaknesses: fullProfile.weaknesses || "",
+                    values: fullProfile.values || [],
+                    loveLanguage: fullProfile.love_language || [],
+                    goals: fullProfile.goals || "",
+                    dreams: fullProfile.dreams || "",
+                    interests: fullProfile.interests || [],
+                    telegramNickname: fullProfile.telegram || "",
+                    instagramNickname: fullProfile.instagram || "",
+                    photo: fullProfile.photo || null
+                  }}
+                />
               </motion.div>
             )}
 
