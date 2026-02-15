@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Settings, ChevronRight, Check } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { getSlots, createBooking } from "@/lib/api";
+import { ru } from "@/lib/i18n/ru";
 
 type BookingStep = "slots" | "payment" | "success";
 
@@ -28,6 +29,7 @@ interface BookingScreenProps {
 }
 
 export function BookingScreen({ city = "Москва", authToken, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
+  const t = ru.booking;
   const [step, setStep] = useState<BookingStep>("slots");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -53,7 +55,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
           setSlots(mappedSlots);
         }
       } catch (err) {
-        if (isMounted) setError("Не удалось загрузить слоты");
+        if (isMounted) setError(t.error);
         console.error(err);
       } finally {
         if (isMounted) setIsLoading(false);
@@ -76,7 +78,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
       setStep("success");
     } catch (e) {
       console.error("Booking failed", e);
-      alert("Ошибка при бронировании. Попробуйте снова.");
+      alert(t.errors.bookingFailed);
     }
   };
 
@@ -102,7 +104,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <div className="w-8 h-8 relative">
@@ -127,17 +129,17 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
 
             {/* Title */}
             <h2 className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6" style={{ fontFamily: "system-ui, sans-serif" }}>
-              Бронирование ужина
+              {t.title}
             </h2>
 
             {/* Slots List */}
             <div className="space-y-3 flex-1">
               {isLoading ? (
-                <div className="text-center py-10 text-gray-500">Загрузка слотов...</div>
+                <div className="text-center py-10 text-gray-500">{t.loading}</div>
               ) : error ? (
                 <div className="text-center py-10 text-red-500">{error}</div>
               ) : slots.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">Нет доступных слотов</div>
+                <div className="text-center py-10 text-gray-500">{t.noSlots}</div>
               ) : (
                 slots.map((slot) => (
                   <button
@@ -162,7 +164,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
               onClick={onPromotions}
               className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
             >
-              Акции и предложения
+              {t.promotionsButton}
             </button>
 
             {/* Contacts Button */}
@@ -170,7 +172,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
               onClick={onContacts}
               className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
             >
-              Мои контакты
+              {t.contactsButton}
             </button>
           </motion.div>
         )}
@@ -190,7 +192,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <div className="w-8 h-8 relative">
@@ -217,23 +219,23 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
             <div className="bg-white rounded-t-[32px] -mt-4 px-6 py-8 flex-1 relative z-10">
               {/* Date */}
               <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">Дата</p>
+                <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
                 <p className="text-[#E15859] text-[22px] font-bold mt-1">07.11.25</p>
               </div>
 
               {/* Location */}
               <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">Локация</p>
+                <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
                 <p className="text-[#E15859] text-[22px] font-bold mt-1">{selectedSlot?.address || "Г. Москва, ул. Скляренко д. 2"}</p>
               </div>
 
               {/* Promo Code */}
               <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium mb-3">Промокод</p>
+                <p className="text-[#404243] text-[15px] font-medium mb-3">{t.payment.promoCode}</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Введите промокод"
+                    placeholder={t.payment.promoPlaceholder}
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
                     className="flex-1 bg-white border border-[#E0E0E0] rounded-full px-5 py-4 text-[15px] focus:outline-none focus:border-[#E15859]"
@@ -246,16 +248,16 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
 
               {/* Total */}
               <div className="flex justify-between items-center mb-4">
-                <span className="text-[#404243] text-[17px] font-medium">Итого</span>
+                <span className="text-[#404243] text-[17px] font-medium">{t.payment.total}</span>
                 <span className="text-[#2A2021] text-[22px] font-bold">1 500 ₽</span>
               </div>
 
               {/* Info Text */}
               <p className="text-[11px] text-[#404243] leading-relaxed mb-3 opacity-70">
-                Возврат средств возможен только в случае, если вы отмените до полуночи понедельника, предшествующего дня ужина.
+                {t.payment.refundPolicy}
               </p>
               <p className="text-[11px] text-[#404243] leading-relaxed mb-4 opacity-70">
-                Нажимая на кнопку, вы даете согласие на <span className="underline">обработку персональных данных</span>, и соглашаетесь с <span className="underline">политикой конфиденциальности</span>
+                {t.payment.privacyConsent}
               </p>
 
               {/* Offer Checkbox */}
@@ -266,7 +268,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${acceptedOffer ? "bg-[#E15859] border-[#E15859]" : "border-[#D1D1D1]"}`}>
                   {acceptedOffer && <Check className="text-white" size={14} strokeWidth={3} />}
                 </div>
-                <span className="text-[#404243] text-[14px] underline">Я принимаю условия оферты</span>
+                <span className="text-[#404243] text-[14px] underline">{t.payment.acceptOffer}</span>
               </button>
 
               {/* Pay Button */}
@@ -276,7 +278,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 className={`w-full py-5 rounded-[20px] text-[17px] font-semibold transition-all ${acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
                   }`}
               >
-                Оплатить
+                {t.payment.payButton}
               </button>
             </div>
           </motion.div>
@@ -296,7 +298,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
               <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <div className="w-8 h-8 relative">
@@ -321,30 +323,30 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
 
             {/* Title */}
             <h2 className="text-[#BDBDBD] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
-              Бронирование ужина
+              {t.success.titleGray}
             </h2>
 
             {/* Success Card */}
             <div className="bg-white rounded-[24px] px-6 py-8 flex-1">
               <h3 className="text-[#E15859] text-[26px] font-black uppercase text-center tracking-tight mb-6">
-                Успешно оплачено
+                {t.success.successTitle}
               </h3>
 
               {/* Date */}
               <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">Дата</p>
+                <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
                 <p className="text-[#E15859] text-[20px] font-bold mt-1">07.11.25</p>
               </div>
 
               {/* Location */}
               <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">Локация</p>
+                <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
                 <p className="text-[#E15859] text-[20px] font-bold mt-1">{city}</p>
               </div>
 
               {/* Time */}
               <div className="border-b border-gray-100 pb-4 mb-6">
-                <p className="text-[#404243] text-[15px] font-medium">Время</p>
+                <p className="text-[#404243] text-[15px] font-medium">{t.success.time}</p>
                 <p className="text-[#E15859] text-[20px] font-bold mt-1">{selectedSlot?.time || "18:00"}</p>
               </div>
 
@@ -353,7 +355,7 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
                 onClick={handleContinue}
                 className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
               >
-                Продолжить
+                {t.success.continueButton}
               </button>
             </div>
           </motion.div>
