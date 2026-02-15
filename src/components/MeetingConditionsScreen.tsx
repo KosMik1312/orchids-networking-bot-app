@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import { ru } from "@/lib/i18n";
@@ -15,7 +15,7 @@ interface MeetingConditionsData {
 
 interface MeetingConditionsScreenProps {
   onContinue: (data: MeetingConditionsData) => void;
-  onBack: () => void;
+  onBack: (data: MeetingConditionsData) => void;
   initialData?: Partial<MeetingConditionsData>;
 }
 
@@ -31,6 +31,20 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   });
 
   const [openSection, setOpenSection] = useState<string | null>(null);
+
+  // Пересинхронизировать состояние когда initialData меняется (при возврате на этот экран)
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => ({
+        ...prev,
+        metro: initialData.metro && initialData.metro.length > 0 ? initialData.metro : prev.metro,
+        days: initialData.days && initialData.days.length > 0 ? initialData.days : prev.days,
+        time: initialData.time ? initialData.time : prev.time,
+        goal: initialData.goal ? initialData.goal : prev.goal,
+        format: initialData.format ? initialData.format : prev.format,
+      }));
+    }
+  }, [initialData?.metro, initialData?.days, initialData?.time, initialData?.goal, initialData?.format]);
 
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
@@ -219,7 +233,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
       <div className="px-6 pb-10 pt-4">
         <div className="flex items-center gap-4">
           <button
-            onClick={onBack}
+            onClick={() => onBack(formData)}
             className="w-[70px] h-[70px] rounded-full border-2 border-[#E15859] flex items-center justify-center bg-transparent shrink-0"
           >
             <ChevronLeft className="w-8 h-8 text-[#E15859]" />

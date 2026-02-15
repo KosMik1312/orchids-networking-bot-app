@@ -226,6 +226,29 @@ export default function Home() {
     setCurrentScreen("best_in_me");
   };
 
+  const handleProfileFormBack = async (data: any) => {
+    const genderValue = data.gender === "Мужской" ? "male" : "female";
+    // Сохранить текущие данные (даже если форма неполная)
+    await updateProfile({
+      name: data.name,
+      gender: genderValue,
+      age: data.age ? parseInt(data.age) : undefined,
+      zodiac: data.zodiac || undefined,
+      occupation: data.career || undefined,
+      relationship_status: data.familyStatus || undefined,
+      children: data.hasChildren || undefined,
+    }).catch((err) => {
+      console.error("Error saving profile on back:", err);
+    });
+    // Перезагрузить данные из БД
+    if (userToken) {
+      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
+      const profileData = await getProfile(userToken, initData);
+      setFullProfile(profileData);
+    }
+    setCurrentScreen("onboarding");
+  };
+
   const handleBestInMeComplete = async (data: any) => {
     setUserSocialLinks({ telegram: data.telegramNickname, instagram: data.instagramNickname });
     if (data.photo) setUserPhoto(data.photo);
@@ -247,6 +270,31 @@ export default function Home() {
     setCurrentScreen("meeting_conditions");
   };
 
+  const handleBestInMeBack = async (data: any) => {
+    // Сохранить текущие данные (даже если форма неполная)
+    await updateProfile({
+      strengths: data.strengths || undefined,
+      weaknesses: data.weaknesses || undefined,
+      values: data.values || undefined,
+      love_language: data.loveLanguage || undefined,
+      goals: data.goals || undefined,
+      dreams: data.dreams || undefined,
+      interests: data.interests || undefined,
+      telegram: data.telegramNickname,
+      instagram: data.instagramNickname,
+      photo: data.photo || undefined
+    }).catch((err) => {
+      console.error("Error saving BestInMe on back:", err);
+    });
+    // Перезагрузить данные из БД
+    if (userToken) {
+      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
+      const profileData = await getProfile(userToken, initData);
+      setFullProfile(profileData);
+    }
+    setCurrentScreen("profile_form");
+  };
+
   const handleMeetingConditionsComplete = async (data: MeetingConditionsData) => {
     setUserMeetingConditions(data);
 
@@ -263,6 +311,27 @@ export default function Home() {
     });
 
     setCurrentScreen("booking");
+  };
+
+  const handleMeetingConditionsBack = async (data: MeetingConditionsData) => {
+    // Сохранить текущие данные (даже если форма неполная)
+    await updateProfile({
+      meeting_metro: data.metro,
+      meeting_days: data.days,
+      meeting_time_from: data.time.from,
+      meeting_time_to: data.time.to,
+      format: data.format,
+      goal: data.goal,
+    }).catch((err) => {
+      console.error("Error saving MeetingConditions on back:", err);
+    });
+    // Перезагрузить данные из БД
+    if (userToken) {
+      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
+      const profileData = await getProfile(userToken, initData);
+      setFullProfile(profileData);
+    }
+    setCurrentScreen("best_in_me");
   };
 
   return (
@@ -292,7 +361,7 @@ export default function Home() {
               <motion.div key="profile_form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ProfileFormScreen
                   onContinue={handleProfileFormComplete}
-                  onBack={() => setCurrentScreen("profile")} // Go back to profile if editing, or onboarding if new? Needs logic.
+                  onBack={handleProfileFormBack}
                   // Only pass data if we have it. If new user, fullProfile is empty.
                   initialData={{
                     name: fullProfile.name || "",
@@ -311,7 +380,7 @@ export default function Home() {
               <motion.div key="best_in_me" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <BestInMeScreen
                   onContinue={handleBestInMeComplete}
-                  onBack={() => setCurrentScreen("profile_form")}
+                  onBack={handleBestInMeBack}
                   initialData={{
                     strengths: fullProfile.strengths || [],
                     weaknesses: fullProfile.weaknesses || "",
@@ -332,7 +401,7 @@ export default function Home() {
               <motion.div key="meeting_conditions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <MeetingConditionsScreen
                   onContinue={handleMeetingConditionsComplete}
-                  onBack={() => setCurrentScreen("best_in_me")}
+                  onBack={handleMeetingConditionsBack}
                   initialData={userMeetingConditions}
                 />
               </motion.div>

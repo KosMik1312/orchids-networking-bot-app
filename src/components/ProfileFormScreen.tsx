@@ -18,7 +18,7 @@ interface ProfileFormData {
 
 interface ProfileFormScreenProps {
   onContinue: (data: ProfileFormData) => void;
-  onBack: () => void;
+  onBack: (data: ProfileFormData) => void;
   initialData?: Partial<ProfileFormData>;
 }
 
@@ -41,6 +41,22 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
   });
 
   const [openDropdown, setOpenDropdown] = useState<FieldKey | null>(null);
+
+  // Пересинхронизировать состояние когда initialData меняется
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => ({
+        ...prev,
+        name: initialData.name || prev.name,
+        gender: initialData.gender || prev.gender,
+        age: typeof initialData.age === "number" ? initialData.age : prev.age,
+        zodiac: initialData.zodiac || prev.zodiac,
+        career: initialData.career || prev.career,
+        familyStatus: initialData.familyStatus || prev.familyStatus,
+        hasChildren: initialData.hasChildren || prev.hasChildren,
+      }));
+    }
+  }, [initialData]);
 
   const isFormComplete = formData.name.trim() !== "" && 
                          formData.gender !== "" && 
@@ -342,7 +358,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
             whileTap={{ scale: 0.95 }}
-            onClick={onBack}
+            onClick={() => onBack(formData)}
             className="w-[56px] h-[56px] rounded-full border-2 border-[#E15859] flex items-center justify-center bg-transparent"
           >
             <ChevronLeft className="w-6 h-6 text-[#E15859]" />

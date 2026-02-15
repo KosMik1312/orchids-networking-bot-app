@@ -32,7 +32,7 @@ interface BestInMeFormData {
 
 interface BestInMeScreenProps {
   onContinue: (data: BestInMeFormData) => void;
-  onBack: () => void;
+  onBack: (data: BestInMeFormData) => void;
   initialData?: Partial<BestInMeFormData>;
 }
 
@@ -74,6 +74,25 @@ export function BestInMeScreen({ onContinue, onBack, initialData }: BestInMeScre
       }
     }
   }, [initialData?.telegramNickname]);
+
+  // Пересинхронизировать состояние когда initialData меняется (при возврате на этот экран)
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => ({
+        ...prev,
+        strengths: initialData.strengths?.length ? initialData.strengths : prev.strengths,
+        weaknesses: initialData.weaknesses ? initialData.weaknesses : prev.weaknesses,
+        values: initialData.values?.length ? initialData.values : prev.values,
+        loveLanguage: initialData.loveLanguage?.length ? initialData.loveLanguage : prev.loveLanguage,
+        goals: initialData.goals ? initialData.goals : prev.goals,
+        dreams: initialData.dreams ? initialData.dreams : prev.dreams,
+        interests: initialData.interests?.length ? initialData.interests : prev.interests,
+        instagramNickname: initialData.instagramNickname ? initialData.instagramNickname : prev.instagramNickname,
+        photo: initialData.photo ? initialData.photo : prev.photo,
+        telegramNickname: initialData.telegramNickname ? initialData.telegramNickname : prev.telegramNickname,
+      }));
+    }
+  }, [initialData?.weaknesses, initialData?.goals, initialData?.dreams, initialData?.instagramNickname, initialData?.photo]);
 
   // Обязательные поля: strengths, values, loveLanguage, interests, telegramNickname
   const isFormComplete = 
@@ -370,7 +389,7 @@ export function BestInMeScreen({ onContinue, onBack, initialData }: BestInMeScre
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
             whileTap={{ scale: 0.95 }}
-            onClick={onBack}
+            onClick={() => onBack(formData)}
             className="w-[56px] h-[56px] rounded-full border-2 border-[#E15859] flex items-center justify-center bg-transparent"
           >
             <ChevronLeft className="w-6 h-6 text-[#E15859]" />
