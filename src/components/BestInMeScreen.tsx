@@ -1,6 +1,18 @@
-"use client";
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initDataUnsafe?: {
+          user?: {
+            username?: string;
+          };
+        };
+      };
+    };
+  }
+}
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, ChevronLeft, Send, Camera, Image as ImageIcon } from "lucide-react";
 import { ru } from "@/lib/i18n";
@@ -45,6 +57,23 @@ export function BestInMeScreen({ onContinue, onBack, initialData }: BestInMeScre
   });
 
   const [openDropdown, setOpenDropdown] = useState<DropdownField | null>(null);
+
+  // Автозаполнение telegram никнейма из Telegram WebApp API
+  useEffect(() => {
+    if (!initialData?.telegramNickname) {
+      const telegramUsername =
+        typeof window !== "undefined"
+          ? window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+          : "";
+
+      if (telegramUsername) {
+        setFormData((prev) => ({
+          ...prev,
+          telegramNickname: telegramUsername,
+        }));
+      }
+    }
+  }, [initialData?.telegramNickname]);
 
   // Обязательные поля: strengths, values, loveLanguage, interests, telegramNickname
   const isFormComplete = 

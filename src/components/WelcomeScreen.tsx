@@ -15,7 +15,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   const texts = ru.welcome;
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden relative" style={{ backgroundColor: '#E9E9E9', touchAction: 'pan-y' }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden relative" style={{ backgroundColor: '#FFF7EF', touchAction: 'pan-y' }}>
 
       {/* Top Logo Area */}
       <div className="pt-24 flex justify-center">
@@ -24,7 +24,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="text-[#E15859] text-[60px] leading-none"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic" }}
+          style={{ fontFamily: "'Great Vibes', cursive" }}
         >
           {texts.logo}
           <div className="h-[2px] bg-[#E15859] w-full mt-1 opacity-70" />
