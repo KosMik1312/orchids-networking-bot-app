@@ -109,7 +109,8 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
     if (scrollContainerRef.current) {
       const initialIndex = ages.indexOf(formData.age);
       if (initialIndex >= 0) {
-        scrollContainerRef.current.scrollTop = initialIndex * itemHeight;
+        // Center the selected age (item should be at middle position)
+        scrollContainerRef.current.scrollTop = (initialIndex - 1) * itemHeight;
       }
     }
   }, []);
@@ -220,7 +221,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
                         >
                           <motion.span
                             animate={{
-                              fontSize: isCenter ? "24px" : "18px",
+                              fontSize: isCenter ? "22px" : "18px",
                               color: isCenter ? "#FFFFFF" : "#2A2021",
                               fontWeight: isCenter ? "900" : "600",
                             }}
