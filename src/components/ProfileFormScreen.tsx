@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, ChevronLeft } from "lucide-react";
 import { ru } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface ProfileFormData {
   name: string;
   gender: string;
-  age: string;
+  age: number;
   zodiac: string;
   career: string;
   familyStatus: string;
@@ -25,11 +26,14 @@ type FieldKey = keyof Omit<ProfileFormData, "name">;
 
 export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFormScreenProps) {
   const texts = ru.profileForm;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
   
   const [formData, setFormData] = useState<ProfileFormData>({
     name: initialData?.name || "",
     gender: initialData?.gender || "",
-    age: initialData?.age || "",
+    age: typeof initialData?.age === "number" ? initialData.age : 25,
     zodiac: initialData?.zodiac || "",
     career: initialData?.career || "",
     familyStatus: initialData?.familyStatus || "",
@@ -38,11 +42,25 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
 
   const [openDropdown, setOpenDropdown] = useState<FieldKey | null>(null);
 
-  const isFormComplete = Object.values(formData).every((value) => value.trim() !== "");
+  const isFormComplete = formData.name.trim() !== "" && 
+                         formData.gender !== "" && 
+                         formData.age >= 18 &&
+                         formData.zodiac !== "" && 
+                         formData.career !== "" && 
+                         formData.familyStatus !== "" && 
+                         formData.hasChildren !== "";
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const dropdownFields: { key: FieldKey; options: string[] }[] = [
+    { key: "gender", options: texts.fields.gender.options },
+    { key: "zodiac", options: texts.fields.zodiac.options },
+    { key: "career", options: texts.fields.career.options },
+    { key: "familyStatus", options: texts.fields.familyStatus.options },
+    { key: "hasChildren", options: texts.fields.hasChildren.options },
+  ];
 
   const handleDropdownToggle = (field: FieldKey) => {
     setOpenDropdown(openDropdown === field ? null : field);
@@ -53,19 +71,48 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
     setOpenDropdown(null);
   };
 
-  const dropdownFields: { key: FieldKey; options: string[] }[] = [
-    { key: "gender", options: texts.fields.gender.options },
-    { key: "age", options: texts.fields.age.options },
-    { key: "zodiac", options: texts.fields.zodiac.options },
-    { key: "career", options: texts.fields.career.options },
-    { key: "familyStatus", options: texts.fields.familyStatus.options },
-    { key: "hasChildren", options: texts.fields.hasChildren.options },
-  ];
-
   const getPlaceholder = (key: FieldKey): string => {
     const fieldTexts = texts.fields[key];
     return "placeholder" in fieldTexts ? fieldTexts.placeholder : "";
   };
+
+  // Age Wheel Picker Logic
+  const itemHeight = 50;
+  const ages = Array.from({ length: 82 }, (_, i) => 18 + i);
+
+  const handleScroll = () => {
+    setIsScrolling(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+      // Snap to nearest item
+      if (scrollContainerRef.current) {
+        const scroll = scrollContainerRef.current.scrollTop;
+        const itemIndex = Math.round(scroll / itemHeight);
+        const nearestScroll = itemIndex * itemHeight;
+        
+        scrollContainerRef.current.scrollTo({
+          top: nearestScroll,
+          behavior: "smooth",
+        });
+
+        const selectedAge = ages[itemIndex];
+        if (selectedAge) {
+          setFormData((prev) => ({ ...prev, age: selectedAge }));
+        }
+      }
+    }, 150);
+  };
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const initialIndex = ages.indexOf(formData.age);
+      if (initialIndex >= 0) {
+        scrollContainerRef.current.scrollTop = initialIndex * itemHeight;
+      }
+    }
+  }, []);
 
   return (
     <div
@@ -114,13 +161,92 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
             />
           </motion.div>
 
+          {/* Age Wheel Picker */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-white rounded-[24px] px-6 py-4"
+          >
+            <div className="flex flex-col gap-4">
+              <label
+                className="text-[16px] text-[#2A2021] font-medium"
+                style={{ fontFamily: "'Montserrat', sans-serif" }}
+              >
+                {texts.fields.age.placeholder}
+              </label>
+
+              {/* Wheel Picker Container */}
+              <div className="relative flex flex-col items-center">
+                {/* Top Fade Gradient */}
+                <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-white via-white to-transparent z-10 pointer-events-none rounded-t-[12px]" />
+
+                {/* Center Highlight Line */}
+                <div className="absolute top-1/2 left-0 right-0 h-[3px] bg-[#E15859] z-20 transform -translate-y-1/2 rounded-full" />
+
+                {/* Bottom Fade Gradient */}
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white via-white to-transparent z-10 pointer-events-none rounded-b-[12px]" />
+
+                {/* Scrollable Numbers */}
+                <div
+                  ref={scrollContainerRef}
+                  onScroll={handleScroll}
+                  className="h-[150px] overflow-y-scroll scroll-smooth"
+                  style={{
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    scrollSnapType: "y mandatory",
+                  }}
+                >
+                  {/* Spacer Top */}
+                  <div style={{ height: itemHeight * 1.5 }} />
+
+                  {/* Age Items */}
+                  {ages.map((age, index) => {
+                    const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
+                    const itemCenter = index * itemHeight + itemHeight / 2;
+                    const viewportCenter = scrollTop + 75; // 75 = half of 150px container
+                    const distance = Math.abs(itemCenter - viewportCenter);
+                    const maxDistance = itemHeight * 1.5;
+                    const scale = Math.max(0.5, 1 - distance / maxDistance);
+                    const isCenter = distance < itemHeight * 0.5;
+
+                    return (
+                      <div
+                        key={age}
+                        style={{ height: itemHeight }}
+                        className="flex items-center justify-center scroll-snap-align-center"
+                      >
+                        <motion.span
+                          animate={{
+                            fontSize: isCenter ? "28px" : `${16 + scale * 12}px`,
+                            color: isCenter ? "#E15859" : "#2A2021",
+                            fontWeight: isCenter ? "900" : "600",
+                          }}
+                          transition={{ duration: 0.15 }}
+                          className="text-center"
+                          style={{ fontFamily: "'Montserrat', sans-serif" }}
+                        >
+                          {age}
+                        </motion.span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Spacer Bottom */}
+                  <div style={{ height: itemHeight * 1.5 }} />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Dropdown Fields */}
           {dropdownFields.map(({ key, options }, index) => (
             <motion.div
               key={key}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 * (index + 2) }}
+              transition={{ duration: 0.3, delay: 0.1 * (index + 3) }}
             >
               <div
                 className={`bg-white overflow-hidden transition-all duration-300 ${

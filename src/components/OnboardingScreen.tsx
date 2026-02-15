@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { ru } from "@/lib/i18n";
 import { IMAGE_PATHS } from "@/lib/images";
 
@@ -18,6 +18,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const handleNext = () => {
     if (currentSlide < totalSlides - 1) {
       setCurrentSlide(currentSlide + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
     }
   };
 
@@ -50,7 +56,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="bg-white rounded-[32px] px-6 py-8 w-full max-w-[280px] relative"
-            style={{ minHeight: "240px" }}
+            style={{ minHeight: "360px" }}
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -69,21 +75,30 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
                   {texts.slides[currentSlide].title}
                 </h2>
 
-                {/* Scrollable Text */}
-                <div
-                  className="overflow-y-auto max-h-[140px] w-full"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                {/* Text */}
+                <p
+                  className="text-[#2A2021] text-[16px] text-center leading-relaxed"
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
-                  <p
-                    className="text-[#2A2021] text-[16px] text-center leading-relaxed"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
-                  >
-                    {texts.slides[currentSlide].text}
-                  </p>
-                </div>
+                  {texts.slides[currentSlide].text}
+                </p>
               </motion.div>
             </AnimatePresence>
           </motion.div>
+
+          {/* Back Button - positioned outside the card */}
+          {currentSlide > 0 && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleBack}
+              className="absolute left-0 w-[56px] h-[56px] rounded-full bg-[#E15859] flex items-center justify-center shadow-lg"
+              style={{ transform: "translateX(-28px)" }}
+            >
+              <ChevronLeft className="w-7 h-7 text-white" />
+            </motion.button>
+          )}
 
           {/* Next Button - positioned outside the card */}
           {currentSlide < totalSlides - 1 && (
