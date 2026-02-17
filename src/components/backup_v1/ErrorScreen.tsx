@@ -15,7 +15,7 @@ export function ErrorScreen({
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-6 px-6"
-      style={{ backgroundColor: "#E9E9E9" }}
+      style={{ backgroundColor: "#FFF7EF" }}
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}

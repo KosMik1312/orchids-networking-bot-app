@@ -10,18 +10,16 @@ interface ComfortSelectionScreenProps {
 }
 
 export function ComfortSelectionScreen({ onNext, onBack, progress }: ComfortSelectionScreenProps) {
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
-
-  const levels = [1, 2, 3, 4, 5];
+  const [comfortLevel, setComfortLevel] = useState<number | null>(null);
 
   const handleContinue = () => {
-    if (selectedLevel !== null) {
-      onNext(selectedLevel);
+    if (comfortLevel !== null) {
+      onNext(comfortLevel);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>
@@ -46,11 +44,11 @@ export function ComfortSelectionScreen({ onNext, onBack, progress }: ComfortSele
       <div className="flex-1 px-6 flex flex-col items-center justify-start pt-4">
         <div className="flex justify-between w-full max-w-[340px] mb-8">
           {levels.map((level) => {
-            const isSelected = selectedLevel !== null && level <= selectedLevel;
+            const isSelected = comfortLevel !== null && level <= comfortLevel;
             return (
               <button
                 key={level}
-                onClick={() => setSelectedLevel(level)}
+                onClick={() => setComfortLevel(level)}
                 className="flex h-[60px] w-[60px] items-center justify-center rounded-full text-[20px] font-bold transition-all duration-300 shadow-sm"
                 style={{
                   backgroundColor: isSelected ? "#E15859" : "white",
@@ -92,10 +90,10 @@ export function ComfortSelectionScreen({ onNext, onBack, progress }: ComfortSele
 
         <button
           onClick={handleContinue}
-          disabled={selectedLevel === null}
+          disabled={comfortLevel === null}
           className="h-[64px] flex-1 rounded-full text-[18px] font-bold transition-all active:scale-[0.98]"
           style={{
-            backgroundColor: selectedLevel === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
+            backgroundColor: comfortLevel === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
             color: "white",
             fontFamily: "'Montserrat', sans-serif",
           }}

@@ -70,7 +70,7 @@ const AVATAR_COLORS = ["#E15859", "#E8A87C", "#D4A5A5", "#C27BA0", "#7986CB"];
 
 export function MyContactsScreen({ onBack }: MyContactsScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       <div className="flex-1 flex flex-col px-6 pt-6 pb-8">
         {/* Title */}
         <h2

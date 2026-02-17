@@ -38,7 +38,7 @@ export function MyBookingsScreen({ city, userId, onBack, onTabChange }: MyBookin
   }, [userId]);
 
   return (
-    <div className="min-h-screen flex flex-col pb-24" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen flex flex-col pb-24" style={{ backgroundColor: "#FFF7EF" }}>
       {/* Top Controls */}
       <div className="px-6 flex justify-between items-center mb-6 mt-4">
         <button 

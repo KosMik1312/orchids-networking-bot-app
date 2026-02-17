@@ -20,29 +20,27 @@ const SpontaneousIcon = () => (
 );
 
 export function EveningScenarioScreen({ onNext, onBack, progress }: EveningScenarioScreenProps) {
-  const [selectedScenario, setSelectedScenario] = useState<EveningScenario | null>(null);
+  const [selected, setSelected] = useState<EveningScenario | null>(null);
 
-  const options = [
-    { 
-      id: "calm" as EveningScenario, 
-      label: "Спокойная и уютная встреча в ресторане", 
-      icon: CalmIcon 
-    },
-    { 
-      id: "spontaneous" as EveningScenario, 
-      label: "Спонтанное приключение", 
-      icon: SpontaneousIcon 
-    },
+  const options: EveningScenario[] = [
+    "Романтический ужин при свечах",
+    "Прогулка по городу",
+    "Просмотр фильма",
+    "Поход в театр или кино",
+    "Караоке вечеринка",
+    "Настольные игры",
+    "Танцы",
+    "Квест в реальности"
   ];
 
   const handleContinue = () => {
-    if (selectedScenario) {
-      onNext(selectedScenario);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

@@ -24,22 +24,20 @@ const FriendsIcon = () => (
 );
 
 export function GoalSelectionScreen({ onNext, onBack, progress }: GoalSelectionScreenProps) {
-  const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(null);
+  const [selected, setSelected] = useState<GoalType | null>(null);
 
-  const options = [
-    { id: "experience" as GoalType, label: "Новый опыт", icon: PlusIcon },
-    { id: "emotions" as GoalType, label: "Яркие эмоции", icon: EmotionsIcon },
-    { id: "friends" as GoalType, label: "Новые друзья", icon: FriendsIcon },
+  const options: GoalType[] = [
+    "Дружба", "Знакомство", "Отношения", "Брак", "Секс", "Общение", "Развлечения", "Путешествия"
   ];
 
   const handleContinue = () => {
-    if (selectedGoal) {
-      onNext(selectedGoal);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

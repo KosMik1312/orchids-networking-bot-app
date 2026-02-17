@@ -132,10 +132,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
   }, []);
 
   return (
-    <div
-      className="min-h-screen flex flex-col overflow-x-hidden"
-      style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}
-    >
+    <div className="min-h-screen flex flex-col overflow-x-hidden relative" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-4">
         <div className="h-[6px] bg-[#D9D9D9] rounded-full overflow-hidden">

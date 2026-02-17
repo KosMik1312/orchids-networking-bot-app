@@ -10,31 +10,16 @@ interface AgeSelectionScreenProps {
 }
 
 export function AgeSelectionScreen({ onNext, onBack, progress }: AgeSelectionScreenProps) {
-  const [selectedAge, setSelectedAge] = useState(25);
-  const ages = Array.from({ length: 83 }, (_, i) => i + 18); // 18 to 100
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [age, setAge] = useState("");
 
-    useEffect(() => {
-      if (scrollRef.current) {
-        const index = ages.indexOf(selectedAge);
-        const itemHeight = 60;
-        scrollRef.current.scrollTop = index * itemHeight;
-      }
-    }, []);
-
-    const handleScroll = () => {
-      if (scrollRef.current) {
-        const scrollTop = scrollRef.current.scrollTop;
-        const itemHeight = 60;
-        const centerIndex = Math.round(scrollTop / itemHeight);
-        if (ages[centerIndex]) {
-          setSelectedAge(ages[centerIndex]);
-        }
-      }
-    };
+  const handleContinue = () => {
+    if (age.trim()) {
+      onNext(parseInt(age, 10));
+    }
+  };
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>
@@ -94,7 +79,7 @@ export function AgeSelectionScreen({ onNext, onBack, progress }: AgeSelectionScr
         </button>
 
         <button
-          onClick={() => onNext(selectedAge)}
+          onClick={handleContinue}
           className="h-[72px] flex-1 rounded-full text-[20px] font-medium transition-all"
           style={{
             backgroundColor: "#E15859",

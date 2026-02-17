@@ -10,18 +10,25 @@ interface SocialFrequencyScreenProps {
 }
 
 export function SocialFrequencyScreen({ onNext, onBack, progress }: SocialFrequencyScreenProps) {
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [frequency, setFrequency] = useState<number | null>(null);
 
-  const levels = [1, 2, 3, 4, 5];
+  const frequencies = [
+    { value: 1, label: "Ни разу" },
+    { value: 2, label: "Раз-два в год" },
+    { value: 3, label: "Раз в месяц" },
+    { value: 4, label: "2-3 раза в месяц" },
+    { value: 5, label: "Раз в неделю" },
+    { value: 6, label: "Несколько раз в неделю" }
+  ];
 
   const handleContinue = () => {
-    if (selectedLevel !== null) {
-      onNext(selectedLevel);
+    if (frequency !== null) {
+      onNext(frequency);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>
@@ -45,19 +52,19 @@ export function SocialFrequencyScreen({ onNext, onBack, progress }: SocialFreque
       {/* Scale Selection */}
       <div className="flex-1 px-6 flex flex-col items-center justify-start pt-4">
         <div className="flex justify-between w-full max-w-[340px] mb-8">
-          {levels.map((level) => {
-            const isSelected = selectedLevel !== null && level <= selectedLevel;
+          {frequencies.map((freq) => {
+            const isSelected = frequency !== null && freq.value <= frequency;
             return (
               <button
-                key={level}
-                onClick={() => setSelectedLevel(level)}
+                key={freq.value}
+                onClick={() => setFrequency(freq.value)}
                 className="flex h-[60px] w-[60px] items-center justify-center rounded-full text-[20px] font-bold transition-all duration-300 shadow-sm"
                 style={{
                   backgroundColor: isSelected ? "#E15859" : "white",
                   color: isSelected ? "white" : "#E15859",
                 }}
               >
-                {level}
+                {freq.value}
               </button>
             );
           })}
@@ -92,10 +99,10 @@ export function SocialFrequencyScreen({ onNext, onBack, progress }: SocialFreque
 
         <button
           onClick={handleContinue}
-          disabled={selectedLevel === null}
+          disabled={frequency === null}
           className="h-[64px] flex-1 rounded-full text-[18px] font-bold transition-all active:scale-[0.98]"
           style={{
-            backgroundColor: selectedLevel === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
+            backgroundColor: frequency === null ? "rgba(225, 88, 89, 0.3)" : "#E15859",
             color: "white",
             fontFamily: "'Montserrat', sans-serif",
           }}

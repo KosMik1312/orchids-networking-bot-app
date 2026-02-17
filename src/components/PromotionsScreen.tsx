@@ -79,7 +79,7 @@ function PromotionCard({ promo }: { promo: Promotion }) {
 
 export function PromotionsScreen({ onBack }: PromotionsScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
         {/* Title */}
         <h2
           className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none px-6 mt-12 mb-6"

@@ -8,7 +8,7 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: '#E9E9E9', touchAction: 'pan-y' }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF7EF', touchAction: 'pan-y' }}>
       <div className="flex flex-1 flex-col items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

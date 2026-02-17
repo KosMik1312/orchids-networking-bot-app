@@ -8,10 +8,7 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ message = "Загрузка..." }: LoadingScreenProps) {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center"
-      style={{ backgroundColor: "#E9E9E9" }}
-    >
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FFF7EF" }}>
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

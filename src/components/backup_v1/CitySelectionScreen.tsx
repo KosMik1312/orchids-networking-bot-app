@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Settings, ChevronLeft } from "lucide-react";
 
 interface CitySelectionScreenProps {
@@ -12,22 +12,33 @@ interface CitySelectionScreenProps {
 export type City = "spb" | "moscow";
 
 export function CitySelectionScreen({ onNext, onBack, progress }: CitySelectionScreenProps) {
-  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [city, setCity] = useState("");
+  const [cities] = useState([
+    "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", 
+    "Казань", "Нижний Новгород", "Челябинск", "Самара"
+  ]);
+  const [filteredCities, setFilteredCities] = useState(cities);
 
-  const cities = [
-    { id: "spb" as City, name: "г. Санкт-Петербург" },
-    { id: "moscow" as City, name: "г. Москва" },
-  ];
+  const handleCitySelect = (selectedCity: string) => {
+    setCity(selectedCity);
+  };
 
   const handleContinue = () => {
-    if (selectedCity) {
-      const cityName = cities.find(c => c.id === selectedCity)?.name || "";
-      onNext(cityName);
+    if (city.trim()) {
+      onNext(city);
     }
   };
 
+  const filtered = cities.filter(c => 
+    c.toLowerCase().includes(city.toLowerCase())
+  );
+
+  useEffect(() => {
+    setFilteredCities(filtered);
+  }, [city]);
+
   return (
-    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Top Header */}
       <div className="flex items-center justify-between px-6 pt-12 shrink-0">
         <button 

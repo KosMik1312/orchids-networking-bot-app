@@ -110,7 +110,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-8 pt-6">
         <div className="h-[6px] bg-[#D9D9D9] rounded-full overflow-hidden">

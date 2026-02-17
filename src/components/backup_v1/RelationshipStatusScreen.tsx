@@ -41,34 +41,23 @@ const XIcon = ({ isSelected }: { isSelected: boolean }) => (
 );
 
 export function RelationshipStatusScreen({ onNext, onBack, progress }: RelationshipStatusScreenProps) {
-  const [selectedStatus, setSelectedStatus] = useState<RelationshipStatus | null>(null);
+  const [selected, setSelected] = useState<RelationshipStatus | null>(null);
 
-  const options = [
-    {
-      id: "in_relationship" as RelationshipStatus,
-      label: "В отношениях / в браке",
-      icon: RingIcon,
-    },
-    {
-      id: "single" as RelationshipStatus,
-      label: "Без партнера",
-      icon: HeartCrackIcon,
-    },
-    {
-      id: "prefer_not_to_say" as RelationshipStatus,
-      label: "Предпочитаю не указывать",
-      icon: XIcon,
-    },
+  const options: RelationshipStatus[] = [
+    "Не женат/Не замужем",
+    "Женат/Замужем",
+    "Все сложно",
+    "В активном поиске"
   ];
 
   const handleContinue = () => {
-    if (selectedStatus) {
-      onNext(selectedStatus);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

@@ -52,34 +52,16 @@ const XIcon = () => (
 );
 
 export function ChildrenSelectionScreen({ onNext, onBack, progress }: ChildrenSelectionScreenProps) {
-  const [selectedStatus, setSelectedStatus] = useState<ChildrenStatus | null>(null);
-
-  const options = [
-    {
-      id: "yes" as ChildrenStatus,
-      label: "Да",
-      icon: BabyIcon,
-    },
-    {
-      id: "no" as ChildrenStatus,
-      label: "Нет",
-      icon: SmileIcon,
-    },
-    {
-      id: "prefer_not_to_say" as ChildrenStatus,
-      label: "Предпочитаю не указывать",
-      icon: XIcon,
-    },
-  ];
+  const [selected, setSelected] = useState<ChildrenStatus | null>(null);
 
   const handleContinue = () => {
-    if (selectedStatus) {
-      onNext(selectedStatus);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

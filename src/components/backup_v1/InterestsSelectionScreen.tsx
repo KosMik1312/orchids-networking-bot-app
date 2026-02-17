@@ -25,25 +25,30 @@ const BoardGamesIcon = () => <Dice5 size={28} strokeWidth={2.5} />;
 const ExcitementIcon = () => <Heart size={28} strokeWidth={2.5} />;
 
 export function InterestsSelectionScreen({ onNext, onBack, progress }: InterestsSelectionScreenProps) {
-  const [selectedInterest, setSelectedInterest] = useState<InterestType | null>(null);
+  const [selectedInterests, setSelectedInterests] = useState<InterestType[]>([]);
 
-  const options = [
-    { id: "sport" as InterestType, label: "Спорт", icon: SportIcon },
-    { id: "culture" as InterestType, label: "Культурный отдых", icon: CultureIcon },
-    { id: "extreme" as InterestType, label: "Экстрим", icon: ExtremeIcon },
-    { id: "gatherings" as InterestType, label: "Душевные посиделки", icon: GatheringsIcon },
-    { id: "board_games" as InterestType, label: "Настольные игры", icon: BoardGamesIcon },
-    { id: "excitement" as InterestType, label: "Азарт", icon: ExcitementIcon },
+  const interests: InterestType[] = [
+    "Спорт", "Музыка", "Кино", "Театр", "Книги", "Путешествия", 
+    "Кулинария", "Искусство", "Наука", "Природа", "Технологии", 
+    "Фотография", "Мода", "Игры", "Образование"
   ];
 
+  const toggleInterest = (interest: InterestType) => {
+    if (selectedInterests.includes(interest)) {
+      setSelectedInterests(selectedInterests.filter(i => i !== interest));
+    } else {
+      setSelectedInterests([...selectedInterests, interest]);
+    }
+  };
+
   const handleContinue = () => {
-    if (selectedInterest) {
-      onNext(selectedInterest);
+    if (selectedInterests.length > 0) {
+      onNext(selectedInterests);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-12 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

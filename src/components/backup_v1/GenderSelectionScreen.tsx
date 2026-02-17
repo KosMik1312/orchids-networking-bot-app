@@ -10,16 +10,16 @@ interface GenderSelectionScreenProps {
 }
 
 export function GenderSelectionScreen({ onNext, onBack, progress }: GenderSelectionScreenProps) {
-  const [selectedGender, setSelectedGender] = useState<"male" | "female" | null>(null);
+  const [selected, setSelected] = useState<"male" | "female" | null>(null);
 
   const handleContinue = () => {
-    if (selectedGender) {
-      onNext(selectedGender);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex min-h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-12 pb-8">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

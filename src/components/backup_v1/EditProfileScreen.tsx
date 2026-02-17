@@ -70,7 +70,7 @@ export function EditProfileScreen({ userData, onSave, onBack, onSelectField }: E
   );
 
   return (
-    <div className="min-h-screen flex flex-col pb-12" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen flex flex-col pb-12" style={{ backgroundColor: "#FFF7EF" }}>
       {/* Top Controls */}
       <div className="px-6 flex justify-between items-center mb-6 mt-4">
         <button 

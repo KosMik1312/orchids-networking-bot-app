@@ -28,7 +28,7 @@ export function FavoritesScreen({ favoriteIds, onBack, onBook, onToggleFavorite 
   const favorites = ALL_EVENTS.filter((e) => favoriteIds.has(e.id));
 
   return (
-    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
         <div className="flex-1 flex flex-col px-6 pb-32 pt-8">
         {/* Title */}
         <h2

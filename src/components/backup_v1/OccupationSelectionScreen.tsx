@@ -107,31 +107,23 @@ const OtherIcon = () => (
 );
 
 export function OccupationSelectionScreen({ onNext, onBack, progress }: OccupationSelectionScreenProps) {
-  const [selectedOccupation, setSelectedOccupation] = useState<OccupationType | null>(null);
+  const [selected, setSelected] = useState<OccupationType | null>(null);
+  const [customValue, setCustomValue] = useState("");
 
-  const options = [
-    { id: "unemployed" as OccupationType, label: "Не работаю", icon: XIcon },
-    { id: "it" as OccupationType, label: "IT и технологии", icon: ITIcon },
-    { id: "retail" as OccupationType, label: "Торговля и ритейл", icon: RetailIcon },
-    { id: "education" as OccupationType, label: "Образование и наука", icon: EducationIcon },
-    { id: "government" as OccupationType, label: "Госслужба и политика", icon: GovernmentIcon },
-    { id: "transport" as OccupationType, label: "Транспорт и логистика", icon: TransportIcon },
-    { id: "finance" as OccupationType, label: "Финансы и юриспруденция", icon: FinanceIcon },
-    { id: "services" as OccupationType, label: "Сфера услуг и уход за людьми", icon: ServicesIcon },
-    { id: "production" as OccupationType, label: "Производство и строительство", icon: ProductionIcon },
-    { id: "hospitality" as OccupationType, label: "Гостеприимство, рестораны", icon: HospitalityIcon },
-    { id: "marketing" as OccupationType, label: "Маркетинг, медиа", icon: MarketingIcon },
-    { id: "other" as OccupationType, label: "Другое", icon: OtherIcon },
+  const occupations: OccupationType[] = [
+    "IT / Технологии", "Финансы / Банки", "Маркетинг / Реклама",
+    "Медицина", "Образование", "Юриспруденция", "Искусство / Культура",
+    "Предпринимательство", "Госслужба", "Другое"
   ];
 
   const handleContinue = () => {
-    if (selectedOccupation) {
-      onNext(selectedOccupation);
+    if (selected) {
+      onNext(selected);
     }
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#E9E9E9", touchAction: "pan-y" }}>
+    <div className="flex h-screen flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
       {/* Progress Bar */}
       <div className="px-6 pt-16 pb-8 shrink-0">
         <div className="h-[6px] w-full rounded-full" style={{ backgroundColor: "#C8CACB" }}>

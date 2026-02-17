@@ -42,7 +42,7 @@ export function ProfileScreen({
   ];
 
     return (
-      <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+      <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
         <div className="flex-1 px-6 pt-12 pb-32">
         {/* Location & Settings */}
         <div className="flex justify-between items-center mb-6">

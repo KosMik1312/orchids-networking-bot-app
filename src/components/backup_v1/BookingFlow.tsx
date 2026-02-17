@@ -126,7 +126,7 @@ export function BookingFlow({ city, userId, onBack, onComplete, onTabChange }: B
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       <AnimatePresence mode="wait">
         {step === "booking" && (
           <motion.div

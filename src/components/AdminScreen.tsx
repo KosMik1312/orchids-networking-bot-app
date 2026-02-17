@@ -132,7 +132,7 @@ export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
 
   if (authorized === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#E9E9E9" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FFF7EF" }}>
         <div className="text-[#404243] text-lg">Проверка доступа...</div>
       </div>
     );
@@ -140,7 +140,7 @@ export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
 
   if (authorized === false) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#E9E9E9" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#FFF7EF" }}>
         <div className="text-[#E15859] text-xl font-bold">Нет доступа</div>
         <div className="text-[#404243] text-center">Откройте админ-панель через команду /admin в боте.</div>
         {onBack && (
@@ -234,7 +234,7 @@ export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
   );
 
   return (
-    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       <div className="flex-1 flex flex-col px-5 pt-10 pb-8">
 
         {error && (

@@ -17,7 +17,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
   ];
 
   return (
-    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#E9E9E9" }}>
+    <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
         <div className="flex-1 px-6 pb-8 flex flex-col">
           {/* Title */}
           <h1
