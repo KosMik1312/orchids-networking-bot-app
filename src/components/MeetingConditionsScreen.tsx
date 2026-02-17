@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import { ru } from "@/lib/i18n";
+import { getMetroStations, getAvailableCities } from "@/lib/metro-stations";
+
+type MetroCity = "moscow" | "spb" | null;
 
 interface MeetingConditionsData {
   metro: string[];
@@ -31,6 +34,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   });
 
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [selectedMetroCity, setSelectedMetroCity] = useState<MetroCity>(null);
+  const [metroStations, setMetroStations] = useState<string[]>([]);
 
   // Пересинхронизировать состояние когда initialData меняется (при возврате на этот экран)
   useEffect(() => {
@@ -58,6 +63,20 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
       });
     }
   }, [initialData]);
+
+  // Функция для выбора города и загрузки станций
+  const handleSelectMetroCity = useCallback((city: MetroCity) => {
+    setSelectedMetroCity(city);
+    if (city) {
+      const stations = getMetroStations(city);
+      setMetroStations(stations);
+    }
+  }, []);
+
+  // Функция для возврата к выбору города
+  const handleBackToMetroCitySelect = useCallback(() => {
+    setSelectedMetroCity(null);
+  }, []);
 
   const toggleSection = useCallback((section: string) => {
     setOpenSection(currentOpen => currentOpen === section ? null : section);
@@ -145,22 +164,56 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
 
       {/* Form Sections */}
       <div className="flex-1 px-6 overflow-y-auto">
-        {/* Metro */}
+        {/* Metro - Two-Level Selection */}
         <AccordionItem id="metro" label={texts.metro.label} isOpen={openSection === "metro"}>
-          {texts.metro.options.map((option) => (
-            <div 
-              key={option} 
-              className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-              onClick={() => handleMultiSelect("metro", option)}
-            >
-              <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                formData.metro.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
-              }`}>
-                {formData.metro.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
+          {!selectedMetroCity ? (
+            // Level 1: City Selection
+            <div className="space-y-3">
+              <p className="text-[14px] text-[#8E8E93] mb-4">Выберите город:</p>
+              {getAvailableCities().map((city: { id: "moscow" | "spb"; name: string }) => (
+                <button
+                  key={city.id}
+                  onClick={() => handleSelectMetroCity(city.id)}
+                  className={`w-full py-3 px-4 rounded-[16px] font-semibold text-[16px] transition-all ${
+                    selectedMetroCity === city.id
+                      ? 'bg-[#E15859] text-white'
+                      : 'bg-[#F5F5F5] text-[#2A2021] border-2 border-[#E15859]'
+                  }`}
+                >
+                  {city.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            // Level 2: Station Selection
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-[14px] text-[#8E8E93]">Станции по алфавиту:</p>
+                <button
+                  onClick={handleBackToMetroCitySelect}
+                  className="text-[#E15859] text-[12px] font-semibold underline"
+                >
+                  Изменить город
+                </button>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {metroStations.map((station) => (
+                  <div 
+                    key={station} 
+                    className="flex items-center justify-between py-2 px-3 border-b border-gray-50 last:border-0 hover:bg-[#FFF7EF] rounded transition-colors cursor-pointer"
+                    onClick={() => handleMultiSelect("metro", station)}
+                  >
+                    <span className="text-[15px] text-[#2A2021]">{station}</span>
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                      formData.metro.includes(station) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                    }`}>
+                      {formData.metro.includes(station) && <div className="w-2 h-2 bg-white rounded-full" />}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </AccordionItem>
 
         {/* Days */}
