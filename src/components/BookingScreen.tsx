@@ -19,6 +19,7 @@ interface Slot {
 interface BookingScreenProps {
   city?: string;
   authToken?: string | null;
+  selectedEventId?: number | null;
   onBack?: () => void;
   onComplete?: () => void;
   onPromotions?: () => void;
@@ -28,7 +29,7 @@ interface BookingScreenProps {
   onContacts?: () => void;
 }
 
-export function BookingScreen({ city = "Москва", authToken, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
+export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", authToken, selectedEventId, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
   const t = ru.booking;
   const [step, setStep] = useState<BookingStep>("slots");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -38,7 +39,14 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Mapping of event IDs to event information
+  const eventMap: Record<number, { title: string; date: string; time: string }> = {
+    1: { title: "Боулинг", date: "7 января", time: "17:00" },
+    2: { title: "Боулинг", date: "7 января", time: "17:00" },
+    3: { title: "Боулинг", date: "7 января", time: "17:00" },
+  };
 
+  const selectedEvent = selectedEventId ? eventMap[selectedEventId] : null;
   useEffect(() => {
     let isMounted = true;
     async function fetchSlots() {
@@ -131,6 +139,15 @@ export function BookingScreen({ city = "Москва", authToken, onBack, onComp
             <h2 className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6" style={{ fontFamily: "system-ui, sans-serif" }}>
               {t.title}
             </h2>
+
+            {/* Selected Event Info */}
+            {selectedEvent && (
+              <div className="bg-white rounded-[16px] px-5 py-4 mb-6 border-l-4 border-[#E15859] shadow-sm">
+                <p className="text-[#8E8E93] text-[13px] font-medium mb-1">ВЫБРАННОЕ МЕРОПРИЯТИЕ:</p>
+                <p className="text-[#2A2021] text-[16px] font-bold">{selectedEvent.title}</p>
+                <p className="text-[#8E8E93] text-[13px] mt-2">{selectedEvent.date}, {selectedEvent.time}</p>
+              </div>
+            )}
 
             {/* Slots List */}
             <div className="space-y-3 flex-1">

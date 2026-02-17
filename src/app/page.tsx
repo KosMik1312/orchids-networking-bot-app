@@ -15,10 +15,11 @@ import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { ProfileScreen } from "@/components/ProfileScreen";
 import { SettingsScreen } from "@/components/SettingsScreen";
 import { MyContactsScreen } from "@/components/MyContactsScreen";
+import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { AdminScreen } from "@/components/AdminScreen";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "admin";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -46,6 +47,7 @@ export default function Home() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   const toggleFavorite = (id: number) => {
     setFavoriteIds((prev) => {
@@ -412,6 +414,7 @@ export default function Home() {
                 <BookingScreen
                   city="Москва"
                   authToken={userToken || null}
+                  selectedEventId={selectedEventId}
                   onBack={() => setCurrentScreen("meeting_conditions")}
                   onComplete={() => { }}
                   onPromotions={() => setCurrentScreen("promotions")}
@@ -438,7 +441,10 @@ export default function Home() {
                   onFavorites={() => setCurrentScreen("favorites")}
                   onHome={() => setCurrentScreen("booking")}
                   onProfile={() => setCurrentScreen("profile")}
-                  onBook={() => setCurrentScreen("booking")}
+                  onBook={(eventId) => {
+                    setSelectedEventId(eventId);
+                    setCurrentScreen("booking");
+                  }}
                 />
               </motion.div>
             )}
@@ -449,7 +455,10 @@ export default function Home() {
                   favoriteIds={favoriteIds}
                   onToggleFavorite={toggleFavorite}
                   onBack={() => setCurrentScreen("afisha")}
-                  onBook={() => setCurrentScreen("booking")}
+                  onBook={(eventId) => {
+                    setSelectedEventId(eventId);
+                    setCurrentScreen("booking");
+                  }}
                 />
               </motion.div>
             )}
@@ -463,7 +472,7 @@ export default function Home() {
                   onHome={() => setCurrentScreen("booking")}
                   onAfisha={() => setCurrentScreen("afisha")}
                   onFavorites={() => setCurrentScreen("favorites")}
-                  onBookings={() => setCurrentScreen("booking")}
+                  onBookings={() => setCurrentScreen("my_bookings")}
                   onEditProfile={() => setCurrentScreen("profile_form")}
                   onSettings={() => setCurrentScreen("settings")}
                 />
@@ -481,7 +490,15 @@ export default function Home() {
                 <MyContactsScreen onBack={() => setCurrentScreen("booking")} />
               </motion.div>
             )}
-
+            {currentScreen === "my_bookings" && (
+              <motion.div key="my_bookings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <MyBookingsScreen
+                  city="Москва"
+                  authToken={userToken}
+                  onBack={() => setCurrentScreen("profile")}
+                />
+              </motion.div>
+            )}
             {currentScreen === "admin" && adminToken && (
               <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <AdminScreen token={adminToken} />

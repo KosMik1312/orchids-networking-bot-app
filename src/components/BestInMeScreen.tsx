@@ -201,23 +201,20 @@ export function BestInMeScreen({ onContinue, onBack, initialData }: BestInMeScre
             selectedDisplay={getSelectedDisplay("strengths")}
           />
 
-          {/* Мои слабости - Textarea */}
+          {/* Мои слабости - Text input */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.15 }}
           >
-            <textarea
+            <input
+              type="text"
               value={formData.weaknesses}
               onChange={(e) => handleTextChange("weaknesses", e.target.value)}
-              placeholder={texts.fields.weaknesses.hint}
-              className="w-full bg-white rounded-[24px] px-6 py-4 text-[16px] text-[#2A2021] placeholder-[#9CA3AF] outline-none resize-none"
-              rows={3}
+              placeholder={texts.fields.weaknesses.placeholder}
+              className="w-full bg-white rounded-full px-6 py-4 text-[16px] text-[#2A2021] placeholder-[#9CA3AF] outline-none"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             />
-            <span className="text-[12px] text-[#9CA3AF] mt-1 block px-2" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-              ({texts.fields.weaknesses.placeholder})
-            </span>
           </motion.div>
 
           {/* Жизненные ценности - Multi-select dropdown */}

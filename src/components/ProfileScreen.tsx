@@ -78,7 +78,7 @@ export function ProfileScreen({
           {/* Name Card */}
           <div className="bg-white rounded-[24px] pt-16 pb-6 -mt-[60px] shadow-sm">
             <h2
-              className="text-[#2A2021] text-[28px] font-black uppercase text-center tracking-tight"
+              className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight"
               style={{ fontFamily: "system-ui, sans-serif" }}
             >
               {userName}

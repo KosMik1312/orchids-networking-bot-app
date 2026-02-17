@@ -1,6 +1,6 @@
-"use client";
+// "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import { ru } from "@/lib/i18n";
@@ -35,22 +35,35 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   // Пересинхронизировать состояние когда initialData меняется (при возврате на этот экран)
   useEffect(() => {
     if (initialData) {
-      setFormData((prev) => ({
-        ...prev,
-        metro: initialData.metro && initialData.metro.length > 0 ? initialData.metro : prev.metro,
-        days: initialData.days && initialData.days.length > 0 ? initialData.days : prev.days,
-        time: initialData.time ? initialData.time : prev.time,
-        goal: initialData.goal ? initialData.goal : prev.goal,
-        format: initialData.format ? initialData.format : prev.format,
-      }));
+      setFormData((prev) => {
+        const updated = { ...prev };
+        
+        if (initialData.metro && initialData.metro.length > 0) {
+          updated.metro = initialData.metro;
+        }
+        if (initialData.days && initialData.days.length > 0) {
+          updated.days = initialData.days;
+        }
+        if (initialData.time) {
+          updated.time = initialData.time;
+        }
+        if (initialData.goal) {
+          updated.goal = initialData.goal;
+        }
+        if (initialData.format) {
+          updated.format = initialData.format;
+        }
+        
+        return updated;
+      });
     }
-  }, [initialData?.metro, initialData?.days, initialData?.time, initialData?.goal, initialData?.format]);
+  }, [initialData]);
 
-  const toggleSection = (section: string) => {
-    setOpenSection(openSection === section ? null : section);
-  };
+  const toggleSection = useCallback((section: string) => {
+    setOpenSection(currentOpen => currentOpen === section ? null : section);
+  }, []);
 
-  const handleMultiSelect = (field: "metro" | "days", value: string) => {
+  const handleMultiSelect = useCallback((field: "metro" | "days", value: string) => {
     setFormData((prev) => {
       const current = prev[field];
       if (current.includes(value)) {
@@ -59,11 +72,15 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         return { ...prev, [field]: [...current, value] };
       }
     });
-  };
+  }, []);
 
-  const handleSingleSelect = (field: "goal" | "format", value: string) => {
+  const handleSingleSelect = useCallback((field: "goal" | "format", value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
+
+  const handleTimeChange = useCallback((field: "from" | "to", value: string) => {
+    setFormData((prev) => ({ ...prev, time: { ...prev.time, [field]: value } }));
+  }, []);
 
   const isFormComplete = 
     formData.metro.length > 0 && 
@@ -92,20 +109,16 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
           <ChevronDown className="w-6 h-6 text-white" />
         </div>
       </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="px-6 pb-6 pt-2 space-y-3 max-h-[250px] overflow-y-auto">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <motion.div
+        animate={isOpen ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+        initial={false}
+        transition={{ duration: 0.2 }}
+        style={{ overflow: "hidden" }}
+      >
+        <div className="px-6 pb-6 pt-2 space-y-3 max-h-[250px] overflow-y-auto">
+          {children}
+        </div>
+      </motion.div>
     </div>
   );
 
@@ -176,7 +189,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
               <input 
                 type="text" 
                 value={formData.time.from}
-                onChange={(e) => setFormData(p => ({ ...p, time: { ...p.time, from: e.target.value } }))}
+                onChange={(e) => handleTimeChange("from", e.target.value)}
                 className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
               />
             </div>
@@ -185,7 +198,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
               <input 
                 type="text" 
                 value={formData.time.to}
-                onChange={(e) => setFormData(p => ({ ...p, time: { ...p.time, to: e.target.value } }))}
+                onChange={(e) => handleTimeChange("to", e.target.value)}
                 className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
               />
             </div>
@@ -219,9 +232,9 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
               onClick={() => handleSingleSelect("format", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                formData.format === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
-              }`}>
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                  formData.format === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                }`}>
                 {formData.format === option && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
             </div>
