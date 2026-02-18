@@ -91,8 +91,6 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
       }));
     }
   }, [initialData]);
-    }
-  }, [initialData]);
 
   const isFormComplete = formData.name.trim() !== "" && 
                          formData.gender !== "" && 
