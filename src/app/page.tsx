@@ -266,30 +266,29 @@ export default function Home() {
       interests: data.interests || undefined,
       telegram: data.telegramNickname,
       instagram: data.instagramNickname,
-             {currentScreen === "profile_form" && (
-               <motion.div key="profile_form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                 <ProfileFormScreen
-                   onContinue={handleProfileFormComplete}
-                   onBack={() => setCurrentScreen("profile")}
-                   userId={userId}
-                   userToken={userToken}
-                   initialData={{
-                     name: fullProfile.name || "",
-                     gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
-                     age: fullProfile.age?.toString() || "",
-                     zodiac: fullProfile.zodiac || "",
-                     career: fullProfile.occupation || "",
-                     familyStatus: fullProfile.relationship_status || "",
-                     hasChildren: fullProfile.children || ""
-                   }}
-                 />
-               </motion.div>
-             )}
-    if (userToken) {
-      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
-      const profileData = await getProfile(userToken, initData);
-      setFullProfile(profileData);
-    }
+      photo: data.photo || undefined,
+    });
+
+    setCurrentScreen("meeting_conditions");
+  };
+
+  const handleBestInMeBack = async (data: any) => {
+    // Сохранить текущие данные (даже если форма неполная)
+    await updateProfile({
+      strengths: data.strengths || undefined,
+      weaknesses: data.weaknesses || undefined,
+      values: data.values || undefined,
+      love_language: data.loveLanguage || undefined,
+      goals: data.goals || undefined,
+      dreams: data.dreams || undefined,
+      interests: data.interests || undefined,
+      telegram: data.telegramNickname,
+      instagram: data.instagramNickname,
+      photo: data.photo || undefined,
+    }).catch((err) => {
+      console.error("Error saving BestInMe on back:", err);
+    });
+    // Перезагрузить данные из БД
     setCurrentScreen("profile_form");
   };
 
