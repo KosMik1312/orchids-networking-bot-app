@@ -16,19 +16,25 @@ type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "gr
 interface AdminScreenProps {
   token: string;
   onBack?: () => void;
+  isAuthorized?: boolean; // для Storybook тестирования
+  mockStats?: AdminStats;
+  mockUsers?: AdminUser[];
+  mockSlots?: AdminSlot[];
+  mockGroups?: AdminGroup[];
+  initialTab?: AdminTab;
 }
 
-export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
-  const [tab, setTab] = useState<AdminTab>("dashboard");
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [usersTotal, setUsersTotal] = useState(0);
+export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorizedProp, mockStats, mockUsers, mockSlots, mockGroups, initialTab = "dashboard" }: AdminScreenProps) {
+  const [tab, setTab] = useState<AdminTab>(initialTab);
+  const [authorized, setAuthorized] = useState<boolean | null>(isAuthorizedProp ?? null);
+  const [stats, setStats] = useState<AdminStats | null>(mockStats || null);
+  const [users, setUsers] = useState<AdminUser[]>(mockUsers || []);
+  const [usersTotal, setUsersTotal] = useState(mockUsers?.length || 0);
   const [usersPage, setUsersPage] = useState(0);
-  const [slots, setSlots] = useState<AdminSlot[]>([]);
+  const [slots, setSlots] = useState<AdminSlot[]>(mockSlots || []);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [participants, setParticipants] = useState<SlotParticipant[]>([]);
-  const [groups, setGroups] = useState<AdminGroup[]>([]);
+  const [groups, setGroups] = useState<AdminGroup[]>(mockGroups || []);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,10 +58,13 @@ export function AdminScreen({ token: initData, onBack }: AdminScreenProps) {
   const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
 
   useEffect(() => {
+    // Если isAuthorized уже установлен (для Storybook), не проверяем
+    if (isAuthorizedProp !== undefined) return;
+    
     checkAdmin(initData)
       .then(() => setAuthorized(true))
       .catch(() => setAuthorized(false));
-  }, [initData]);
+  }, [initData, isAuthorizedProp]);
 
   const loadStats = useCallback(async () => {
     try {

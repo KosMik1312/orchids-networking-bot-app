@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, ChevronLeft } from "lucide-react";
 import { ru } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
+import { getProfile } from "@/lib/api";
 interface ProfileFormData {
   name: string;
   gender: string;
@@ -20,15 +20,16 @@ interface ProfileFormScreenProps {
   onContinue: (data: ProfileFormData) => void;
   onBack: (data: ProfileFormData) => void;
   initialData?: Partial<ProfileFormData>;
+  userId?: number;
+  userToken?: string | null;
 }
 
-type FieldKey = keyof Omit<ProfileFormData, "name">;
-
-export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFormScreenProps) {
+export function ProfileFormScreen({ onContinue, onBack, initialData, userId, userToken }: ProfileFormScreenProps) {
   const texts = ru.profileForm;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState<ProfileFormData>({
     name: initialData?.name || "",
@@ -41,6 +42,39 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
   });
 
   const [openDropdown, setOpenDropdown] = useState<FieldKey | null>(null);
+
+  // Загрузить профиль из БД при открытии экрана
+  useEffect(() => {
+    const loadProfileFromDB = async () => {
+      if (!userId || !userToken) return;
+      
+      try {
+        setIsLoading(true);
+        console.log(`📥 Loading profile from DB for user ${userId}`);
+        const response = await getProfile(userId, userToken);
+        
+        if (response.profile) {
+          console.log('✅ Profile loaded from DB:', response.profile);
+          setFormData((prev) => ({
+            ...prev,
+            name: response.profile.name || prev.name,
+            gender: response.profile.gender === "male" ? "Мужской" : response.profile.gender === "female" ? "Женский" : prev.gender,
+            age: response.profile.age || prev.age,
+            zodiac: response.profile.zodiac || prev.zodiac,
+            career: response.profile.occupation || prev.career,
+            familyStatus: response.profile.relationship_status || prev.familyStatus,
+            hasChildren: response.profile.children || prev.hasChildren,
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Failed to load profile from DB:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProfileFromDB();
+  }, [userId, userToken]);
 
   // Пересинхронизировать состояние когда initialData меняется
   useEffect(() => {
@@ -55,6 +89,8 @@ export function ProfileFormScreen({ onContinue, onBack, initialData }: ProfileFo
         familyStatus: initialData.familyStatus || prev.familyStatus,
         hasChildren: initialData.hasChildren || prev.hasChildren,
       }));
+    }
+  }, [initialData]);
     }
   }, [initialData]);
 

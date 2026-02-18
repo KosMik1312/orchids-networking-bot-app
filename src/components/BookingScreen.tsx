@@ -234,17 +234,17 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
 
             {/* Payment Card */}
             <div className="bg-white rounded-t-[32px] -mt-4 px-6 py-8 flex-1 relative z-10">
-              {/* Date */}
-              <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
-                <p className="text-[#E15859] text-[22px] font-bold mt-1">07.11.25</p>
-              </div>
+               {/* Date & Time */}
+               <div className="border-b border-gray-100 pb-4 mb-4">
+                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
+                 <p className="text-[#E15859] text-[22px] font-bold mt-1">{selectedSlot?.date || "07.11.25"}, {selectedSlot?.time || "18:00"}</p>
+               </div>
 
-              {/* Location */}
-              <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[22px] font-bold mt-1">{selectedSlot?.address || "Г. Москва, ул. Скляренко д. 2"}</p>
-              </div>
+               {/* Location */}
+               <div className="border-b border-gray-100 pb-4 mb-4">
+                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
+                 <p className="text-[#E15859] text-[22px] font-bold mt-1">{city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
+               </div>
 
               {/* Promo Code */}
               <div className="border-b border-gray-100 pb-4 mb-4">

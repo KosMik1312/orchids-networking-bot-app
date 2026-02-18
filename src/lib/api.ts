@@ -145,7 +145,7 @@ export async function saveProfile(userId: number, profile: Partial<UserProfile>,
 }
 
 export async function getProfile(userId?: number, authToken?: string): Promise<{ profile: UserProfile }> {
-  const url = `${API_BASE}/api/profile/get`;
+  const url = `${API_BASE}/api/profile`;
   console.log('🔗 Запрос к:', url);
   console.log('📤 userId:', userId);
   console.log('📤 authToken present:', !!authToken);
@@ -160,8 +160,12 @@ export async function getProfile(userId?: number, authToken?: string): Promise<{
     console.log('📤 Auth header set');
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
+  // Добавляем userId в query параметры если он есть
+  const queryParams = userId ? `?userId=${userId}` : '';
+  const fullUrl = url + queryParams;
+
+  const response = await fetch(fullUrl, {
+    method: 'GET',
     cache: 'no-store',
     headers,
   });
