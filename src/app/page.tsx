@@ -462,8 +462,8 @@ export default function Home() {
               <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ProfileScreen
                   city="Москва"
-                  userName={userName || "Павел"}
-                  userPhoto={userPhoto}
+                  userId={userId}
+                  authToken={userToken}
                   onHome={() => setCurrentScreen("booking")}
                   onAfisha={() => setCurrentScreen("afisha")}
                   onFavorites={() => setCurrentScreen("favorites")}
@@ -482,7 +482,7 @@ export default function Home() {
 
             {currentScreen === "contacts" && (
               <motion.div key="contacts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <MyContactsScreen onBack={() => setCurrentScreen("booking")} />
+                <MyContactsScreen authToken={userToken} onBack={() => setCurrentScreen("booking")} />
               </motion.div>
             )}
             {currentScreen === "my_bookings" && (

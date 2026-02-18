@@ -1,17 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Heart } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-
-interface Event {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  seatsAvailable: number;
-  seatsTotal: number;
-}
+import { getSlots, type Slot } from "@/lib/api";
 
 interface AfishaScreenProps {
   city?: string;
@@ -23,13 +15,41 @@ interface AfishaScreenProps {
   onToggleFavorite?: (eventId: number) => void;
 }
 
-const EVENTS: Event[] = [
-  { id: 1, title: "Боулинг", date: "7 января", time: "17:00", seatsAvailable: 8, seatsTotal: 10 },
-  { id: 2, title: "Боулинг", date: "7 января", time: "17:00", seatsAvailable: 8, seatsTotal: 10 },
-  { id: 3, title: "Боулинг", date: "7 января", time: "17:00", seatsAvailable: 8, seatsTotal: 10 },
-];
-
 export function AfishaScreen({ city = "Москва", onFavorites, onHome, onProfile, onBook, favoriteIds = new Set(), onToggleFavorite }: AfishaScreenProps) {
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchSlots() {
+      try {
+        setIsLoading(true);
+        const data = await getSlots(city);
+        if (isMounted) {
+          setSlots(data.slots || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError("Не удалось загрузить мероприятия");
+          console.error(err);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    fetchSlots();
+    return () => { isMounted = false; };
+  }, [city]);
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    } catch {
+      return dateStr;
+    }
+  };
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       <div className="flex-1 flex flex-col px-6 pt-12 pb-32">
@@ -59,44 +79,54 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
 
         {/* Events List */}
         <div className="space-y-4 flex-1">
-          {EVENTS.map((event) => {
-            const isFav = favoriteIds.has(event.id);
-            return (
-              <div key={event.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">
-                <div className="px-6 pt-5 pb-4 flex items-start justify-between">
-                  <div>
-                    <h3 className="text-[#2A2021] text-[20px] font-bold">{event.title}</h3>
-                    <p className="text-[#8E8E93] text-[15px] mt-1">{event.date}</p>
-                    <p className="text-[#8E8E93] text-[15px]">{event.time}</p>
+          {isLoading ? (
+            <div className="text-center py-10 text-gray-500">Загрузка мероприятий...</div>
+          ) : error ? (
+            <div className="text-center py-10 text-red-500">{error}</div>
+          ) : slots.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">Нет доступных мероприятий</div>
+          ) : (
+            slots.map((slot) => {
+              const isFav = favoriteIds.has(slot.id);
+              const seatsAvailable = slot.max_people - slot.current_bookings;
+              return (
+                <div key={slot.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">
+                  <div className="px-6 pt-5 pb-4 flex items-start justify-between">
+                    <div>
+                      <h3 className="text-[#2A2021] text-[20px] font-bold">{slot.restaurant}</h3>
+                      <p className="text-[#8E8E93] text-[15px] mt-1">{formatDate(slot.date)}</p>
+                      <p className="text-[#8E8E93] text-[15px]">{slot.time}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => onToggleFavorite?.(slot.id)}
+                        className="w-12 h-12 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: isFav ? "#E15859" : "#F5D5D5" }}
+                      >
+                        <Heart
+                          className="text-white"
+                          size={20}
+                          fill={isFav ? "white" : "none"}
+                          strokeWidth={isFav ? 0 : 2}
+                          stroke={isFav ? undefined : "white"}
+                        />
+                      </button>
+                      <span className="text-[#8E8E93] text-[11px] text-center leading-tight">
+                        Свободных мест {seatsAvailable}/{slot.max_people}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <button
-                      onClick={() => onToggleFavorite?.(event.id)}
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: isFav ? "#E15859" : "#F5D5D5" }}
-                    >
-                      <Heart
-                        className="text-white"
-                        size={20}
-                        fill={isFav ? "white" : "none"}
-                        strokeWidth={isFav ? 0 : 2}
-                        stroke={isFav ? undefined : "white"}
-                      />
-                    </button>
-                    <span className="text-[#8E8E93] text-[11px] text-center leading-tight">
-                      Свободных мест {event.seatsAvailable}/{event.seatsTotal}
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => onBook?.(slot.id)}
+                    className="w-full py-3 bg-[#E15859] text-white text-[15px] font-semibold"
+                    disabled={seatsAvailable <= 0}
+                  >
+                    {seatsAvailable > 0 ? 'Забронировать' : 'Мест нет'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => onBook?.(event.id)}
-                  className="w-full py-3 bg-[#E15859] text-white text-[15px] font-semibold"
-                >
-                  Забронировать
-                </button>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 

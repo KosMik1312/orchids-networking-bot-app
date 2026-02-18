@@ -39,14 +39,6 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Mapping of event IDs to event information
-  const eventMap: Record<number, { title: string; date: string; time: string }> = {
-    1: { title: "Боулинг", date: "7 января", time: "17:00" },
-    2: { title: "Боулинг", date: "7 января", time: "17:00" },
-    3: { title: "Боулинг", date: "7 января", time: "17:00" },
-  };
-
-  const selectedEvent = selectedEventId ? eventMap[selectedEventId] : null;
   useEffect(() => {
     let isMounted = true;
     async function fetchSlots() {
@@ -139,15 +131,6 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
             <h2 className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6" style={{ fontFamily: "system-ui, sans-serif" }}>
               {t.title}
             </h2>
-
-            {/* Selected Event Info */}
-            {selectedEvent && (
-              <div className="bg-white rounded-[16px] px-5 py-4 mb-6 border-l-4 border-[#E15859] shadow-sm">
-                <p className="text-[#8E8E93] text-[13px] font-medium mb-1">ВЫБРАННОЕ МЕРОПРИЯТИЕ:</p>
-                <p className="text-[#2A2021] text-[16px] font-bold">{selectedEvent.title}</p>
-                <p className="text-[#8E8E93] text-[13px] mt-2">{selectedEvent.date}, {selectedEvent.time}</p>
-              </div>
-            )}
 
             {/* Slots List */}
             <div className="space-y-3 flex-1">
@@ -352,13 +335,13 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
               {/* Date */}
               <div className="border-b border-gray-100 pb-4 mb-4">
                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">07.11.25</p>
+                <p className="text-[#E15859] text-[20px] font-bold mt-1">{selectedSlot?.date || "07.11.25"}</p>
               </div>
 
               {/* Location */}
               <div className="border-b border-gray-100 pb-4 mb-4">
                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">{city}</p>
+                <p className="text-[#E15859] text-[20px] font-bold mt-1">{city}, {selectedSlot?.address || "-"}</p>
               </div>
 
               {/* Time */}

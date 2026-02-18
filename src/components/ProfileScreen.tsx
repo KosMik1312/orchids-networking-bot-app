@@ -1,14 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { MapPin, Settings, ChevronRight, User, Calendar, Heart, Info } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { getProfile, getUserBookings, type UserProfile } from "@/lib/api";
 
 interface ProfileScreenProps {
   city?: string;
-  userName?: string;
-  userPhoto?: string | null;
-  completedMeetings?: number;
-  totalMeetings?: number;
+  userId?: number;
+  authToken?: string | null;
   onHome?: () => void;
   onAfisha?: () => void;
   onMyProfile?: () => void;
@@ -21,10 +21,8 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({
   city = "Москва",
-  userName = "Павел",
-  userPhoto = null,
-  completedMeetings = 3,
-  totalMeetings = 8,
+  userId,
+  authToken,
   onHome,
   onAfisha,
   onMyProfile,
@@ -34,6 +32,43 @@ export function ProfileScreen({
   onEditProfile,
   onSettings,
 }: ProfileScreenProps) {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [completedMeetings, setCompletedMeetings] = useState(0);
+  const [totalMeetings, setTotalMeetings] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        
+        // Загружаем профиль
+        const profileData = await getProfile(userId, authToken || undefined);
+        if (isMounted && profileData.profile) {
+          setProfile(profileData.profile);
+        }
+
+        // Загружаем бронирования
+        if (userId) {
+          const bookingsData = await getUserBookings(userId, authToken || undefined);
+          if (isMounted) {
+            const bookings = bookingsData.bookings || [];
+            setTotalMeetings(bookings.length);
+            setCompletedMeetings(bookings.filter(b => b.status === 'completed').length);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load profile data:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => { isMounted = false; };
+  }, [userId, authToken]);
   const menuItems = [
     { icon: User, label: "Моя анкета", onClick: onEditProfile || onMyProfile },
     { icon: Calendar, label: "Актуальные бронирования", onClick: onBookings },
@@ -43,6 +78,11 @@ export function ProfileScreen({
 
     return (
       <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-[#8E8E93] text-[16px]">Загрузка...</p>
+          </div>
+        ) : (
         <div className="flex-1 px-6 pt-12 pb-32">
         {/* Location & Settings */}
         <div className="flex justify-between items-center mb-6">
@@ -65,8 +105,8 @@ export function ProfileScreen({
           {/* Avatar - positioned to overlap the card */}
           <div className="flex justify-center relative z-10">
             <div className="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-white shadow-md">
-              {userPhoto ? (
-                <img src={userPhoto} alt={userName} className="w-full h-full object-cover" />
+              {profile?.photo ? (
+                <img src={profile.photo} alt={profile.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
                   <User className="text-white" size={48} />
@@ -81,7 +121,7 @@ export function ProfileScreen({
               className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight"
               style={{ fontFamily: "system-ui, sans-serif" }}
             >
-              {userName}
+              {profile?.name || "Пользователь"}
             </h2>
           </div>
         </div>
@@ -110,6 +150,7 @@ export function ProfileScreen({
           Завершенных встреч: {completedMeetings} из {totalMeetings}
         </p>
       </div>
+        )}
 
       <BottomNav
         activeTab="profile"
