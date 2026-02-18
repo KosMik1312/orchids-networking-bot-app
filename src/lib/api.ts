@@ -281,3 +281,44 @@ export async function getContacts(slotId: number, authToken?: string): Promise<{
   console.log(`[API] Contacts response status: ${response.status}`);
   return handleResponse(response);
 }
+
+// Favorites API
+export async function toggleFavorite(slotId: number, authToken?: string): Promise<{ success: boolean; favorites: number[] }> {
+  console.log(`[API] Toggling favorite: slotId=${slotId}`);
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
+  const response = await fetch(`${API_BASE}/api/favorites/toggle?slot_id=${slotId}`, {
+    method: 'POST',
+    headers,
+    cache: 'no-store',
+  });
+  
+  console.log(`[API] Toggle favorite response status: ${response.status}`);
+  return handleResponse(response);
+}
+
+export async function getFavorites(authToken?: string): Promise<{ favorites: number[] }> {
+  console.log(`[API] Getting favorites`);
+  
+  const headers: HeadersInit = {};
+  
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
+  const response = await fetch(`${API_BASE}/api/favorites`, {
+    method: 'GET',
+    headers,
+    cache: 'no-store',
+  });
+  
+  console.log(`[API] Get favorites response status: ${response.status}`);
+  return handleResponse(response);
+}

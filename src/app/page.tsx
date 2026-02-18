@@ -17,7 +17,7 @@ import { SettingsScreen } from "@/components/SettingsScreen";
 import { MyContactsScreen } from "@/components/MyContactsScreen";
 import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { AdminScreen } from "@/components/AdminScreen";
-import { getProfile, saveProfile, type UserProfile } from "@/lib/api";
+import { getProfile, saveProfile, getFavorites, toggleFavorite, type UserProfile } from "@/lib/api";
 
 type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin";
 
@@ -49,13 +49,23 @@ export default function Home() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = async (id: number) => {
+    if (!userToken) return;
+    
     setFavoriteIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    
+    // Синхронизируем с БД
+    try {
+      await toggleFavorite(id, userToken);
+      console.log('✅ Favorite synced with DB');
+    } catch (error) {
+      console.error('❌ Failed to sync favorite:', error);
+    }
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
@@ -149,6 +159,13 @@ export default function Home() {
               setFullProfile(profileResponse.profile);
               setUserName(profileResponse.profile.name || '');
               setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
+            }
+            
+            // Загружаем избранное
+            const favoritesResponse = await getFavorites(initData);
+            if (isMounted && favoritesResponse.favorites) {
+              setFavoriteIds(new Set(favoritesResponse.favorites));
+              console.log(`✅ Loaded ${favoritesResponse.favorites.length} favorites`);
             }
           } catch (profileError) {
             console.warn('Could not pre-load profile:', profileError);
