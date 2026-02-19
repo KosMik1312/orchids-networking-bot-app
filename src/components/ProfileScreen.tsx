@@ -10,6 +10,7 @@ interface ProfileScreenProps {
   userId?: number;
   authToken?: string | null;
   initialProfile?: Partial<UserProfile>;
+  userName?: string;
   onHome?: () => void;
   onAfisha?: () => void;
   onMyProfile?: () => void;
@@ -25,6 +26,7 @@ export function ProfileScreen({
   userId,
   authToken,
   initialProfile,
+  userName,
   onHome,
   onAfisha,
   onMyProfile,
@@ -123,7 +125,7 @@ export function ProfileScreen({
               className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight"
               style={{ fontFamily: "system-ui, sans-serif" }}
             >
-              {profile?.name || "Пользователь"}
+              {profile?.name || initialProfile?.name || userName || "Пользователь"}
             </h2>
           </div>
         </div>

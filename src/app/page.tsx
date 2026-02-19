@@ -480,6 +480,7 @@ export default function Home() {
                 <ProfileScreen
                   city={fullProfile.city || "Москва"}
                   initialProfile={fullProfile}
+                  userName={userName}
                   userId={userId}
                   authToken={userToken}
                   onHome={() => setCurrentScreen("booking")}
