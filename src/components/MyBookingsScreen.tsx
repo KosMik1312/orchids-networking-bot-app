@@ -45,13 +45,35 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
   }, [authToken]);
 
   // Helper function to format date
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-    } catch {
-      return dateStr;
+  const formatDate = (dateInput: any) => {
+    if (!dateInput && dateInput !== 0) return "";
+
+    // Normalize numeric timestamps (seconds or ms)
+    let dateObj: Date;
+    if (typeof dateInput === "number") {
+      // If timestamp looks like seconds (10 digits), convert to ms
+      dateObj = new Date(dateInput.toString().length === 10 ? dateInput * 1000 : dateInput);
+    } else if (typeof dateInput === "string" && /^\d+$/.test(dateInput)) {
+      const n = parseInt(dateInput, 10);
+      dateObj = new Date(dateInput.length === 10 ? n * 1000 : n);
+    } else if (typeof dateInput === "string") {
+      // Try ISO first, then replace space with T
+      dateObj = new Date(dateInput);
+      if (isNaN(dateObj.getTime())) {
+        const alt = new Date(dateInput.replace(" ", "T"));
+        dateObj = alt;
+      }
+    } else if (dateInput instanceof Date) {
+      dateObj = dateInput;
+    } else {
+      return String(dateInput);
     }
+
+    if (isNaN(dateObj.getTime())) {
+      return String(dateInput);
+    }
+
+    return dateObj.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
   };
 
   // Helper function to get status badge

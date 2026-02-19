@@ -107,14 +107,7 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
                 <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <div className="w-8 h-8 relative">
-                  <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                  </svg>
-                </div>
+                <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
               </button>
             </div>
 
@@ -195,14 +188,7 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
                 <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <div className="w-8 h-8 relative">
-                  <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                  </svg>
-                </div>
+                <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
               </button>
             </div>
 
@@ -300,15 +286,8 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
                 </div>
                 <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
               </div>
-              <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <div className="w-8 h-8 relative">
-                  <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-                    <circle cx="12" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="12" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="12" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                    <circle cx="20" cy="20" r="3" stroke="#E15859" strokeWidth="2" />
-                  </svg>
-                </div>
+              <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
               </button>
             </div>
 

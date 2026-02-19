@@ -9,6 +9,7 @@ interface ProfileScreenProps {
   city?: string;
   userId?: number;
   authToken?: string | null;
+  initialProfile?: Partial<UserProfile>;
   onHome?: () => void;
   onAfisha?: () => void;
   onMyProfile?: () => void;
@@ -23,6 +24,7 @@ export function ProfileScreen({
   city = "Москва",
   userId,
   authToken,
+  initialProfile,
   onHome,
   onAfisha,
   onMyProfile,
@@ -32,7 +34,7 @@ export function ProfileScreen({
   onEditProfile,
   onSettings,
 }: ProfileScreenProps) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(initialProfile && Object.keys(initialProfile).length ? (initialProfile as UserProfile) : null);
   const [completedMeetings, setCompletedMeetings] = useState(0);
   const [totalMeetings, setTotalMeetings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);

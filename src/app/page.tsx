@@ -424,7 +424,7 @@ export default function Home() {
             {currentScreen === "booking" && (
               <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <BookingScreen
-                  city="Москва"
+                  city={fullProfile.city || "Москва"}
                   authToken={userToken || null}
                   selectedEventId={selectedEventId}
                   onBack={() => setCurrentScreen("meeting_conditions")}
@@ -447,7 +447,7 @@ export default function Home() {
             {currentScreen === "afisha" && (
               <motion.div key="afisha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <AfishaScreen
-                  city="Москва"
+                  city={fullProfile.city || "Москва"}
                   favoriteIds={favoriteIds}
                   onToggleFavorite={toggleFavorite}
                   onFavorites={() => setCurrentScreen("favorites")}
@@ -478,7 +478,8 @@ export default function Home() {
             {currentScreen === "profile" && (
               <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ProfileScreen
-                  city="Москва"
+                  city={fullProfile.city || "Москва"}
+                  initialProfile={fullProfile}
                   userId={userId}
                   authToken={userToken}
                   onHome={() => setCurrentScreen("booking")}
@@ -505,7 +506,7 @@ export default function Home() {
             {currentScreen === "my_bookings" && (
               <motion.div key="my_bookings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <MyBookingsScreen
-                  city="Москва"
+                  city={fullProfile.city || "Москва"}
                   authToken={userToken}
                   onBack={() => setCurrentScreen("profile")}
                 />
