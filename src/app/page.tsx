@@ -49,7 +49,7 @@ export default function Home() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
-  const toggleFavorite = async (id: number) => {
+  const toggleFavoriteHandler = async (id: number) => {
     if (!userToken) return;
     
     setFavoriteIds((prev) => {
@@ -260,10 +260,9 @@ export default function Home() {
       console.error("Error saving profile on back:", err);
     });
     // Перезагрузить данные из БД
-    if (userToken) {
-      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
-      const profileData = await getProfile(userToken, initData);
-      setFullProfile(profileData);
+    if (userId && userToken) {
+      const profileData = await getProfile(userId, userToken);
+      setFullProfile(profileData.profile);
     }
     setCurrentScreen("onboarding");
   };
@@ -340,10 +339,9 @@ export default function Home() {
       console.error("Error saving MeetingConditions on back:", err);
     });
     // Перезагрузить данные из БД
-    if (userToken) {
-      const initData = await fetch("#").then(() => (window.Telegram?.WebApp?.initData || "")).catch(() => "");
-      const profileData = await getProfile(userToken, initData);
-      setFullProfile(profileData);
+    if (userId && userToken) {
+      const profileData = await getProfile(userId, userToken);
+      setFullProfile(profileData.profile);
     }
     setCurrentScreen("best_in_me");
   };
@@ -380,7 +378,7 @@ export default function Home() {
                   initialData={{
                     name: fullProfile.name || "",
                     gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
-                    age: fullProfile.age?.toString() || "",
+                    age: fullProfile.age !== undefined ? String(fullProfile.age) : "",
                     zodiac: fullProfile.zodiac || "",
                     career: fullProfile.occupation || "",
                     familyStatus: fullProfile.relationship_status || "",
@@ -396,13 +394,13 @@ export default function Home() {
                   onContinue={handleBestInMeComplete}
                   onBack={handleBestInMeBack}
                   initialData={{
-                    strengths: fullProfile.strengths || [],
+                    strengths: Array.isArray(fullProfile.strengths) ? fullProfile.strengths : [],
                     weaknesses: fullProfile.weaknesses || "",
-                    values: fullProfile.values || [],
-                    loveLanguage: fullProfile.love_language || [],
+                    values: Array.isArray(fullProfile.values) ? fullProfile.values : [],
+                    loveLanguage: Array.isArray(fullProfile.love_language) ? fullProfile.love_language : [],
                     goals: fullProfile.goals || "",
                     dreams: fullProfile.dreams || "",
-                    interests: fullProfile.interests || [],
+                    interests: Array.isArray(fullProfile.interests) ? fullProfile.interests : [],
                     telegramNickname: fullProfile.telegram || "",
                     instagramNickname: fullProfile.instagram || "",
                     photo: fullProfile.photo || null
@@ -449,7 +447,7 @@ export default function Home() {
                 <AfishaScreen
                   city={fullProfile.city || "Москва"}
                   favoriteIds={favoriteIds}
-                  onToggleFavorite={toggleFavorite}
+                  onToggleFavorite={toggleFavoriteHandler}
                   onFavorites={() => setCurrentScreen("favorites")}
                   onHome={() => setCurrentScreen("booking")}
                   onProfile={() => setCurrentScreen("profile")}
@@ -465,7 +463,7 @@ export default function Home() {
               <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <FavoritesScreen
                   favoriteIds={favoriteIds}
-                  onToggleFavorite={toggleFavorite}
+                  onToggleFavorite={toggleFavoriteHandler}
                   onBack={() => setCurrentScreen("afisha")}
                   onBook={(eventId) => {
                     setSelectedEventId(eventId);

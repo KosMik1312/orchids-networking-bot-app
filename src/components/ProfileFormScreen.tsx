@@ -16,6 +16,8 @@ interface ProfileFormData {
   hasChildren: string;
 }
 
+type FieldKey = 'gender' | 'zodiac' | 'career' | 'familyStatus' | 'hasChildren';
+
 interface ProfileFormScreenProps {
   onContinue: (data: ProfileFormData) => void;
   onBack: (data: ProfileFormData) => void;
