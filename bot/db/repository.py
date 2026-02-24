@@ -143,6 +143,33 @@ class UserRepo(BaseRepo):
         logger.info(f"User {user_id} admin flag set to {user.is_admin}")
         return True
 
+    async def toggle_favorite(self, user_id: int, slot_id: int) -> List[int]:
+        """Добавляет или удаляет слот из избранного пользователя."""
+        user = await self.session.get(User, user_id)
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+            
+        favorites = list(user.favorite_slots) if user.favorite_slots else []
+        
+        if slot_id in favorites:
+            favorites.remove(slot_id)
+            logger.info(f"Removed slot {slot_id} from favorites for user {user_id}")
+        else:
+            favorites.append(slot_id)
+            logger.info(f"Added slot {slot_id} to favorites for user {user_id}")
+            
+        user.favorite_slots = favorites
+        await self.session.commit()
+        await self.session.refresh(user)
+        return favorites
+
+    async def get_favorites(self, user_id: int) -> List[int]:
+        """Возвращает список ID избранных слотов пользователя."""
+        user = await self.session.get(User, user_id)
+        if not user:
+            return []
+        return list(user.favorite_slots) if user.favorite_slots else []
+
 
 class SlotRepo(BaseRepo):
     """Репозиторий для работы со слотами ужинов."""

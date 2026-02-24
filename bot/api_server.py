@@ -682,29 +682,12 @@ async def toggle_favorite_endpoint(
         logger.info(f"📦 Toggle favorite: user={user_id}, slot={slot_id}")
         
         user_repo = UserRepo(session)
-        user = await user_repo.get_user_profile(user_id)
-        
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        favorites = user.favorite_slots or []
-        
-        if slot_id in favorites:
-            favorites.remove(slot_id)
-            logger.info(f"✅ Removed slot {slot_id} from favorites")
-        else:
-            favorites.append(slot_id)
-            logger.info(f"✅ Added slot {slot_id} to favorites")
-        
-        # Обновляем в БД
-        from sqlalchemy import update
-        stmt = update(User).where(User.user_id == user_id).values(favorite_slots=favorites)
-        await session.execute(stmt)
-        await session.commit()
+        favorites = await user_repo.toggle_favorite(user_id, slot_id)
         
         return {"success": True, "favorites": favorites}
-    except HTTPException:
-        raise
+    except ValueError as e:
+        logger.error(f"Toggle favorite user error: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Toggle favorite error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -723,17 +706,10 @@ async def get_favorites_endpoint(
         logger.info(f"📦 Getting favorites for user {user_id}")
         
         user_repo = UserRepo(session)
-        user = await user_repo.get_user_profile(user_id)
+        favorites = await user_repo.get_favorites(user_id)
         
-        if not user:
-            return {"favorites": []}
-        
-        favorites = user.favorite_slots or []
         logger.info(f"✅ Found {len(favorites)} favorites")
-        
         return {"favorites": favorites}
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Get favorites error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
