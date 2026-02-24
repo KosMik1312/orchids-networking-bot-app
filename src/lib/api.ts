@@ -43,11 +43,11 @@ export interface UserProfile {
   relationship_status?: string;
   children?: string;
   occupation?: string;
-  goal?: string;
+  goal?: string[];
   interests?: string;
   comfort_level?: number;
   social_frequency?: number;
-  communication_format?: string;
+  communication_format?: string[] | string;
   evening_scenario?: string;
   telegram?: string;
   instagram?: string;
@@ -67,7 +67,7 @@ export interface UserProfile {
   meeting_time_from?: string;
   meeting_time_to?: string;
   // Frontend uses `format` key for meeting format; backend maps it to communication_format
-  format?: string;
+  format?: string[];
   is_profile_completed?: boolean;
 }
 
