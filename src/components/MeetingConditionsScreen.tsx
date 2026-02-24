@@ -12,8 +12,8 @@ interface MeetingConditionsData {
   metro: string[];
   days: string[];
   time: { from: string; to: string };
-  goal: string;
-  format: string;
+  goal: string[];
+  format: string[];
 }
 
 interface MeetingConditionsScreenProps {
@@ -29,8 +29,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     metro: initialData?.metro || [],
     days: initialData?.days || [],
     time: initialData?.time || { from: "17:00", to: "21:00" },
-    goal: initialData?.goal || "",
-    format: initialData?.format || "",
+    goal: Array.isArray(initialData?.goal) ? initialData.goal : [],
+    format: Array.isArray(initialData?.format) ? initialData.format : [],
   });
 
   const [openSection, setOpenSection] = useState<string | null>(null);
@@ -66,10 +66,10 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         if (initialData.time) {
           updated.time = initialData.time;
         }
-        if (initialData.goal) {
+        if (initialData.goal && Array.isArray(initialData.goal)) {
           updated.goal = initialData.goal;
         }
-        if (initialData.format) {
+        if (initialData.format && Array.isArray(initialData.format)) {
           updated.format = initialData.format;
         }
         
@@ -107,8 +107,15 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     });
   }, []);
 
-  const handleSingleSelect = useCallback((field: "goal" | "format", value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleMultiSelectGoalFormat = useCallback((field: "goal" | "format", value: string) => {
+    setFormData((prev) => {
+      const current = prev[field];
+      if (current.includes(value)) {
+        return { ...prev, [field]: current.filter((v) => v !== value) };
+      } else {
+        return { ...prev, [field]: [...current, value] };
+      }
+    });
   }, []);
 
   const handleTimeChange = useCallback((field: "from" | "to", value: string) => {
@@ -136,8 +143,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   const isFormComplete = 
     formData.metro.length > 0 && 
     formData.days.length > 0 && 
-    formData.goal !== "" && 
-    formData.format !== "";
+    formData.goal.length > 0 && 
+    formData.format.length > 0;
 
   const AccordionItem = ({ 
     id, 
@@ -322,13 +329,13 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
             <div 
               key={option} 
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-              onClick={() => handleSingleSelect("goal", option)}
+              onClick={() => handleMultiSelectGoalFormat("goal", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                formData.goal === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                formData.goal.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
               }`}>
-                {formData.goal === option && <div className="w-2 h-2 bg-white rounded-full" />}
+                {formData.goal.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
             </div>
           ))}
@@ -340,13 +347,13 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
             <div 
               key={option} 
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-              onClick={() => handleSingleSelect("format", option)}
+              onClick={() => handleMultiSelectGoalFormat("format", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                  formData.format === option ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  formData.format.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
                 }`}>
-                {formData.format === option && <div className="w-2 h-2 bg-white rounded-full" />}
+                {formData.format.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
             </div>
           ))}

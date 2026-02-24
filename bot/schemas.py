@@ -21,7 +21,7 @@ class UserProfile(BaseModel):
     relationship_status: Optional[str] = Field(None, description="Relationship status")
     children: Optional[str] = Field(None, description="Children status")
     occupation: Optional[str] = Field(None, description="Occupation type")
-    goal: Optional[str] = Field(None, description="Meeting goal")
+    goal: Optional[List[str]] = Field(None, description="Meeting goals (multiple selection)")
     interests: Optional[str] = Field(None, description="Short interests text")
     comfort_level: Optional[int] = Field(None, description="Comfort level")
     social_frequency: Optional[int] = Field(None, description="Social frequency")
@@ -45,7 +45,7 @@ class UserProfile(BaseModel):
     meeting_time_from: Optional[str] = Field(None, description="Preferred meeting time from")
     meeting_time_to: Optional[str] = Field(None, description="Preferred meeting time to")
     # Frontend sends 'format' — map it on save to `communication_format` in the DB
-    format: Optional[str] = Field(None, description="Meeting format (frontend key 'format')")
+    format: Optional[List[str]] = Field(None, description="Meeting format (multiple selection)")
     # Флаг завершённости профиля
     is_profile_completed: Optional[bool] = Field(None, description="Whether the profile is completed")
 

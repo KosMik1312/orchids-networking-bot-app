@@ -298,6 +298,18 @@ export default function Home() {
       photo: data.photo || undefined,
     });
 
+    // Перезагрузить профиль из БД после сохранения
+    if (userId && userToken) {
+      try {
+        const profileData = await getProfile(userId, userToken);
+        if (profileData.profile) {
+          setFullProfile(profileData.profile);
+        }
+      } catch (err) {
+        console.warn('Warning: could not reload profile after save:', err);
+      }
+    }
+
     setCurrentScreen("meeting_conditions");
   };
 
@@ -351,10 +363,17 @@ export default function Home() {
     }).catch((err) => {
       console.error("Error saving MeetingConditions on back:", err);
     });
-    // Перезагрузить данные из БД
+    // Перезагрузить данные из БД перед возвратом
     if (userId && userToken) {
-      const profileData = await getProfile(userId, userToken);
-      setFullProfile(profileData.profile);
+      try {
+        const profileData = await getProfile(userId, userToken);
+        if (profileData.profile) {
+          setFullProfile(profileData.profile);
+          console.log('✅ Profile reloaded after MeetingConditions back');
+        }
+      } catch (err) {
+        console.error("Error reloading profile on back:", err);
+      }
     }
     setCurrentScreen("best_in_me");
   };
@@ -431,10 +450,16 @@ export default function Home() {
                 <MeetingConditionsScreen
                   onContinue={handleMeetingConditionsComplete}
                   onBack={handleMeetingConditionsBack}
-                  initialData={userMeetingConditions}
+                  initialData={{
+                    metro: userMeetingConditions.metro?.length ? userMeetingConditions.metro : (Array.isArray(fullProfile.meeting_metro) ? fullProfile.meeting_metro : []),
+                    days: userMeetingConditions.days?.length ? userMeetingConditions.days : (Array.isArray(fullProfile.meeting_days) ? fullProfile.meeting_days : []),
+                    time: userMeetingConditions.time?.from ? userMeetingConditions.time : { from: fullProfile.meeting_time_from || "17:00", to: fullProfile.meeting_time_to || "21:00" },
+                    goal: userMeetingConditions.goal?.length ? userMeetingConditions.goal : (Array.isArray(fullProfile.goal) ? fullProfile.goal : []),
+                    format: userMeetingConditions.format?.length ? userMeetingConditions.format : (Array.isArray(fullProfile.format) ? fullProfile.format : [])
+                  }}
                 />
               </motion.div>
-            )}
+            )}}
 
             {currentScreen === "booking" && (
               <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

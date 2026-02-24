@@ -26,11 +26,11 @@ class User(Base):
     relationship_status = Column(String)
     children = Column(String)
     occupation = Column(String)
-    goal = Column(String)
+    goal = Column(JSONB, nullable=True)  # Массив целей встреч
     interests = Column(Text)
     comfort_level = Column(Integer)
     social_frequency = Column(Integer)
-    communication_format = Column(String)
+    communication_format = Column(JSONB, nullable=True)  # Массив форматов встреч
     evening_scenario = Column(String)
     telegram = Column(String)
     instagram = Column(String)
