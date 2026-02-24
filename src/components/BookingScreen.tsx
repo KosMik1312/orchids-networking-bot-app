@@ -239,11 +239,8 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
               </div>
 
               {/* Info Text */}
-              <p className="text-[11px] text-[#404243] leading-relaxed mb-3 opacity-70">
-                {t.payment.refundPolicy}
-              </p>
               <p className="text-[11px] text-[#404243] leading-relaxed mb-4 opacity-70">
-                {t.payment.privacyConsent}
+                {t.payment.refundPolicy}
               </p>
 
               {/* Offer Checkbox */}

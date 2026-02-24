@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ru } from "@/lib/i18n";
 
 interface LoadingScreenProps {
   message?: string;
 }
 
-export function LoadingScreen({ message = "Загрузка..." }: LoadingScreenProps) {
+export function LoadingScreen({ message = ru.loading.defaultMessage }: LoadingScreenProps) {
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FFF7EF" }}>
       <motion.div
@@ -22,7 +23,7 @@ export function LoadingScreen({ message = "Загрузка..." }: LoadingScreen
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
         >
           {/* Pulsing glow background */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-[#E15859]/5 rounded-full"
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -40,9 +41,9 @@ export function LoadingScreen({ message = "Загрузка..." }: LoadingScreen
                 borderRightColor: "#E15859",
               }}
             />
-            
+
             {/* Inner "A" or Stylized Element */}
-            <div 
+            <div
               className="absolute text-[#E15859] font-bold text-2xl select-none"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
@@ -69,9 +70,9 @@ export function LoadingScreen({ message = "Загрузка..." }: LoadingScreen
               <motion.div
                 key={i}
                 className="w-1.5 h-1.5 rounded-full bg-[#E15859]"
-                animate={{ 
+                animate={{
                   scale: [1, 1.5, 1],
-                  opacity: [0.3, 1, 0.3] 
+                  opacity: [0.3, 1, 0.3]
                 }}
                 transition={{
                   duration: 1,

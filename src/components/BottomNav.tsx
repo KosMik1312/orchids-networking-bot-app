@@ -1,6 +1,7 @@
 "use client";
 
 import { Home, Calendar, User } from "lucide-react";
+import { ru } from "@/lib/i18n";
 
 interface BottomNavProps {
   activeTab?: "home" | "afisha" | "profile";
@@ -11,33 +12,33 @@ export function BottomNav({ activeTab = "home", onTabChange }: BottomNavProps) {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white px-8 py-4 flex justify-between items-center z-50 rounded-t-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
       <button onClick={() => onTabChange?.("home")} className="flex flex-col items-center gap-1 min-w-[60px]">
-        <Home 
-          className={activeTab === "home" ? "text-[#E15859]" : "text-[#BDBDBD]"} 
-          size={24} 
+        <Home
+          className={activeTab === "home" ? "text-[#E15859]" : "text-[#BDBDBD]"}
+          size={24}
           strokeWidth={1.5}
         />
         <span className={`text-[11px] font-medium ${activeTab === "home" ? "text-[#E15859]" : "text-[#BDBDBD]"}`}>
-          Главная
+          {ru.bottomNav.home}
         </span>
       </button>
       <button onClick={() => onTabChange?.("afisha")} className="flex flex-col items-center gap-1 min-w-[60px]">
-        <Calendar 
-          className={activeTab === "afisha" ? "text-[#E15859]" : "text-[#BDBDBD]"} 
-          size={24} 
+        <Calendar
+          className={activeTab === "afisha" ? "text-[#E15859]" : "text-[#BDBDBD]"}
+          size={24}
           strokeWidth={1.5}
         />
         <span className={`text-[11px] font-medium ${activeTab === "afisha" ? "text-[#E15859]" : "text-[#BDBDBD]"}`}>
-          Афиша
+          {ru.bottomNav.afisha}
         </span>
       </button>
       <button onClick={() => onTabChange?.("profile")} className="flex flex-col items-center gap-1 min-w-[60px]">
-        <User 
-          className={activeTab === "profile" ? "text-[#E15859]" : "text-[#BDBDBD]"} 
-          size={24} 
+        <User
+          className={activeTab === "profile" ? "text-[#E15859]" : "text-[#BDBDBD]"}
+          size={24}
           strokeWidth={1.5}
         />
         <span className={`text-[11px] font-medium ${activeTab === "profile" ? "text-[#E15859]" : "text-[#BDBDBD]"}`}>
-          Профиль
+          {ru.bottomNav.profile}
         </span>
       </button>
     </div>

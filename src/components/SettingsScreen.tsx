@@ -2,29 +2,33 @@
 
 import { useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ru } from "@/lib/i18n";
 
 interface SettingsScreenProps {
   onBack?: () => void;
+  onPrivacy?: () => void;
+  onOffer?: () => void;
+  onConsent?: () => void;
 }
 
-export function SettingsScreen({ onBack }: SettingsScreenProps) {
+export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent }: SettingsScreenProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const menuItems = [
-    { label: "Политика конфиденциальности" },
-    { label: "Договор оферты" },
-    { label: "Обработка персональных данных" },
+    { label: ru.settings.privacyText, onClick: onPrivacy },
+    { label: ru.settings.offerText, onClick: onOffer },
+    { label: ru.settings.consentText, onClick: onConsent },
   ];
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
-        <div className="flex-1 px-6 pb-8 flex flex-col">
-          {/* Title */}
-          <h1
-            className="text-[#E15859] text-[32px] font-black uppercase text-center tracking-tight leading-none mt-12 mb-8"
+      <div className="flex-1 px-6 pb-8 flex flex-col">
+        {/* Title */}
+        <h1
+          className="text-[#E15859] text-[32px] font-black uppercase text-center tracking-tight leading-none mt-12 mb-8"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
-          Настройки
+          {ru.settings.title}
         </h1>
 
         {/* Menu Items */}
@@ -32,6 +36,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           {menuItems.map((item, index) => (
             <button
               key={index}
+              onClick={item.onClick}
               className="w-full flex items-center justify-between px-6 py-5 rounded-[20px] bg-white shadow-sm"
             >
               <span className="text-[#404243] text-[15px] font-medium">{item.label}</span>
@@ -55,7 +60,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             onClick={() => setShowDeleteConfirm(true)}
             className="flex-1 py-4 rounded-full border-2 border-[#E15859] text-[#E15859] text-[17px] font-semibold bg-white"
           >
-            Удалить аккаунт
+            {ru.settings.deleteAccount}
           </button>
         </div>
       </div>
@@ -70,13 +75,13 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           />
 
           {/* Overlay on top of the screen content */}
-            <div className="absolute inset-0 flex flex-col" style={{ backgroundColor: "rgba(233,233,233,0.6)" }}>
-              {/* Title (faded) */}
-              <h1
-                className="text-[#E15859] text-[32px] font-black uppercase text-center tracking-tight leading-none mt-12 mb-8 opacity-30"
+          <div className="absolute inset-0 flex flex-col" style={{ backgroundColor: "rgba(233,233,233,0.6)" }}>
+            {/* Title (faded) */}
+            <h1
+              className="text-[#E15859] text-[32px] font-black uppercase text-center tracking-tight leading-none mt-12 mb-8 opacity-30"
               style={{ fontFamily: "system-ui, sans-serif" }}
             >
-              Настройки
+              {ru.settings.title}
             </h1>
 
             {/* Menu items (faded) */}
@@ -102,17 +107,28 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
                   className="text-[#2A2021] text-[22px] font-black uppercase text-center tracking-tight leading-tight mb-3"
                   style={{ fontFamily: "system-ui, sans-serif" }}
                 >
-                  Ты уверен, что хочешь удалить аккаунт?
+                  {ru.settings.deleteConfirmTitle}
                 </h2>
                 <p className="text-[#8E8E93] text-[14px] text-center leading-relaxed mb-6">
-                  Восстановить ваш аккаунт или любую удалённую информацию будет невозможно
+                  {ru.settings.deleteConfirmText}
                 </p>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
-                >
-                  Подтвердить
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      // TODO: Добавить логику удаления аккаунта
+                      console.log("Удаление аккаунта...");
+                    }}
+                    className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
+                  >
+                    {ru.settings.deleteConfirmButton}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="w-full py-4 rounded-[20px] border-2 border-[#E15859] bg-white text-[#E15859] text-[17px] font-semibold"
+                  >
+                    {ru.settings.deleteCancelButton}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, MessageCircle, Instagram } from "lucide-react";
 import { getUserBookings, getContacts, type Contact } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
 interface MyContactsScreenProps {
   authToken?: string | null;
@@ -27,16 +28,16 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Сначала получаем бронирования пользователя
         const bookingsData = await getUserBookings(0, authToken || undefined);
         const bookings = bookingsData.bookings || [];
-        
+
         if (!isMounted) return;
-        
+
         // Затем загружаем контакты для каждого слота
         const allContacts: Contact[] = [];
-        
+
         for (const booking of bookings) {
           if (booking.status === 'active' || booking.status === 'completed') {
             try {
@@ -47,7 +48,7 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
             }
           }
         }
-        
+
         if (isMounted) {
           // Удаляем дубликаты по telegram
           const uniqueContacts = allContacts.filter((contact, index, self) =>
@@ -57,7 +58,7 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
         }
       } catch (err) {
         if (isMounted) {
-          setError("Не удалось загрузить контакты");
+          setError(ru.contacts.errorLoad);
           console.error("Failed to load contacts:", err);
         }
       } finally {
@@ -80,19 +81,19 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
           className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
-          Мои контакты
+          {ru.contacts.title}
         </h2>
 
         {/* Contacts List */}
         <div className="space-y-3 flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="text-center py-10 text-gray-500">Загрузка контактов...</div>
+            <div className="text-center py-10 text-gray-500">{ru.contacts.loading}</div>
           ) : error ? (
             <div className="text-center py-10 text-red-500">{error}</div>
           ) : contacts.length === 0 ? (
             <div className="text-center py-10 text-gray-500">
-              <p>У вас пока нет контактов</p>
-              <p className="text-sm mt-2">Посетите мероприятие, чтобы познакомиться</p>
+              <p>{ru.contacts.noContacts}</p>
+              <p className="text-sm mt-2">{ru.contacts.noContactsHint}</p>
             </div>
           ) : (
             contacts.map((contact, index) => (
@@ -122,7 +123,7 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-[#2A2021] text-[17px] font-bold">{contact.name}</h3>
-                    {contact.age && <p className="text-[#8E8E93] text-[13px] mt-0.5">Возраст: {contact.age}</p>}
+                    {contact.age && <p className="text-[#8E8E93] text-[13px] mt-0.5">{ru.contacts.agePrefix}{contact.age}</p>}
                     {contact.city && <p className="text-[#8E8E93] text-[13px]">{contact.city}</p>}
                     {contact.interests && <p className="text-[#BDBDBD] text-[12px] mt-0.5 truncate">{contact.interests}</p>}
                   </div>
@@ -162,7 +163,7 @@ export function MyContactsScreen({ authToken, onBack }: MyContactsScreenProps) {
           className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6 flex items-center justify-center gap-2"
         >
           <ChevronLeft size={20} />
-          Назад
+          {ru.common.back}
         </button>
       </div>
     </div>

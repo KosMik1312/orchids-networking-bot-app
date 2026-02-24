@@ -17,9 +17,13 @@ import { SettingsScreen } from "@/components/SettingsScreen";
 import { MyContactsScreen } from "@/components/MyContactsScreen";
 import { MyBookingsScreen } from "@/components/MyBookingsScreen";
 import { AdminScreen } from "@/components/AdminScreen";
+import { PrivacyPolicyScreen } from "@/components/PrivacyPolicyScreen";
+import { ConsentScreen } from "@/components/ConsentScreen";
+import { OfferScreen } from "@/components/OfferScreen";
 import { getProfile, saveProfile, getFavorites, toggleFavorite, type UserProfile } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin" | "privacy" | "consent" | "offer";
 
 interface MeetingConditionsData {
   metro: string[];
@@ -49,16 +53,25 @@ export default function Home() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
+  // Хранит предыдущий экран для динамической кнопки "Назад" (например, в Избранном)
+  const [previousScreen, setPreviousScreen] = useState<Screen>("afisha");
+
+  // Вспомогательная функция для смены экрана с сохранением истории
+  const navigateTo = (screen: Screen) => {
+    setPreviousScreen(currentScreen);
+    setCurrentScreen(screen);
+  };
+
   const toggleFavoriteHandler = async (id: number) => {
     if (!userToken) return;
-    
+
     setFavoriteIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-    
+
     // Синхронизируем с БД
     try {
       await toggleFavorite(id, userToken);
@@ -160,7 +173,7 @@ export default function Home() {
               setUserName(profileResponse.profile.name || '');
               setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
             }
-            
+
             // Загружаем избранное
             const favoritesResponse = await getFavorites(initData);
             if (isMounted && favoritesResponse.favorites) {
@@ -351,7 +364,7 @@ export default function Home() {
       <AnimatePresence mode="wait">
         {isLoading && !profileLoaded && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100]">
-            <LoadingScreen message="Профиль загружается..." />
+            <LoadingScreen message={ru.loading.profileLoading} />
           </motion.div>
         )}
 
@@ -403,7 +416,7 @@ export default function Home() {
                     interests: Array.isArray(fullProfile.interests) ? fullProfile.interests : [],
                     telegramNickname: fullProfile.telegram || "",
                     instagramNickname: fullProfile.instagram || "",
-                    photo: fullProfile.photo || null
+                    photo: (fullProfile.photo as string) || null
                   }}
                 />
               </motion.div>
@@ -425,13 +438,16 @@ export default function Home() {
                   city={fullProfile.city || "Москва"}
                   authToken={userToken || null}
                   selectedEventId={selectedEventId}
-                  onBack={() => setCurrentScreen("meeting_conditions")}
-                  onComplete={() => { }}
-                  onPromotions={() => setCurrentScreen("promotions")}
-                  onAfisha={() => setCurrentScreen("afisha")}
-                  onProfile={() => setCurrentScreen("profile")}
-                  onSettings={() => setCurrentScreen("settings")}
-                  onContacts={() => setCurrentScreen("contacts")}
+                  onBack={() => setCurrentScreen("afisha")} // Исправлено: Возврат на афишу
+                  onComplete={() => {
+                    // Успешная оплата -> сброс selectedEventId -> обновление списка
+                    setSelectedEventId(null);
+                  }}
+                  onPromotions={() => navigateTo("promotions")}
+                  onAfisha={() => navigateTo("afisha")}
+                  onProfile={() => navigateTo("profile")}
+                  onSettings={() => navigateTo("settings")}
+                  onContacts={() => navigateTo("contacts")}
                 />
               </motion.div>
             )}
@@ -448,12 +464,12 @@ export default function Home() {
                   city={fullProfile.city || "Москва"}
                   favoriteIds={favoriteIds}
                   onToggleFavorite={toggleFavoriteHandler}
-                  onFavorites={() => setCurrentScreen("favorites")}
+                  onFavorites={() => navigateTo("favorites")}
                   onHome={() => setCurrentScreen("booking")}
                   onProfile={() => setCurrentScreen("profile")}
                   onBook={(eventId) => {
                     setSelectedEventId(eventId);
-                    setCurrentScreen("booking");
+                    navigateTo("booking");
                   }}
                 />
               </motion.div>
@@ -464,10 +480,10 @@ export default function Home() {
                 <FavoritesScreen
                   favoriteIds={favoriteIds}
                   onToggleFavorite={toggleFavoriteHandler}
-                  onBack={() => setCurrentScreen("afisha")}
+                  onBack={() => setCurrentScreen(previousScreen)} // Исправлено: Динамический возврат
                   onBook={(eventId) => {
                     setSelectedEventId(eventId);
-                    setCurrentScreen("booking");
+                    navigateTo("booking");
                   }}
                 />
               </motion.div>
@@ -483,17 +499,40 @@ export default function Home() {
                   authToken={userToken}
                   onHome={() => setCurrentScreen("booking")}
                   onAfisha={() => setCurrentScreen("afisha")}
-                  onFavorites={() => setCurrentScreen("favorites")}
-                  onBookings={() => setCurrentScreen("my_bookings")}
-                  onEditProfile={() => setCurrentScreen("profile_form")}
-                  onSettings={() => setCurrentScreen("settings")}
+                  onFavorites={() => navigateTo("favorites")}
+                  onBookings={() => navigateTo("my_bookings")}
+                  onEditProfile={() => navigateTo("profile_form")}
+                  onSettings={() => navigateTo("settings")}
                 />
               </motion.div>
             )}
 
             {currentScreen === "settings" && (
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <SettingsScreen onBack={() => setCurrentScreen("booking")} />
+                <SettingsScreen
+                  onBack={() => setCurrentScreen("profile")} // Исправлено: возврат в профиль
+                  onPrivacy={() => navigateTo("privacy")}
+                  onOffer={() => navigateTo("offer")}
+                  onConsent={() => navigateTo("consent")}
+                />
+              </motion.div>
+            )}
+
+            {currentScreen === "privacy" && (
+              <motion.div key="privacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <PrivacyPolicyScreen onBack={() => setCurrentScreen("settings")} />
+              </motion.div>
+            )}
+
+            {currentScreen === "offer" && (
+              <motion.div key="offer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <OfferScreen onBack={() => setCurrentScreen("settings")} />
+              </motion.div>
+            )}
+
+            {currentScreen === "consent" && (
+              <motion.div key="consent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ConsentScreen onBack={() => setCurrentScreen("settings")} />
               </motion.div>
             )}
 

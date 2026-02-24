@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 
 interface WelcomeScreenProps {
   onStart: () => void;
+  onShowConsent?: () => void;
+  onShowPrivacy?: () => void;
 }
 
-export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy }: WelcomeScreenProps) {
   const [accepted, setAccepted] = useState(false);
   const texts = ru.welcome;
 
@@ -95,9 +97,19 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
             {texts.disclaimer}{" "}
-            <span className="underline decoration-1 underline-offset-2">{texts.consentLink}</span>{" "}
+            <span 
+              onClick={(e) => { e.preventDefault(); onShowConsent?.(); }}
+              className="underline decoration-1 underline-offset-2 cursor-pointer hover:text-[#E15859] transition-colors"
+            >
+              {texts.consentLink}
+            </span>{" "}
             {texts.and}{" "}
-            <span className="underline decoration-1 underline-offset-2">{texts.privacyLink}</span>
+            <span 
+              onClick={(e) => { e.preventDefault(); onShowPrivacy?.(); }}
+              className="underline decoration-1 underline-offset-2 cursor-pointer hover:text-[#E15859] transition-colors"
+            >
+              {texts.privacyLink}
+            </span>
           </label>
         </motion.div>
       </div>

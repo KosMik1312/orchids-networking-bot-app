@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { getSlots, type Slot } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
 interface FavoritesScreenProps {
   city?: string;
@@ -48,23 +49,23 @@ export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, on
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
-        <div className="flex-1 flex flex-col px-6 pb-32 pt-8">
+      <div className="flex-1 flex flex-col px-6 pb-32 pt-8">
         {/* Title */}
         <h2
           className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
-          Избранное
+          {ru.favorites.title}
         </h2>
 
         {/* Favorites List */}
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-[#8E8E93] text-[16px]">Загрузка...</p>
+            <p className="text-[#8E8E93] text-[16px]">{ru.loading.defaultMessage}</p>
           </div>
         ) : favorites.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-[#8E8E93] text-[16px]">Нет избранных событий</p>
+            <p className="text-[#8E8E93] text-[16px]">{ru.favorites.noEvents}</p>
           </div>
         ) : (
           <div className="space-y-4 flex-1">
@@ -86,7 +87,9 @@ export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, on
                         <Heart className="text-white" size={20} fill="white" />
                       </button>
                       <span className="text-[#8E8E93] text-[11px] text-center leading-tight">
-                        Свободных мест {seatsAvailable}/{slot.max_people}
+                        {ru.afisha.seatsAvailable
+                          .replace("{available}", seatsAvailable.toString())
+                          .replace("{total}", slot.max_people.toString())}
                       </span>
                     </div>
                   </div>
@@ -95,7 +98,7 @@ export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, on
                     className="w-full py-3 bg-[#E15859] text-white text-[15px] font-semibold"
                     disabled={seatsAvailable <= 0}
                   >
-                    {seatsAvailable > 0 ? 'Забронировать' : 'Мест нет'}
+                    {seatsAvailable > 0 ? ru.afisha.bookButton : ru.afisha.noSeatsButton}
                   </button>
                 </div>
               );
@@ -108,7 +111,7 @@ export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, on
           onClick={onBack}
           className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
         >
-          Назад
+          {ru.common.back}
         </button>
       </div>
     </div>

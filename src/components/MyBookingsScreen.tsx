@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, MapPin, Calendar, Clock } from "lucide-react";
 import { getUserBookings, type Booking } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
 interface MyBookingsScreenProps {
   city?: string;
@@ -28,7 +29,7 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
         }
       } catch (err) {
         if (isMounted) {
-          setError("Не удалось загрузить бронирования");
+          setError(ru.myBookings.errorLoad);
           console.error("Failed to load bookings:", err);
         }
       } finally {
@@ -79,9 +80,9 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
   // Helper function to get status badge
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { bg: string; text: string; label: string }> = {
-      active: { bg: "#E8F5E9", text: "#2E7D32", label: "✅ Активное" },
-      completed: { bg: "#F3E5F5", text: "#6A1B9A", label: "✓ Завершено" },
-      cancelled: { bg: "#FFEBEE", text: "#C62828", label: "✕ Отменено" },
+      active: { bg: "#E8F5E9", text: "#2E7D32", label: ru.myBookings.statusActive },
+      completed: { bg: "#F3E5F5", text: "#6A1B9A", label: ru.myBookings.statusCompleted },
+      cancelled: { bg: "#FFEBEE", text: "#C62828", label: ru.myBookings.statusCancelled },
     };
     return statusMap[status] || statusMap.active;
   };
@@ -101,14 +102,14 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
             className="text-[#E15859] text-[28px] font-black uppercase tracking-tight leading-none"
             style={{ fontFamily: "system-ui, sans-serif" }}
           >
-            Мои бронирования
+            {ru.myBookings.title}
           </h2>
         </div>
 
         {/* Bookings List */}
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-[#8E8E93] text-[16px]">Загрузка...</p>
+            <p className="text-[#8E8E93] text-[16px]">{ru.loading.defaultMessage}</p>
           </div>
         ) : error ? (
           <div className="flex-1 flex items-center justify-center">
@@ -117,8 +118,8 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
         ) : bookings.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-[#8E8E93] text-[16px]">У вас нет бронирований</p>
-              <p className="text-[#8E8E93] text-[14px] mt-2">Забронируйте мероприятие из афиши</p>
+              <p className="text-[#8E8E93] text-[16px]">{ru.myBookings.noBookings}</p>
+              <p className="text-[#8E8E93] text-[14px] mt-2">{ru.myBookings.noBookingsHint}</p>
             </div>
           </div>
         ) : (
@@ -136,7 +137,7 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-[#2A2021] text-[18px] font-bold">
-                          Бронирование #{booking.id}
+                          {ru.myBookings.bookingNumber.replace("{id}", booking.id.toString())}
                         </h3>
                       </div>
                       <div
@@ -155,7 +156,7 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
                           <p className="text-[#2A2021] text-[15px] font-semibold">
                             {formatDate(booking.date)}
                           </p>
-                          <p className="text-[#8E8E93] text-[13px]">Дата встречи</p>
+                          <p className="text-[#8E8E93] text-[13px]">{ru.myBookings.meetingDate}</p>
                         </div>
                       </div>
 
@@ -165,7 +166,7 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
                           <p className="text-[#2A2021] text-[15px] font-semibold">
                             {booking.time}
                           </p>
-                          <p className="text-[#8E8E93] text-[13px]">Время встречи</p>
+                          <p className="text-[#8E8E93] text-[13px]">{ru.myBookings.meetingTime}</p>
                         </div>
                       </div>
 
@@ -184,7 +185,9 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
                     {booking.max_people && booking.current_bookings !== undefined && (
                       <div className="mt-4 pt-4 border-t border-[#F0F0F0]">
                         <p className="text-[#8E8E93] text-[13px]">
-                          Участников: {booking.current_bookings}/{booking.max_people}
+                          {ru.myBookings.participants
+                            .replace("{current}", booking.current_bookings.toString())
+                            .replace("{max}", booking.max_people.toString())}
                         </p>
                       </div>
                     )}
@@ -193,12 +196,14 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
                   {/* Card Footer - Actions */}
                   <div className="px-6 py-3 bg-[#FAFAFA] border-t border-[#F0F0F0]">
                     <p className="text-[#8E8E93] text-[12px] text-center">
-                      Дата бронирования:{" "}
-                      {new Date(booking.booking_date).toLocaleDateString("ru-RU", {
-                        day: "numeric",
-                        month: "numeric",
-                        year: "numeric",
-                      })}
+                      {ru.myBookings.bookingDate.replace(
+                        "{date}",
+                        new Date(booking.booking_date).toLocaleDateString("ru-RU", {
+                          day: "numeric",
+                          month: "numeric",
+                          year: "numeric",
+                        })
+                      )}
                     </p>
                   </div>
                 </div>
@@ -213,7 +218,7 @@ export function MyBookingsScreen({ city = "Москва", authToken, onBack }: M
             onClick={onBack}
             className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
           >
-            Назад в профиль
+            {ru.myBookings.backToProfile}
           </button>
         )}
       </div>

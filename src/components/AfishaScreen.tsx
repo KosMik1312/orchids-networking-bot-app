@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { MapPin, Heart } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { getSlots, type Slot } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
 interface AfishaScreenProps {
   city?: string;
@@ -31,7 +32,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
         }
       } catch (err) {
         if (isMounted) {
-          setError("Не удалось загрузить мероприятия");
+          setError(ru.afisha.errorLoad);
           console.error(err);
         }
       } finally {
@@ -74,17 +75,17 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
           className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
-          Афиша
+          {ru.afisha.title}
         </h2>
 
         {/* Events List */}
         <div className="space-y-4 flex-1">
           {isLoading ? (
-            <div className="text-center py-10 text-gray-500">Загрузка мероприятий...</div>
+            <div className="text-center py-10 text-gray-500">{ru.afisha.loading}</div>
           ) : error ? (
             <div className="text-center py-10 text-red-500">{error}</div>
           ) : slots.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">Нет доступных мероприятий</div>
+            <div className="text-center py-10 text-gray-500">{ru.afisha.noEvents}</div>
           ) : (
             slots.map((slot) => {
               const isFav = favoriteIds.has(slot.id);
@@ -112,7 +113,9 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
                         />
                       </button>
                       <span className="text-[#8E8E93] text-[11px] text-center leading-tight">
-                        Свободных мест {seatsAvailable}/{slot.max_people}
+                        {ru.afisha.seatsAvailable
+                          .replace("{available}", seatsAvailable.toString())
+                          .replace("{total}", slot.max_people.toString())}
                       </span>
                     </div>
                   </div>
@@ -121,7 +124,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
                     className="w-full py-3 bg-[#E15859] text-white text-[15px] font-semibold"
                     disabled={seatsAvailable <= 0}
                   >
-                    {seatsAvailable > 0 ? 'Забронировать' : 'Мест нет'}
+                    {seatsAvailable > 0 ? ru.afisha.bookButton : ru.afisha.noSeatsButton}
                   </button>
                 </div>
               );
@@ -130,10 +133,10 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
         </div>
       </div>
 
-    <BottomNav activeTab="afisha" onTabChange={(tab) => {
-      if (tab === "home") onHome?.();
-      if (tab === "profile") onProfile?.();
-    }} />
+      <BottomNav activeTab="afisha" onTabChange={(tab) => {
+        if (tab === "home") onHome?.();
+        if (tab === "profile") onProfile?.();
+      }} />
     </div>
   );
 }

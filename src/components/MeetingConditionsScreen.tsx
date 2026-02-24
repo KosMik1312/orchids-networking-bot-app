@@ -1,6 +1,6 @@
 // "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import { ru } from "@/lib/i18n";
@@ -36,6 +36,20 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [selectedMetroCity, setSelectedMetroCity] = useState<MetroCity>(null);
   const [metroStations, setMetroStations] = useState<string[]>([]);
+  const fromRef = useRef<HTMLInputElement | null>(null);
+  const toRef = useRef<HTMLInputElement | null>(null);
+  const [activeTimeField, setActiveTimeField] = useState<"from" | "to" | null>(null);
+  const prevValidFromRef = useRef<string>(formData.time.from);
+  const prevValidToRef = useRef<string>(formData.time.to);
+
+  const isValidTime24 = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+
+  const formatDigitsToTime = (digits: string) => {
+    if (digits.length <= 2) return digits;
+    const h = digits.slice(0, 2);
+    const m = digits.slice(2, 4);
+    return `${h}:${m}`;
+  };
 
   // Пересинхронизировать состояние когда initialData меняется (при возврате на этот экран)
   useEffect(() => {
@@ -98,8 +112,26 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
   }, []);
 
   const handleTimeChange = useCallback((field: "from" | "to", value: string) => {
-    setFormData((prev) => ({ ...prev, time: { ...prev.time, [field]: value } }));
-  }, []);
+    // Удаляем все не-цифры и ограничиваем до 4 цифр (HHMM)
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    const newValue = formatDigitsToTime(digits);
+
+    setFormData((prev) => ({ ...prev, time: { ...prev.time, [field]: newValue } }));
+
+    // Если получилось валидное время, сохраняем как последнее валидное
+    if (isValidTime24(newValue)) {
+      if (field === 'from') prevValidFromRef.current = newValue;
+      else prevValidToRef.current = newValue;
+    }
+
+    // Удерживаем фокус в поле после обновления состояния
+    requestAnimationFrame(() => {
+      if (activeTimeField === field) {
+        const ref = field === "from" ? fromRef.current : toRef.current;
+        ref?.focus();
+      }
+    });
+  }, [activeTimeField]);
 
   const isFormComplete = 
     formData.metro.length > 0 && 
@@ -240,8 +272,21 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
             <div className="flex items-center gap-2 flex-1">
               <span className="text-[18px] text-[#9CA3AF]">{texts.time.from}</span>
               <input 
+                ref={fromRef}
                 type="text" 
+                inputMode="numeric"
+                pattern="[0-9:]*"
+                maxLength={5}
                 value={formData.time.from}
+                onFocus={() => setActiveTimeField("from")}
+                onBlur={() => {
+                  setActiveTimeField(null);
+                  const val = formData.time.from;
+                  if (!isValidTime24(val)) {
+                    const fallback = prevValidFromRef.current || '17:00';
+                    setFormData((prev) => ({ ...prev, time: { ...prev.time, from: fallback } }));
+                  }
+                }}
                 onChange={(e) => handleTimeChange("from", e.target.value)}
                 className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
               />
@@ -249,8 +294,21 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
             <div className="flex items-center gap-2 flex-1">
               <span className="text-[18px] text-[#9CA3AF]">{texts.time.to}</span>
               <input 
+                ref={toRef}
                 type="text" 
+                inputMode="numeric"
+                pattern="[0-9:]*"
+                maxLength={5}
                 value={formData.time.to}
+                onFocus={() => setActiveTimeField("to")}
+                onBlur={() => {
+                  setActiveTimeField(null);
+                  const val = formData.time.to;
+                  if (!isValidTime24(val)) {
+                    const fallback = prevValidToRef.current || '21:00';
+                    setFormData((prev) => ({ ...prev, time: { ...prev.time, to: fallback } }));
+                  }
+                }}
                 onChange={(e) => handleTimeChange("to", e.target.value)}
                 className="w-full border-2 border-[#E15859] rounded-full px-4 py-2 text-center text-[#E15859] font-medium outline-none"
               />

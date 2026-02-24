@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ru } from "@/lib/i18n";
 
 interface Promotion {
   id: number;
@@ -63,13 +64,13 @@ function PromotionCard({ promo }: { promo: Promotion }) {
           onClick={() => setExpanded(!expanded)}
           className="text-[#E15859] font-medium"
         >
-          {expanded ? "Свернуть" : "Подробнее"}
+          {expanded ? ru.promotions.collapse : ru.promotions.expand}
         </button>
       </p>
 
       <div className="flex items-center gap-4">
         <button className="bg-[#E15859] text-white text-[15px] font-semibold px-8 py-3 rounded-[14px]">
-          Купить
+          {ru.promotions.buyButton}
         </button>
         <span className="text-[#2A2021] text-[16px] font-semibold">{promo.price}</span>
       </div>
@@ -80,12 +81,12 @@ function PromotionCard({ promo }: { promo: Promotion }) {
 export function PromotionsScreen({ onBack }: PromotionsScreenProps) {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
-        {/* Title */}
-        <h2
-          className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none px-6 mt-12 mb-6"
+      {/* Title */}
+      <h2
+        className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none px-6 mt-12 mb-6"
         style={{ fontFamily: "system-ui, sans-serif" }}
       >
-        Акции и предложения
+        {ru.promotions.title}
       </h2>
 
       {/* Promotions List */}
@@ -108,7 +109,7 @@ export function PromotionsScreen({ onBack }: PromotionsScreenProps) {
           onClick={onBack}
           className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
         >
-          Назад
+          {ru.common.back}
         </button>
       </div>
     </div>
