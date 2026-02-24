@@ -708,6 +708,7 @@ async def get_favorites_endpoint(
         
         logger.info(f"📦 Getting favorites for user {user_id}")
         
+        user_repo = UserRepo(session)
         favorites_ids = await user_repo.get_favorites(user_id)
         logger.info(f"✅ Found {len(favorites_ids)} favorite IDs")
         

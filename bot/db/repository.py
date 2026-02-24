@@ -163,7 +163,8 @@ class UserRepo(BaseRepo):
             
         user.favorite_slots = favorites
         await self.session.commit()
-        await self.session.refresh(user)
+        # Refresh is not strictly needed here as we return the list, but good for consistency
+        # await self.session.refresh(user) 
         return favorites
 
     async def get_favorites(self, user_id: int) -> List[int]:
