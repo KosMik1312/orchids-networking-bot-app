@@ -628,18 +628,26 @@ async def get_contacts_endpoint(
         logger.info(f"📦 Getting contacts for user {user_id}, slot {request.slotId}")
         
         slot_repo = SlotRepo(session)
+        group_repo = GroupRepo(session)
+        
+        # Получаем ID всех «одногруппников» пользователя
+        teammate_ids = await group_repo.get_teammate_ids(user_id)
+        
         contacts_users = await slot_repo.get_slot_contacts(request.slotId, user_id)
         
         contacts = []
         for user in contacts_users:
             contacts.append({
+                "id": user.user_id,
                 "name": user.name,
                 "age": user.age,
                 "interests": user.interests,
                 "city": user.city,
                 "telegram": user.telegram,
                 "instagram": user.instagram,
-                "about_me": user.about_me
+                "about_me": user.about_me,
+                "photo": user.photo,
+                "is_teammate": user.user_id in teammate_ids
             })
         
         # Добавляем контакт поддержки

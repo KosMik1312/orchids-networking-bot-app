@@ -589,3 +589,18 @@ class GroupRepo(BaseRepo):
         )
         result = await self.session.execute(stmt)
         return [row[0] for row in result.all()]
+
+    async def get_teammate_ids(self, user_id: int) -> set[int]:
+        """Возвращает ID всех пользователей, которые состоят в одних группах с данным пользователем."""
+        # 1. Находим все ID групп, в которых состоит пользователь
+        groups_stmt = select(UserGroup.group_id).where(UserGroup.user_id == user_id)
+        groups_result = await self.session.execute(groups_stmt)
+        group_ids = [row[0] for row in groups_result.all()]
+        
+        if not group_ids:
+            return set()
+            
+        # 2. Находим всех участников этих групп
+        teammates_stmt = select(UserGroup.user_id).where(UserGroup.group_id.in_(group_ids))
+        teammates_result = await self.session.execute(teammates_stmt)
+        return {row[0] for row in teammates_result.all() if row[0] != user_id}

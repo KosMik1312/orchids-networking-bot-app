@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Grid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
@@ -156,6 +156,10 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [broadcastSlotId, setBroadcastSlotId] = useState<number | null>(null);
   const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
 
+  // Selection for grouping
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [isSplitting, setIsSplitting] = useState(false);
+
   useEffect(() => {
     if (isAuthorizedProp !== undefined) return;
     checkAdmin(initData)
@@ -285,10 +289,65 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   };
 
   const handleDeleteGroup = async (groupId: number) => {
+    if (!confirm("Вы уверены, что хотите удалить эту группу?")) return;
     try {
       await deleteAdminGroup(initData, groupId);
+      setSelectedGroupId(null);
+      setTab("groups");
       await loadGroups();
     } catch (e: any) { setError(e.message); }
+  };
+
+  const handleManualGrouping = async () => {
+    if (selectedUserIds.length === 0) return;
+    const groupName = prompt("Введите название новой группы:");
+    if (!groupName) return;
+    setLoading(true);
+    try {
+      const g = await createAdminGroup(initData, groupName);
+      await addGroupMembers(initData, g.id, selectedUserIds);
+      setSelectedUserIds([]);
+      setTab("groups");
+      await loadGroups();
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleAutoSplit = async () => {
+    if (!selectedSlotId || participants.length === 0) return;
+    const teamSizeStr = prompt("По сколько человек в каждой команде? (напр. 3 или 4)", "3");
+    if (!teamSizeStr) return;
+    const teamSize = parseInt(teamSizeStr);
+    if (isNaN(teamSize) || teamSize <= 0) return;
+
+    setLoading(true);
+    setIsSplitting(true);
+    try {
+      // For simplicity, we split frontend-side by making multiple calls
+      // In a real prod environment, a single backend endpoint is better, but let's see if this works for current scale.
+      const usersToSplit = selectedUserIds.length > 0
+        ? participants.filter(p => selectedUserIds.includes(p.user_id))
+        : participants;
+
+      const shuffled = [...usersToSplit].sort(() => Math.random() - 0.5);
+      const teamsCount = Math.ceil(shuffled.length / teamSize);
+
+      const slot = slots.find(s => s.id === selectedSlotId);
+      const baseName = slot ? `${slot.date} ${slot.city}` : "Команда";
+
+      for (let i = 0; i < teamsCount; i++) {
+        const teamMembers = shuffled.slice(i * teamSize, (i + 1) * teamSize);
+        const gName = `${baseName} - Группа ${i + 1}`;
+        const g = await createAdminGroup(initData, gName);
+        await addGroupMembers(initData, g.id, teamMembers.map(m => m.user_id));
+      }
+
+      setSelectedUserIds([]);
+      setTab("groups");
+      await loadGroups();
+    } catch (e: any) { setError(e.message); }
+    setIsSplitting(false);
+    setLoading(false);
   };
 
   const handleAddMembers = async () => {
@@ -519,25 +578,61 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                   <div className="font-medium text-[#404243]">{slot.restaurant}</div>
                   <div className="text-xs text-gray-400 mt-1">{slot.date} {slot.time} | {slot.city}</div>
                   <div className="text-xs text-gray-400">Мест: {slot.current_bookings}/{slot.max_people}</div>
-                  <button onClick={() => handleToggleSlotActive(slot)} className={`mt-2 text-xs px-3 py-1.5 rounded-full ${slot.is_active ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
-                    {slot.is_active ? "Деактивировать" : "Активировать"}
-                  </button>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleToggleSlotActive(slot)} className={`text-xs px-3 py-1.5 rounded-full ${slot.is_active ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
+                      {slot.is_active ? "Деактивировать" : "Активировать"}
+                    </button>
+                    <button onClick={() => setSelectedUserIds(prev => prev.length === participants.length ? [] : participants.map(p => p.user_id))} className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
+                      {selectedUserIds.length === participants.length ? "Снять выбор" : "Выбрать всех"}
+                    </button>
+                  </div>
                 </div>
               );
             })()}
 
+            {participants.length > 0 && (
+              <div className={`${cardClass} border-2 border-dashed border-[#E15859]/20 bg-[#E15859]/5`}>
+                <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-2">Группировка</div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleManualGrouping}
+                    disabled={selectedUserIds.length === 0 || loading}
+                    className={`${btnPrimary} !w-auto !py-2 !px-4 !text-xs flex items-center gap-1 disabled:opacity-50`}
+                  >
+                    <Users size={14} /> Создать группу из выбранных ({selectedUserIds.length})
+                  </button>
+                  <button
+                    onClick={handleAutoSplit}
+                    disabled={loading || isSplitting}
+                    className={`${btnSecondary} !w-auto !py-2 !px-4 !text-xs flex items-center gap-1 disabled:opacity-50`}
+                  >
+                    <Grid size={14} /> {isSplitting ? "Создание..." : selectedUserIds.length > 0 ? "Разбить выбранных на команды" : "Разбить всех на команды"}
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-400 mt-2 italic">
+                  * Команды будут созданы автоматически с именами на основе даты и места.
+                </div>
+              </div>
+            )}
+
             <div className="text-xs text-gray-400 mb-2">Участники ({participants.length}):</div>
             {participants.length === 0 && <div className="text-sm text-gray-400 text-center py-4">Нет участников</div>}
             {participants.map(p => (
-              <div key={p.user_id} className={cardClass}>
-                <div className="flex justify-between items-start">
+              <label key={p.user_id} className={`${cardClass} flex items-center gap-3 cursor-pointer hover:border-[#E15859]/30 transition-colors`}>
+                <input
+                  type="checkbox"
+                  checked={selectedUserIds.includes(p.user_id)}
+                  onChange={() => setSelectedUserIds(prev => prev.includes(p.user_id) ? prev.filter(id => id !== p.user_id) : [...prev, p.user_id])}
+                  className="w-4 h-4 accent-[#E15859]"
+                />
+                <div className="flex-1 flex justify-between items-start">
                   <div>
                     <div className="font-medium text-[#404243]">{p.name || "Без имени"}</div>
-                    <div className="text-xs text-gray-400 mt-1">TG: {p.telegram || "—"} | Оплата: {p.is_paid ? "✅" : "⏳"}</div>
+                    <div className="text-xs text-gray-400 mt-1">TG: {p.telegram || "—"} | Оплата: {p.paid ? "✅" : "⏳"}</div>
                   </div>
-                  <div className="text-xs bg-gray-50 px-2 py-1 rounded text-gray-500">{p.status}</div>
+                  <div className="text-xs bg-gray-50 px-2 py-1 rounded text-gray-500">{p.booking_status}</div>
                 </div>
-              </div>
+              </label>
             ))}
           </>
         )}

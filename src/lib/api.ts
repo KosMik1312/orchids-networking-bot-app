@@ -106,8 +106,9 @@ export interface Contact {
   telegram?: string;
   instagram?: string;
   about_me?: string;
-  id?: string; // For support contact
-  isSupport?: boolean; // For support contact
+  id?: string | number;
+  isSupport?: boolean;
+  is_teammate?: boolean;
 }
 
 // Profile API - uses hybrid authentication (Telegram initData or JWT)
@@ -202,15 +203,15 @@ export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
 // Bookings API - uses hybrid authentication (Telegram initData or JWT)
 export async function getUserBookings(userId: number, authToken?: string): Promise<{ bookings: Booking[] }> {
   console.log(`[API] Requesting bookings for userId=${userId}`);
-  
+
   const headers: HeadersInit = {};
-  
+
   // 🎯 Передаём initData/JWT в Authorization заголовке
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
     console.log('📤 Auth header set');
   }
-  
+
   const response = await fetch(`${API_BASE}/api/bookings/list`, {
     method: 'POST',
     headers: {
@@ -219,7 +220,7 @@ export async function getUserBookings(userId: number, authToken?: string): Promi
     },
     cache: 'no-store',
   });
-  
+
   console.log(`[API] Bookings response status: ${response.status}`);
   const result = await handleResponse<{ bookings: Booking[] }>(response);
   console.log(`[API] Got bookings response:`, result);
@@ -228,11 +229,11 @@ export async function getUserBookings(userId: number, authToken?: string): Promi
 
 export async function createBooking(slotId: number, authToken?: string): Promise<{ success: boolean }> {
   console.log(`[API] Creating booking: slotId=${slotId}`);
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   // 🎯 Передаём initData/JWT в Authorization заголовке
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
@@ -259,15 +260,15 @@ export async function createBooking(slotId: number, authToken?: string): Promise
 // Contacts API - uses hybrid authentication (Telegram initData or JWT)
 export async function getContacts(slotId: number, authToken?: string): Promise<{ contacts: Contact[] }> {
   console.log(`[API] Getting contacts for slotId=${slotId}`);
-  
+
   const headers: HeadersInit = {};
-  
+
   // 🎯 Передаём initData/JWT в Authorization заголовке
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
     console.log('📤 Auth header set');
   }
-  
+
   const response = await fetch(`${API_BASE}/api/contacts`, {
     method: 'POST',
     headers: {
@@ -277,7 +278,7 @@ export async function getContacts(slotId: number, authToken?: string): Promise<{
     cache: 'no-store',
     body: JSON.stringify({ slotId }),
   });
-  
+
   console.log(`[API] Contacts response status: ${response.status}`);
   return handleResponse(response);
 }
@@ -285,40 +286,40 @@ export async function getContacts(slotId: number, authToken?: string): Promise<{
 // Favorites API
 export async function toggleFavorite(slotId: number, authToken?: string): Promise<{ success: boolean; favorites: number[] }> {
   console.log(`[API] Toggling favorite: slotId=${slotId}`);
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
   }
-  
+
   const response = await fetch(`${API_BASE}/api/favorites/toggle?slot_id=${slotId}`, {
     method: 'POST',
     headers,
     cache: 'no-store',
   });
-  
+
   console.log(`[API] Toggle favorite response status: ${response.status}`);
   return handleResponse(response);
 }
 
 export async function getFavorites(authToken?: string): Promise<{ favorites: number[] }> {
   console.log(`[API] Getting favorites`);
-  
+
   const headers: HeadersInit = {};
-  
+
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
   }
-  
+
   const response = await fetch(`${API_BASE}/api/favorites`, {
     method: 'GET',
     headers,
     cache: 'no-store',
   });
-  
+
   console.log(`[API] Get favorites response status: ${response.status}`);
   return handleResponse(response);
 }

@@ -128,8 +128,8 @@ export async function getAdminGroups(initData: string): Promise<{ groups: AdminG
   return adminFetch('/api/admin/groups', initData);
 }
 
-export async function createAdminGroup(initData: string, name: string) {
-  return adminFetch('/api/admin/groups/create', initData, { body: JSON.stringify({ name }) });
+export async function createAdminGroup(initData: string, name: string): Promise<AdminGroup> {
+  return adminFetch<AdminGroup>('/api/admin/groups/create', initData, { body: JSON.stringify({ name }) });
 }
 
 export async function deleteAdminGroup(initData: string, groupId: number) {
