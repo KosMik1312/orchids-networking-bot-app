@@ -55,6 +55,15 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             city: s.city
           }));
           setSlots(mappedSlots);
+
+          // Если передан ID конкретного события, выбираем его сразу
+          if (selectedEventId) {
+            const preSelected = mappedSlots.find(s => Number(s.id) === Number(selectedEventId));
+            if (preSelected) {
+              setSelectedSlot(preSelected);
+              setStep("payment");
+            }
+          }
         }
       } catch (err) {
         if (isMounted) setError(t.error);
@@ -66,7 +75,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
     fetchSlots();
     return () => { isMounted = false; };
-  }, [city]);
+  }, [city, selectedEventId]);
 
   const handleSlotSelect = (slot: Slot) => {
     setSelectedSlot(slot);
