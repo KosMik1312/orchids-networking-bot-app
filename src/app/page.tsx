@@ -246,8 +246,8 @@ export default function Home() {
 
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     await updateProfile({
-      name: data.name,
-      gender: genderValue,
+      name: data.name || undefined,
+      gender: genderValue || undefined,
       age: data.age ? parseInt(data.age) : undefined,
       zodiac: data.zodiac || undefined,
       occupation: data.career || undefined,
@@ -259,10 +259,10 @@ export default function Home() {
   };
 
   const handleProfileFormBack = async (data: any) => {
-    const genderValue = data.gender === "Мужской" ? "male" : "female";
+    const genderValue = data.gender === "Мужской" ? "male" : data.gender === "Женский" ? "female" : undefined;
     // Сохранить текущие данные (даже если форма неполная)
     await updateProfile({
-      name: data.name,
+      name: data.name || undefined,
       gender: genderValue,
       age: data.age ? parseInt(data.age) : undefined,
       zodiac: data.zodiac || undefined,
@@ -286,15 +286,15 @@ export default function Home() {
 
     // ← ИСПРАВЛЕНИЕ: await для гарантии сохранения перед переходом
     await updateProfile({
-      strengths: data.strengths || undefined,
+      strengths: data.strengths?.length > 0 ? data.strengths : undefined,
       weaknesses: data.weaknesses || undefined,
-      values: data.values || undefined,
-      love_language: data.loveLanguage || undefined,
+      values: data.values?.length > 0 ? data.values : undefined,
+      love_language: data.loveLanguage?.length > 0 ? data.loveLanguage : undefined,
       goals: data.goals || undefined,
       dreams: data.dreams || undefined,
-      interests: data.interests || undefined,
-      telegram: data.telegramNickname,
-      instagram: data.instagramNickname,
+      interests: data.interests?.length > 0 ? data.interests : undefined,
+      telegram: data.telegramNickname || undefined,
+      instagram: data.instagramNickname || undefined,
       photo: data.photo || undefined,
     });
 
@@ -304,15 +304,15 @@ export default function Home() {
   const handleBestInMeBack = async (data: any) => {
     // Сохранить текущие данные (даже если форма неполная)
     await updateProfile({
-      strengths: data.strengths || undefined,
+      strengths: data.strengths?.length > 0 ? data.strengths : undefined,
       weaknesses: data.weaknesses || undefined,
-      values: data.values || undefined,
-      love_language: data.loveLanguage || undefined,
+      values: data.values?.length > 0 ? data.values : undefined,
+      love_language: data.loveLanguage?.length > 0 ? data.loveLanguage : undefined,
       goals: data.goals || undefined,
       dreams: data.dreams || undefined,
-      interests: data.interests || undefined,
-      telegram: data.telegramNickname,
-      instagram: data.instagramNickname,
+      interests: data.interests?.length > 0 ? data.interests : undefined,
+      telegram: data.telegramNickname || undefined,
+      instagram: data.instagramNickname || undefined,
       photo: data.photo || undefined,
     }).catch((err) => {
       console.error("Error saving BestInMe on back:", err);
@@ -391,7 +391,7 @@ export default function Home() {
                   initialData={{
                     name: fullProfile.name || "",
                     gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
-                    age: fullProfile.age !== undefined ? String(fullProfile.age) : "",
+                    age: fullProfile.age !== undefined ? Number(fullProfile.age) : 25,
                     zodiac: fullProfile.zodiac || "",
                     career: fullProfile.occupation || "",
                     familyStatus: fullProfile.relationship_status || "",
@@ -438,10 +438,11 @@ export default function Home() {
                   city={fullProfile.city || "Москва"}
                   authToken={userToken || null}
                   selectedEventId={selectedEventId}
-                  onBack={() => setCurrentScreen("afisha")} // Исправлено: Возврат на афишу
+                  onBack={() => setCurrentScreen("afisha")} // Возврат на афишу
                   onComplete={() => {
-                    // Успешная оплата -> сброс selectedEventId -> обновление списка
+                    // Успешная оплата -> переход в мои бронирования
                     setSelectedEventId(null);
+                    setCurrentScreen("my_bookings"); // ИСПРАВЛЕНИЕ: Переход к списку бронирований
                   }}
                   onPromotions={() => navigateTo("promotions")}
                   onAfisha={() => navigateTo("afisha")}
@@ -503,6 +504,7 @@ export default function Home() {
                   onBookings={() => navigateTo("my_bookings")}
                   onEditProfile={() => navigateTo("profile_form")}
                   onSettings={() => navigateTo("settings")}
+                  onHelp={() => window.open('https://t.me/alloraclub_support', '_blank')} // ИСПРАВЛЕНИЕ: Ссылка на саппорт
                 />
               </motion.div>
             )}
@@ -510,7 +512,7 @@ export default function Home() {
             {currentScreen === "settings" && (
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <SettingsScreen
-                  onBack={() => setCurrentScreen("profile")} // Исправлено: возврат в профиль
+                  onBack={() => setCurrentScreen("profile")} // ИСПРАВЛЕНИЕ: возврат в профиль
                   onPrivacy={() => navigateTo("privacy")}
                   onOffer={() => navigateTo("offer")}
                   onConsent={() => navigateTo("consent")}
