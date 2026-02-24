@@ -1,4 +1,4 @@
-# Backup V1 - Allora MiniApp Components
+# Backup V1 - Antre Club MiniApp Components
 
 **Дата создания:** 2026-02-05  
 **Последнее обновление:** 2026-02-05

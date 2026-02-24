@@ -3,7 +3,7 @@ import "./globals.css";
 import { VisualEditsMessenger } from "orchids-visual-edits";
 
 export const metadata: Metadata = {
-  title: "Аллора Клаб",
+  title: "Antre Club",
   description: "Создаем яркую жизнь вместе",
 };
 

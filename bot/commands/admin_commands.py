@@ -69,7 +69,7 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
     ])
 
     await message.answer(
-        "🔧 <b>Панель администратора Allora</b>\n\n"
+        "🔧 <b>Панель администратора Antre Club</b>\n\n"
         "Нажмите кнопку ниже, чтобы открыть админ-панель:",
         reply_markup=keyboard
     )

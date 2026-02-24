@@ -644,7 +644,7 @@ async def get_contacts_endpoint(
         
         # Добавляем контакт поддержки
         contacts.append({
-            "name": "Поддержка Allora",
+            "name": "Поддержка Antre Club",
             "id": "support",
             "isSupport": True,
             "telegram": "@allora_support"

@@ -20,7 +20,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             className="font-serif text-[44px] italic text-[#E15859] text-center"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
-            Аллора Клаб
+            Antre Club
           </h1>
           <div className="h-[1px] bg-[#E15859] w-[85%] mt-[-4px]" />
         </motion.div>
