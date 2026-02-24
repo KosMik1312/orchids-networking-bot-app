@@ -76,7 +76,7 @@ export default function Home() {
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!userId || isSaving) return;
+    if (!userId) return;
     setIsSaving(true);
     try {
       // 📤 ИСПРАВЛЕНИЕ: ПЕРЕДАЁМ ТОКЕН при сохранении профиля

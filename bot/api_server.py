@@ -368,7 +368,7 @@ async def save_profile_endpoint(
         raise HTTPException(status_code=401, detail="Invalid authentication")
     
     logger.info(f"📦 POST /api/profile for user {user_id}")
-    profile_dict = request.profile.model_dump(exclude_none=False)
+    profile_dict = request.profile.model_dump(exclude_none=True)
     logger.info(f"   Profile data keys: {list(profile_dict.keys())}")
     logger.info(f"   Profile data sample: name={profile_dict.get('name')}, age={profile_dict.get('age')}, gender={profile_dict.get('gender')}")
     
