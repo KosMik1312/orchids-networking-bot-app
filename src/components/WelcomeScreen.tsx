@@ -83,7 +83,7 @@ export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy }: Welcome
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          className="flex items-start gap-3 mt-6 justify-center"
+          className="flex items-start gap-3 mt-6 justify-center relative z-20"
         >
           <Checkbox
             id="consent"
@@ -91,26 +91,31 @@ export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy }: Welcome
             onCheckedChange={(checked) => setAccepted(checked === true)}
             className="mt-0.5 border-[#E15859] data-[state=checked]:bg-[#E15859] data-[state=checked]:text-white rounded-[6px] size-[22px] shrink-0 transition-colors"
           />
-          <label
-            htmlFor="consent"
-            className="text-[11px] text-[#2A2021] leading-tight cursor-pointer select-none max-w-[260px]"
+          <div
+            className="text-[11px] text-[#2A2021] leading-tight select-none max-w-[260px]"
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
-            {texts.disclaimer}{" "}
-            <span 
-              onClick={(e) => { e.preventDefault(); onShowConsent?.(); }}
+            <span onClick={() => setAccepted(!accepted)} className="cursor-pointer">
+              {texts.disclaimer}{" "}
+            </span>
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowConsent?.(); }}
               className="underline decoration-1 underline-offset-2 cursor-pointer hover:text-[#E15859] transition-colors"
+              style={{ touchAction: 'manipulation', padding: '2px 0' }}
             >
               {texts.consentLink}
-            </span>{" "}
-            {texts.and}{" "}
-            <span 
-              onClick={(e) => { e.preventDefault(); onShowPrivacy?.(); }}
+            </span>
+            <span onClick={() => setAccepted(!accepted)} className="cursor-pointer">
+              {" "}{texts.and}{" "}
+            </span>
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowPrivacy?.(); }}
               className="underline decoration-1 underline-offset-2 cursor-pointer hover:text-[#E15859] transition-colors"
+              style={{ touchAction: 'manipulation', padding: '2px 0' }}
             >
               {texts.privacyLink}
             </span>
-          </label>
+          </div>
         </motion.div>
       </div>
     </div >

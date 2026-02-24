@@ -136,36 +136,9 @@ def get_user_id_or_param(auth_user_id: Optional[int], param_user_id: Optional[in
 
 # ===== Pydantic модели =====
 
-class UserProfile(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    name: Optional[str] = None
-    age: Optional[int] = None
-    gender: Optional[str] = None
-    relationship_status: Optional[str] = None
-    children: Optional[str] = None
-    occupation: Optional[str] = None
-    goal: Optional[str] = None
-    interests: Optional[str] = None
-    comfort_level: Optional[int] = None
-    social_frequency: Optional[int] = None
-    communication_format: Optional[str] = None
-    evening_scenario: Optional[str] = None
-    telegram: Optional[str] = None
-    instagram: Optional[str] = None
-    photo: Optional[str] = None
-    about_me: Optional[str] = None
-    city: Optional[str] = None
-    meeting_metro: Optional[List[str]] = None
-    meeting_days: Optional[List[str]] = None
-    meeting_time_from: Optional[str] = None
-    meeting_time_to: Optional[str] = None
-    format: Optional[str] = None
-    is_profile_completed: bool = False
-
 class ProfileRequest(BaseModel):
     userId: Optional[int] = None
-    profile: UserProfile
+    profile: UserProfileSchema
 
 
 class BookingRequest(BaseModel):
@@ -474,7 +447,7 @@ async def debug_save_profile_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/profile/get")
+@app.get("/api/profile")
 async def get_profile_endpoint(
     user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
@@ -509,6 +482,7 @@ async def get_profile_endpoint(
             "name": user.name,
             "age": user.age,
             "gender": user.gender,
+            "zodiac": user.zodiac,
             "relationship_status": user.relationship_status,
             "children": user.children,
             "occupation": user.occupation,
@@ -516,6 +490,8 @@ async def get_profile_endpoint(
             "interests": user.interests,
             "comfort_level": user.comfort_level,
             "social_frequency": user.social_frequency,
+            # Map DB `communication_format` to frontend `format`
+            "format": user.communication_format,
             "communication_format": user.communication_format,
             "evening_scenario": user.evening_scenario,
             "telegram": user.telegram,
@@ -523,6 +499,18 @@ async def get_profile_endpoint(
             "photo": user.photo,
             "about_me": user.about_me,
             "city": user.city,
+            # BestInMeScreen fields
+            "strengths": user.strengths,
+            "weaknesses": user.weaknesses,
+            "values": user.values,
+            "love_language": user.love_language,
+            "goals": user.goals,
+            "dreams": user.dreams,
+            # Meeting related
+            "meeting_metro": user.meeting_metro,
+            "meeting_days": user.meeting_days,
+            "meeting_time_from": user.meeting_time_from,
+            "meeting_time_to": user.meeting_time_to,
             "is_profile_completed": user.is_profile_completed
         }
         return {"profile": profile_dict}

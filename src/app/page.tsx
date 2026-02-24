@@ -372,7 +372,11 @@ export default function Home() {
           <>
             {currentScreen === "welcome" && (
               <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <WelcomeScreen onStart={handleStartOnboarding} />
+                <WelcomeScreen
+                  onStart={handleStartOnboarding}
+                  onShowConsent={() => navigateTo("consent")}
+                  onShowPrivacy={() => navigateTo("privacy")}
+                />
               </motion.div>
             )}
 
@@ -522,19 +526,19 @@ export default function Home() {
 
             {currentScreen === "privacy" && (
               <motion.div key="privacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <PrivacyPolicyScreen onBack={() => setCurrentScreen("settings")} />
+                <PrivacyPolicyScreen onBack={() => setCurrentScreen(previousScreen || "settings")} />
               </motion.div>
             )}
 
             {currentScreen === "offer" && (
               <motion.div key="offer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <OfferScreen onBack={() => setCurrentScreen("settings")} />
+                <OfferScreen onBack={() => setCurrentScreen(previousScreen || "settings")} />
               </motion.div>
             )}
 
             {currentScreen === "consent" && (
               <motion.div key="consent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ConsentScreen onBack={() => setCurrentScreen("settings")} />
+                <ConsentScreen onBack={() => setCurrentScreen(previousScreen || "settings")} />
               </motion.div>
             )}
 

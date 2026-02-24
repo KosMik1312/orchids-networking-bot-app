@@ -79,12 +79,34 @@ class UserRepo(BaseRepo):
             profile_dict['communication_format'] = profile_dict.pop('format')
             logger.info(f"🔄 Mapped 'format' to 'communication_format'")
         
+        # Небольшая подстраховка: часто фронтенд использует camelCase
+        # мэпим известные варианты в snake_case, чтобы не терять поля.
+        camel_to_snake = {
+            'familyStatus': 'relationship_status',
+            'hasChildren': 'children',
+            'loveLanguage': 'love_language',
+            'meetingMetro': 'meeting_metro',
+            'meetingDays': 'meeting_days',
+            'meetingTimeFrom': 'meeting_time_from',
+            'meetingTimeTo': 'meeting_time_to',
+            'telegramNickname': 'telegram',
+            'instagramNickname': 'instagram',
+        }
+
+        for ckey, skey in camel_to_snake.items():
+            if ckey in profile_dict and skey not in profile_dict:
+                profile_dict[skey] = profile_dict.pop(ckey)
+                logger.debug(f"🔁 Mapped camelCase {ckey} -> {skey}")
         logger.debug(f"Saving profile for user {user_id}: {list(profile_dict.keys())}")
         
+        missing_keys = []
         for key, value in profile_dict.items():
             if hasattr(user, key):
                 logger.debug(f"  Setting {key}={value}")
                 setattr(user, key, value)
+            else:
+                missing_keys.append(key)
+                logger.debug(f"  Attribute {key} not found on User model")
         
         # Если все обязательные поля заполнены, можно ставить True (опционально, или доверяем фронту)
         # В данном случае доверяем фронту, который присылает is_profile_completed=True в конце
@@ -97,6 +119,8 @@ class UserRepo(BaseRepo):
         logger.info(f"✅ Commit successful for user {user_id}")
         
         await self.session.refresh(user)
+        if missing_keys:
+            logger.warning(f"⚠️ Some profile keys were not applied to User (unknown attributes): {missing_keys}")
         logger.info(f"✅ Profile saved for user {user_id}: name={user.name}, is_profile_completed={user.is_profile_completed}")
         return user
     
