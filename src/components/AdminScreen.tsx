@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
   updateAdminSlot, getSlotParticipants, getAdminGroups, createAdminGroup,
@@ -16,13 +17,115 @@ type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "gr
 interface AdminScreenProps {
   token: string;
   onBack?: () => void;
-  isAuthorized?: boolean; // для Storybook тестирования
+  isAuthorized?: boolean;
   mockStats?: AdminStats;
   mockUsers?: AdminUser[];
   mockSlots?: AdminSlot[];
   mockGroups?: AdminGroup[];
   initialTab?: AdminTab;
 }
+
+// --- Вспомогательные компоненты для красивой формы ---
+
+const cardClass = "bg-white rounded-2xl p-4 shadow-sm mb-3";
+const btnPrimary = "bg-[#E15859] text-white rounded-2xl px-4 py-3 font-medium text-sm w-full";
+const btnSecondary = "bg-white border border-[#E15859] text-[#E15859] rounded-2xl px-4 py-2 font-medium text-sm";
+const inputClass = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#E15859]";
+
+const AdminSelect = ({ value, options, onChange, placeholder }: { value: string, options: string[], onChange: (v: string) => void, placeholder: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`${inputClass} flex items-center justify-between text-left`}
+      >
+        <span className={value ? "text-[#404243]" : "text-gray-400"}>{value || placeholder}</span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+          >
+            {options.map(opt => (
+              <button
+                key={opt}
+                onClick={() => { onChange(opt); setIsOpen(false); }}
+                className="w-full px-4 py-3 text-sm text-[#404243] hover:bg-gray-50 text-left transition-colors flex items-center justify-between"
+              >
+                {opt}
+                {value === opt && <Check size={14} className="text-[#E15859]" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const AdminCalendar = ({ value, onChange, onClose }: { value: string, onChange: (v: string) => void, onClose: () => void }) => {
+  const [viewDate, setViewDate] = useState(new Date());
+  const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+  const firstDayOfMonth = (y: number, m: number) => new Date(y, m, 1).getDay();
+
+  const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const days = [];
+  const firstDay = (firstDayOfMonth(year, month) + 6) % 7;
+  for (let i = 0; i < firstDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth(year, month); i++) days.push(i);
+
+  const isSelected = (d: number) => {
+    const formatted = `${d.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}.${year}`;
+    return value === formatted;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="bg-white rounded-3xl p-4 shadow-2xl border border-gray-100 w-[280px]"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <button onClick={() => setViewDate(new Date(year, month - 1))} className="p-1 hover:bg-gray-100 rounded-full transition-colors"><ChevronLeft size={18} /></button>
+        <div className="text-sm font-bold text-[#404243]">{monthNames[month]} {year}</div>
+        <button onClick={() => setViewDate(new Date(year, month + 1))} className="p-1 hover:bg-gray-100 rounded-full transition-colors"><ChevronRight size={18} /></button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map(d => (
+          <div key={d} className="text-[10px] font-bold text-gray-300 text-center uppercase">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((d, i) => (
+          <div key={i} className="aspect-square flex items-center justify-center">
+            {d && (
+              <button
+                onClick={() => {
+                  const formatted = `${d.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}.${year}`;
+                  onChange(formatted);
+                  onClose();
+                }}
+                className={`w-full h-full text-xs rounded-lg transition-all flex items-center justify-center ${isSelected(d) ? "bg-[#E15859] text-white font-bold" : "text-[#404243] hover:bg-red-50 hover:text-[#E15859]"}`}
+              >
+                {d}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button onClick={onClose} className="w-full mt-4 py-2 text-xs font-medium text-gray-400 hover:text-[#E15859] transition-colors">Закрыть</button>
+    </motion.div>
+  );
+};
 
 export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorizedProp, mockStats, mockUsers, mockSlots, mockGroups, initialTab = "dashboard" }: AdminScreenProps) {
   const [tab, setTab] = useState<AdminTab>(initialTab);
@@ -40,17 +143,13 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Форма создания мероприятия
   const [showSlotForm, setShowSlotForm] = useState(false);
   const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  // Создание группы
   const [newGroupName, setNewGroupName] = useState("");
-
-  // Добавление участников
   const [addMemberIds, setAddMemberIds] = useState("");
 
-  // Рассылка
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastTarget, setBroadcastTarget] = useState<"groups" | "slot">("groups");
   const [broadcastGroupIds, setBroadcastGroupIds] = useState<number[]>([]);
@@ -58,9 +157,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
 
   useEffect(() => {
-    // Если isAuthorized уже установлен (для Storybook), не проверяем
     if (isAuthorizedProp !== undefined) return;
-
     checkAdmin(initData)
       .then(() => setAuthorized(true))
       .catch(() => setAuthorized(false));
@@ -165,7 +262,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     try {
       await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people) });
       setShowSlotForm(false);
-      setSlotForm({ date: "", time: "", city: "", restaurant: "", max_people: "" });
+      setSlotForm({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
       await loadSlots();
     } catch (e: any) { setError(e.message); }
     setLoading(false);
@@ -227,11 +324,6 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     } catch (e: any) { setError(e.message); }
     setLoading(false);
   };
-
-  const cardClass = "bg-white rounded-2xl p-4 shadow-sm mb-3";
-  const btnPrimary = "bg-[#E15859] text-white rounded-2xl px-4 py-3 font-medium text-sm w-full";
-  const btnSecondary = "bg-white border border-[#E15859] text-[#E15859] rounded-2xl px-4 py-2 font-medium text-sm";
-  const inputClass = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#E15859]";
 
   const renderHeader = (title: string, backTo?: AdminTab) => (
     <div className="flex items-center gap-3 mb-4">
@@ -347,23 +439,55 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             </button>
 
             {showSlotForm && (
-              <div className={`${cardClass} flex flex-col gap-2`}>
-                <input placeholder="Дата (ДД.ММ.ГГГГ)" value={slotForm.date} onChange={e => setSlotForm(p => ({ ...p, date: e.target.value }))} className={inputClass} />
-                <input placeholder="Время (ЧЧ:ММ)" value={slotForm.time} onChange={e => setSlotForm(p => ({ ...p, time: e.target.value }))} className={inputClass} />
-                <select
-                  value={slotForm.city}
-                  onChange={e => setSlotForm(p => ({ ...p, city: e.target.value }))}
-                  className={inputClass}
-                >
-                  <option value="Москва">Москва</option>
-                  <option value="Санкт-Петербург">Санкт-Петербург</option>
-                </select>
-                <input placeholder="Место / Адрес" value={slotForm.restaurant} onChange={e => setSlotForm(p => ({ ...p, restaurant: e.target.value }))} className={inputClass} />
-                <input placeholder="Макс. участников" type="number" value={slotForm.max_people} onChange={e => setSlotForm(p => ({ ...p, max_people: e.target.value }))} className={inputClass} />
-                <button onClick={handleCreateSlot} disabled={loading} className={btnPrimary}>
-                  {loading ? "Создание..." : "Создать"}
-                </button>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className={`${cardClass} border-2 border-[#E15859]/10 bg-white/50 backdrop-blur-sm flex flex-col gap-3`}>
+                  <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">Новое мероприятие</div>
+
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className={`${inputClass} flex items-center justify-between text-left`}
+                    >
+                      <span className={slotForm.date ? "text-[#404243]" : "text-gray-400"}>
+                        {slotForm.date || "Выберите дату"}
+                      </span>
+                      <Calendar size={16} className="text-gray-400" />
+                    </button>
+                    <AnimatePresence>
+                      {showCalendar && (
+                        <div className="absolute z-[60] mt-2 left-0 top-full">
+                          <AdminCalendar
+                            value={slotForm.date}
+                            onChange={(v) => setSlotForm(p => ({ ...p, date: v }))}
+                            onClose={() => setShowCalendar(false)}
+                          />
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <input placeholder="Время (ЧЧ:ММ)" value={slotForm.time} onChange={e => setSlotForm(p => ({ ...p, time: e.target.value }))} className={inputClass} />
+
+                  <AdminSelect
+                    value={slotForm.city}
+                    options={["Москва", "Санкт-Петербург"]}
+                    onChange={(v) => setSlotForm(p => ({ ...p, city: v }))}
+                    placeholder="Выберите город"
+                  />
+
+                  <input placeholder="Место / Адрес" value={slotForm.restaurant} onChange={e => setSlotForm(p => ({ ...p, restaurant: e.target.value }))} className={inputClass} />
+                  <input placeholder="Максимально участников" type="number" value={slotForm.max_people} onChange={e => setSlotForm(p => ({ ...p, max_people: e.target.value }))} className={inputClass} />
+
+                  <button onClick={handleCreateSlot} disabled={loading} className={`${btnPrimary} mt-2 shadow-lg shadow-[#E15859]/20`}>
+                    {loading ? "Создание..." : "Создать мероприятие"}
+                  </button>
+                </div>
+              </motion.div>
             )}
 
             {slots.map(s => (
@@ -405,19 +529,13 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             <div className="text-xs text-gray-400 mb-2">Участники ({participants.length}):</div>
             {participants.length === 0 && <div className="text-sm text-gray-400 text-center py-4">Нет участников</div>}
             {participants.map(p => (
-              <div key={p.booking_id} className={cardClass}>
+              <div key={p.user_id} className={cardClass}>
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium text-[#404243]">{p.name || "Без имени"}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">ID: {p.user_id}</div>
-                    {p.telegram && <div className="text-xs text-gray-400">TG: {p.telegram}</div>}
+                    <div className="text-xs text-gray-400 mt-1">TG: {p.telegram || "—"} | Оплата: {p.is_paid ? "✅" : "⏳"}</div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className={`text-xs px-2 py-1 rounded-full ${p.paid ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"}`}>
-                      {p.paid ? `Оплачено ${p.payment_amount || ""}` : "Не оплачено"}
-                    </div>
-                    <div className="text-[10px] text-gray-300">{p.booking_status}</div>
-                  </div>
+                  <div className="text-xs bg-gray-50 px-2 py-1 rounded text-gray-500">{p.status}</div>
                 </div>
               </div>
             ))}
@@ -428,45 +546,44 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         {tab === "groups" && (
           <>
             {renderHeader("Группы", "dashboard")}
-            <div className="flex gap-2 mb-4">
-              <input placeholder="Название группы" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} className={`${inputClass} flex-1`} />
-              <button onClick={handleCreateGroup} className="bg-[#E15859] text-white rounded-xl px-4 flex-shrink-0">
-                <Plus size={18} />
-              </button>
+            <div className={`${cardClass} flex gap-2`}>
+              <input placeholder="Название группы" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} className={inputClass} />
+              <button onClick={handleCreateGroup} className={`${btnPrimary} !w-auto !px-6`}><Plus size={20} /></button>
             </div>
-
             {groups.map(g => (
-              <div key={g.id} className={`${cardClass} flex items-center gap-3`}>
-                <button onClick={() => { setSelectedGroupId(g.id); setTab("group_detail"); }} className="flex-1 text-left">
+              <button key={g.id} onClick={() => { setSelectedGroupId(g.id); setTab("group_detail"); }} className={`${cardClass} w-full text-left flex justify-between items-center`}>
+                <div>
                   <div className="font-medium text-[#404243]">{g.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{g.member_count} участников</div>
-                </button>
-                <button onClick={() => handleDeleteGroup(g.id)} className="w-8 h-8 flex items-center justify-center text-red-400">
-                  <Trash2 size={16} />
-                </button>
-              </div>
+                  <div className="text-xs text-gray-400 mt-1">Участников: {g.member_count}</div>
+                </div>
+                <ChevronRight size={18} className="text-gray-300" />
+              </button>
             ))}
-            {groups.length === 0 && <div className="text-sm text-gray-400 text-center py-4">Нет групп</div>}
           </>
         )}
 
         {/* ===== ДЕТАЛИ ГРУППЫ ===== */}
         {tab === "group_detail" && selectedGroupId && (
           <>
-            {renderHeader(groups.find(g => g.id === selectedGroupId)?.name || "Группа", "groups")}
-            <div className="flex gap-2 mb-4">
-              <input placeholder="ID через запятую" value={addMemberIds} onChange={e => setAddMemberIds(e.target.value)} className={`${inputClass} flex-1`} />
-              <button onClick={handleAddMembers} className="bg-[#E15859] text-white rounded-xl px-4 flex-shrink-0">
-                <Plus size={18} />
+            {renderHeader("Управление группой", "groups")}
+            <div className={cardClass}>
+              <div className="text-sm font-medium text-[#404243] mb-2">Добавить участников (через запятую ID):</div>
+              <div className="flex gap-2">
+                <input placeholder="123, 456, 789" value={addMemberIds} onChange={e => setAddMemberIds(e.target.value)} className={inputClass} />
+                <button onClick={handleAddMembers} className={`${btnPrimary} !w-auto !px-6`}>Добавить</button>
+              </div>
+            </div>
+            <div className="flex justify-between items-center mb-2 px-1">
+              <div className="text-xs text-gray-400">Участники группы:</div>
+              <button onClick={() => handleDeleteGroup(selectedGroupId)} className="text-xs text-red-400 flex items-center gap-1">
+                <Trash2 size={12} /> Удалить группу
               </button>
             </div>
-
-            <div className="text-xs text-gray-400 mb-2">Участники ({groupMembers.length}):</div>
             {groupMembers.map(m => (
-              <div key={m.user_id} className={`${cardClass} flex items-center justify-between`}>
+              <div key={m.user_id} className={`${cardClass} flex justify-between items-center`}>
                 <div>
-                  <div className="font-medium text-[#404243]">{m.name || "Без имени"}</div>
-                  <div className="text-xs text-gray-400">ID: {m.user_id} {m.telegram ? `| TG: ${m.telegram}` : ""}</div>
+                  <div className="text-sm font-medium text-[#404243]">{m.name || "Без имени"}</div>
+                  <div className="text-xs text-gray-400">ID: {m.user_id} | TG: {m.telegram || "—"}</div>
                 </div>
                 <button onClick={() => handleRemoveMember(m.user_id)} className="w-8 h-8 flex items-center justify-center text-red-400">
                   <X size={16} />
