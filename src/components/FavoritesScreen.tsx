@@ -2,40 +2,41 @@
 
 import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
-import { getSlots, type Slot } from "@/lib/api";
+import { getFavorites, getSlots, type Slot } from "@/lib/api";
 import { ru } from "@/lib/i18n";
 
 interface FavoritesScreenProps {
-  city?: string;
   favoriteIds: Set<number>;
+  authToken?: string | null;
   onBack?: () => void;
   onBook?: (eventId: number) => void;
   onToggleFavorite?: (eventId: number) => void;
 }
 
-export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, onBook, onToggleFavorite }: FavoritesScreenProps) {
+export function FavoritesScreen({ favoriteIds, authToken, onBack, onBook, onToggleFavorite }: FavoritesScreenProps) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    async function fetchSlots() {
+    async function fetchFavorites() {
       try {
         setIsLoading(true);
-        const data = await getSlots(city);
+        const data = await getFavorites(authToken || undefined);
         if (isMounted) {
-          setSlots(data.slots || []);
+          setSlots(data.favorites || []);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch favorites:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
     }
-    fetchSlots();
+    fetchFavorites();
     return () => { isMounted = false; };
-  }, [city]);
+  }, [authToken]);
 
+  // Фильтруем слоты по текущему набору ID (на случай если пользователь нажал "дизлайк" на этом же экране)
   const favorites = slots.filter((s) => favoriteIds.has(s.id));
 
   const formatDate = (dateStr: string) => {
@@ -75,6 +76,11 @@ export function FavoritesScreen({ city = "Москва", favoriteIds, onBack, on
                 <div key={slot.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">
                   <div className="px-6 pt-5 pb-4 flex items-start justify-between">
                     <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#E15859] bg-[#FDEEEE] px-2 py-0.5 rounded-full">
+                          {slot.city}
+                        </span>
+                      </div>
                       <h3 className="text-[#2A2021] text-[20px] font-bold">{slot.restaurant}</h3>
                       <p className="text-[#8E8E93] text-[15px] mt-1">{formatDate(slot.date)}</p>
                       <p className="text-[#8E8E93] text-[15px]">{slot.time}</p>

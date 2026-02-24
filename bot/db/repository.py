@@ -242,6 +242,14 @@ class SlotRepo(BaseRepo):
         result = await self.session.execute(select(func.sum(DinnerSlot.current_bookings)))
         return result.scalar_one() or 0
 
+    async def get_slots_by_ids(self, slot_ids: List[int]) -> List[DinnerSlot]:
+        """Получает слоты по списку ID."""
+        if not slot_ids:
+            return []
+        stmt = select(DinnerSlot).where(DinnerSlot.id.in_(slot_ids)).order_by(DinnerSlot.date, DinnerSlot.time)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
 
 class BookingRepo(BaseRepo):
     """Репозиторий для работы с бронированиями."""

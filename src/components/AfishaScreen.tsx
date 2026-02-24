@@ -26,7 +26,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
     async function fetchSlots() {
       try {
         setIsLoading(true);
-        const data = await getSlots(city);
+        const data = await getSlots("all");
         if (isMounted) {
           setSlots(data.slots || []);
         }
@@ -60,7 +60,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
             <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
               <MapPin className="text-white" size={22} fill="white" />
             </div>
-            <span className="font-medium text-[#404243] text-[15px] pr-2">г. {city}</span>
+            <span className="font-medium text-[#404243] text-[15px] pr-2">Все города</span>
           </div>
           <button
             onClick={onFavorites}
@@ -94,6 +94,11 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
                 <div key={slot.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">
                   <div className="px-6 pt-5 pb-4 flex items-start justify-between">
                     <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#E15859] bg-[#FDEEEE] px-2 py-0.5 rounded-full">
+                          {slot.city}
+                        </span>
+                      </div>
                       <h3 className="text-[#2A2021] text-[20px] font-bold">{slot.restaurant}</h3>
                       <p className="text-[#8E8E93] text-[15px] mt-1">{formatDate(slot.date)}</p>
                       <p className="text-[#8E8E93] text-[15px]">{slot.time}</p>

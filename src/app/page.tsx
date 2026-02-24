@@ -169,10 +169,11 @@ export default function Home() {
               setUserGender(profileResponse.profile.gender as 'male' | 'female' | null);
             }
 
-            // Загружаем избранное
+            // Загружаем избранное (теперь возвращает Slot[])
             const favoritesResponse = await getFavorites(initData);
             if (isMounted && favoritesResponse.favorites) {
-              setFavoriteIds(new Set(favoritesResponse.favorites));
+              const ids = favoritesResponse.favorites.map(f => f.id);
+              setFavoriteIds(new Set(ids));
               console.log(`✅ Loaded ${favoritesResponse.favorites.length} favorites`);
             }
           } catch (profileError) {
@@ -539,6 +540,7 @@ export default function Home() {
               <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <FavoritesScreen
                   favoriteIds={favoriteIds}
+                  authToken={userToken}
                   onToggleFavorite={toggleFavoriteHandler}
                   onBack={() => setCurrentScreen(previousScreen)} // Исправлено: Динамический возврат
                   onBook={(eventId) => {

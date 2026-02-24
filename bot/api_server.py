@@ -309,8 +309,11 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
             if slot.is_active and slot.current_bookings < slot.max_people
         ]
         
-        # Фильтруем по городу если указан
-        if city:
+        # NOTE: Пользователь хочет видеть все города на афише, 
+        # поэтому фильтрацию по городу отключаем по умолчанию.
+        # Если city передан, можем оставить его как опциональный фильтр, 
+        # но AfishaScreen перестанет его присылать.
+        if city and city != "all":
             from urllib.parse import unquote
             city_decoded = unquote(city)
             city_clean = city_decoded.replace("г. ", "").strip()
@@ -705,11 +708,29 @@ async def get_favorites_endpoint(
         
         logger.info(f"📦 Getting favorites for user {user_id}")
         
-        user_repo = UserRepo(session)
-        favorites = await user_repo.get_favorites(user_id)
+        favorites_ids = await user_repo.get_favorites(user_id)
+        logger.info(f"✅ Found {len(favorites_ids)} favorite IDs")
         
-        logger.info(f"✅ Found {len(favorites)} favorites")
-        return {"favorites": favorites}
+        slot_repo = SlotRepo(session)
+        favorite_slots = await slot_repo.get_slots_by_ids(favorites_ids)
+        
+        slots_data = [
+            {
+                "id": slot.id,
+                "date": slot.date.isoformat(),
+                "time": slot.time,
+                "city": slot.city,
+                "restaurant": slot.restaurant,
+                "max_people": slot.max_people,
+                "current_bookings": slot.current_bookings,
+                "available_places": slot.max_people - slot.current_bookings,
+                "created_at": slot.created_at.isoformat() if slot.created_at else None,
+                "is_active": slot.is_active
+            }
+            for slot in favorite_slots
+        ]
+        
+        return {"favorites": slots_data}
     except Exception as e:
         logger.error(f"Get favorites error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

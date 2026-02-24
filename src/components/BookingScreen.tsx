@@ -45,13 +45,14 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
     async function fetchSlots() {
       try {
         setIsLoading(true);
-        const data = await getSlots(city);
+        const data = await getSlots("all");
         if (isMounted) {
           const mappedSlots: Slot[] = data.slots.map((s: any) => ({
             id: s.id,
             date: new Date(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
             time: s.time,
-            address: s.restaurant
+            address: s.restaurant,
+            city: s.city
           }));
           setSlots(mappedSlots);
         }
@@ -105,7 +106,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">Все города</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
@@ -186,7 +187,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">Все города</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
@@ -213,7 +214,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Location */}
               <div className="border-b border-gray-100 pb-3 mb-3">
                 <p className="text-[#404243] text-[13px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[18px] font-bold mt-0.5 line-clamp-1">{city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
+                <p className="text-[#E15859] text-[18px] font-bold mt-0.5 line-clamp-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
               </div>
 
               {/* Promo Code */}
@@ -286,7 +287,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
                 </div>
-                <span className="font-medium text-[#404243] text-[15px] pr-2">{t.cityPrefix} {city}</span>
+                <span className="font-medium text-[#404243] text-[15px] pr-2">Все города</span>
               </div>
               <button onClick={onSettings} className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
                 <Settings className="text-[#E15859]" size={24} strokeWidth={1.5} />
@@ -322,7 +323,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Location */}
               <div className="border-b border-gray-100 pb-4 mb-4">
                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">{city}, {selectedSlot?.address || "-"}</p>
+                <p className="text-[#E15859] text-[20px] font-bold mt-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "-"}</p>
               </div>
 
               {/* Time */}

@@ -305,7 +305,7 @@ export async function toggleFavorite(slotId: number, authToken?: string): Promis
   return handleResponse(response);
 }
 
-export async function getFavorites(authToken?: string): Promise<{ favorites: number[] }> {
+export async function getFavorites(authToken?: string): Promise<{ favorites: Slot[] }> {
   console.log(`[API] Getting favorites`);
 
   const headers: HeadersInit = {};
