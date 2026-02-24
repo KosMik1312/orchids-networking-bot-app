@@ -27,7 +27,7 @@ class User(Base):
     children = Column(String)
     occupation = Column(String)
     goal = Column(JSONB, nullable=True)  # Массив целей встреч
-    interests = Column(Text)
+    interests = Column(JSONB, nullable=True)  # Массив интересов
     comfort_level = Column(Integer)
     social_frequency = Column(Integer)
     communication_format = Column(JSONB, nullable=True)  # Массив форматов встреч

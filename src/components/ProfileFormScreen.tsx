@@ -32,7 +32,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState<ProfileFormData>({
     name: initialData?.name || "",
     gender: initialData?.gender || "",
@@ -49,19 +49,19 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
   useEffect(() => {
     const loadProfileFromDB = async () => {
       if (!userId || !userToken) return;
-      
+
       try {
         setIsLoading(true);
         console.log(`📥 Loading profile from DB for user ${userId}`);
         const response = await getProfile(userId, userToken);
-        
+
         if (response.profile) {
           console.log('✅ Profile loaded from DB:', response.profile);
           setFormData((prev) => ({
             ...prev,
             name: response.profile.name || prev.name,
             gender: response.profile.gender === "male" ? "Мужской" : response.profile.gender === "female" ? "Женский" : prev.gender,
-            age: response.profile.age || prev.age,
+            age: typeof response.profile.age === "string" ? parseInt(response.profile.age) || prev.age : (response.profile.age || prev.age),
             zodiac: response.profile.zodiac || prev.zodiac,
             career: response.profile.occupation || prev.career,
             familyStatus: response.profile.relationship_status || prev.familyStatus,
@@ -74,7 +74,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
         setIsLoading(false);
       }
     };
-    
+
     loadProfileFromDB();
   }, [userId, userToken]);
 
@@ -94,13 +94,13 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
     }
   }, [initialData]);
 
-  const isFormComplete = formData.name.trim() !== "" && 
-                         formData.gender !== "" && 
-                         formData.age >= 18 &&
-                         formData.zodiac !== "" && 
-                         formData.career !== "" && 
-                         formData.familyStatus !== "" && 
-                         formData.hasChildren !== "";
+  const isFormComplete = formData.name.trim() !== "" &&
+    formData.gender !== "" &&
+    formData.age >= 18 &&
+    formData.zodiac !== "" &&
+    formData.career !== "" &&
+    formData.familyStatus !== "" &&
+    formData.hasChildren !== "";
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -135,7 +135,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
   const handleScroll = () => {
     setIsScrolling(true);
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    
+
     scrollTimeoutRef.current = setTimeout(() => {
       setIsScrolling(false);
       // Snap to nearest item
@@ -143,7 +143,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
         const scroll = scrollContainerRef.current.scrollTop;
         const itemIndex = Math.round(scroll / itemHeight);
         const nearestScroll = itemIndex * itemHeight;
-        
+
         scrollContainerRef.current.scrollTo({
           top: nearestScroll,
           behavior: "smooth",
@@ -158,14 +158,19 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
   };
 
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollContainerRef.current && !isScrolling) {
       const initialIndex = ages.indexOf(formData.age);
       if (initialIndex >= 0) {
-        // Center the selected age (item should be at middle position)
-        scrollContainerRef.current.scrollTop = (initialIndex - 1) * itemHeight;
+        // Correct formula: initialIndex * itemHeight to align the item exactly at the top of the viewport
+        // But since we want it centered in a 180px container (3 items visible), we need to scroll so that
+        // the item is at the middle. Middle is itemIndex * itemHeight.
+        const targetScroll = initialIndex * itemHeight;
+        if (scrollContainerRef.current.scrollTop !== targetScroll) {
+          scrollContainerRef.current.scrollTop = targetScroll;
+        }
       }
     }
-  }, []);
+  }, [formData.age]); // Make it reactive to age changes
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden relative" style={{ backgroundColor: "#FFF7EF", touchAction: "pan-y" }}>
@@ -245,7 +250,7 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
                   {/* Age Items */}
                   {ages.map((age, index) => {
                     const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
-                    // Правильный расчет центра элемента (с учетом спейсера вверху)
+                    // Calculate center: spacer + previous items + half of current item
                     const itemCenter = (index + 1) * itemHeight + itemHeight / 2;
                     const viewportCenter = scrollTop + 90; // 90 = half of 180px container
                     const distance = Math.abs(itemCenter - viewportCenter);
@@ -302,9 +307,8 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
               transition={{ duration: 0.3, delay: 0.1 * (index + 3) }}
             >
               <div
-                className={`bg-white overflow-hidden transition-all duration-300 ${
-                  openDropdown === key ? "rounded-[24px]" : "rounded-full"
-                }`}
+                className={`bg-white overflow-hidden transition-all duration-300 ${openDropdown === key ? "rounded-[24px]" : "rounded-full"
+                  }`}
               >
                 {/* Dropdown Header */}
                 <button
@@ -312,17 +316,15 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
                   className="w-full flex items-center justify-between px-6 py-4"
                 >
                   <span
-                    className={`text-[16px] ${
-                      formData[key] ? "text-[#2A2021] font-medium" : "text-[#9CA3AF]"
-                    }`}
+                    className={`text-[16px] ${formData[key] ? "text-[#2A2021] font-medium" : "text-[#9CA3AF]"
+                      }`}
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
                     {formData[key] || getPlaceholder(key)}
                   </span>
                   <div
-                    className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-colors ${
-                      openDropdown === key ? "bg-[#E15859]" : "bg-[#E15859]"
-                    }`}
+                    className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-colors ${openDropdown === key ? "bg-[#E15859]" : "bg-[#E15859]"
+                      }`}
                   >
                     {openDropdown === key ? (
                       <ChevronUp className="w-6 h-6 text-white" />
@@ -350,21 +352,19 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
                             className="w-full flex items-center justify-between py-3"
                           >
                             <span
-                              className={`text-[16px] ${
-                                formData[key] === option
-                                  ? "text-[#2A2021] font-medium"
-                                  : "text-[#9CA3AF]"
-                              }`}
+                              className={`text-[16px] ${formData[key] === option
+                                ? "text-[#2A2021] font-medium"
+                                : "text-[#9CA3AF]"
+                                }`}
                               style={{ fontFamily: "'Montserrat', sans-serif" }}
                             >
                               {option}
                             </span>
                             <div
-                              className={`w-[28px] h-[28px] rounded-full border-2 flex items-center justify-center ${
-                                formData[key] === option
-                                  ? "border-[#E15859]"
-                                  : "border-[#E15859]"
-                              }`}
+                              className={`w-[28px] h-[28px] rounded-full border-2 flex items-center justify-center ${formData[key] === option
+                                ? "border-[#E15859]"
+                                : "border-[#E15859]"
+                                }`}
                             >
                               {formData[key] === option && (
                                 <div className="w-[14px] h-[14px] rounded-full bg-[#E15859]" />
@@ -405,11 +405,10 @@ export function ProfileFormScreen({ onContinue, onBack, initialData, userId, use
             whileTap={{ scale: isFormComplete ? 0.98 : 1 }}
             onClick={() => isFormComplete && onContinue(formData)}
             disabled={!isFormComplete}
-            className={`flex-1 py-[18px] rounded-full text-[18px] font-medium transition-all ${
-              isFormComplete
-                ? "bg-[#E15859] text-white"
-                : "bg-[#E15859]/30 text-white/50"
-            }`}
+            className={`flex-1 py-[18px] rounded-full text-[18px] font-medium transition-all ${isFormComplete
+              ? "bg-[#E15859] text-white"
+              : "bg-[#E15859]/30 text-white/50"
+              }`}
             style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
             {texts.continueButton}

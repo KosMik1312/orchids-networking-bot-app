@@ -8,7 +8,7 @@ import { getMetroStations, getAvailableCities } from "@/lib/metro-stations";
 
 type MetroCity = "moscow" | "spb" | null;
 
-interface MeetingConditionsData {
+export interface MeetingConditionsData {
   metro: string[];
   days: string[];
   time: { from: string; to: string };
@@ -56,7 +56,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     if (initialData) {
       setFormData((prev) => {
         const updated = { ...prev };
-        
+
         if (initialData.metro && initialData.metro.length > 0) {
           updated.metro = initialData.metro;
         }
@@ -72,7 +72,7 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         if (initialData.format && Array.isArray(initialData.format)) {
           updated.format = initialData.format;
         }
-        
+
         return updated;
       });
     }
@@ -140,22 +140,22 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     });
   }, [activeTimeField]);
 
-  const isFormComplete = 
-    formData.metro.length > 0 && 
-    formData.days.length > 0 && 
-    formData.goal.length > 0 && 
+  const isFormComplete =
+    formData.metro.length > 0 &&
+    formData.days.length > 0 &&
+    formData.goal.length > 0 &&
     formData.format.length > 0;
 
-  const AccordionItem = ({ 
-    id, 
-    label, 
-    children, 
-    isOpen 
-  }: { 
-    id: string; 
-    label: string; 
-    children: React.ReactNode; 
-    isOpen: boolean 
+  const AccordionItem = ({
+    id,
+    label,
+    children,
+    isOpen
+  }: {
+    id: string;
+    label: string;
+    children: React.ReactNode;
+    isOpen: boolean
   }) => (
     <div className="bg-white rounded-[32px] overflow-hidden mb-4 shadow-sm">
       <button
@@ -213,11 +213,10 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
                 <button
                   key={city.id}
                   onClick={() => handleSelectMetroCity(city.id)}
-                  className={`w-full py-3 px-4 rounded-[16px] font-semibold text-[16px] transition-all ${
-                    selectedMetroCity === city.id
+                  className={`w-full py-3 px-4 rounded-[16px] font-semibold text-[16px] transition-all ${selectedMetroCity === city.id
                       ? 'bg-[#E15859] text-white'
                       : 'bg-[#F5F5F5] text-[#2A2021] border-2 border-[#E15859]'
-                  }`}
+                    }`}
                 >
                   {city.name}
                 </button>
@@ -237,15 +236,14 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
               </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {metroStations.map((station) => (
-                  <div 
-                    key={station} 
+                  <div
+                    key={station}
                     className="flex items-center justify-between py-2 px-3 border-b border-gray-50 last:border-0 hover:bg-[#FFF7EF] rounded transition-colors cursor-pointer"
                     onClick={() => handleMultiSelect("metro", station)}
                   >
                     <span className="text-[15px] text-[#2A2021]">{station}</span>
-                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                      formData.metro.includes(station) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${formData.metro.includes(station) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                      }`}>
                       {formData.metro.includes(station) && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
                   </div>
@@ -258,15 +256,14 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         {/* Days */}
         <AccordionItem id="days" label={texts.days.label} isOpen={openSection === "days"}>
           {texts.days.options.map((option) => (
-            <div 
-              key={option} 
+            <div
+              key={option}
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
               onClick={() => handleMultiSelect("days", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                formData.days.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
-              }`}>
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${formData.days.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                }`}>
                 {formData.days.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
             </div>
@@ -278,9 +275,9 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
           <div className="flex items-center gap-4 py-2">
             <div className="flex items-center gap-2 flex-1">
               <span className="text-[18px] text-[#9CA3AF]">{texts.time.from}</span>
-              <input 
+              <input
                 ref={fromRef}
-                type="text" 
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9:]*"
                 maxLength={5}
@@ -300,9 +297,9 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
             </div>
             <div className="flex items-center gap-2 flex-1">
               <span className="text-[18px] text-[#9CA3AF]">{texts.time.to}</span>
-              <input 
+              <input
                 ref={toRef}
-                type="text" 
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9:]*"
                 maxLength={5}
@@ -326,15 +323,14 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         {/* Goals */}
         <AccordionItem id="goals" label={texts.goals.label} isOpen={openSection === "goals"}>
           {texts.goals.options.map((option) => (
-            <div 
-              key={option} 
+            <div
+              key={option}
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
               onClick={() => handleMultiSelectGoalFormat("goal", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                formData.goal.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
-              }`}>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${formData.goal.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+                }`}>
                 {formData.goal.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
             </div>
@@ -344,14 +340,13 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         {/* Format */}
         <AccordionItem id="format" label={texts.format.label} isOpen={openSection === "format"}>
           {texts.format.options.map((option) => (
-            <div 
-              key={option} 
+            <div
+              key={option}
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
               onClick={() => handleMultiSelectGoalFormat("format", option)}
             >
               <span className="text-[18px] text-[#9CA3AF]">{option}</span>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  formData.format.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${formData.format.includes(option) ? 'bg-[#E15859] border-[#E15859]' : 'border-[#E15859]'
                 }`}>
                 {formData.format.includes(option) && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
@@ -377,9 +372,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
               }
             }}
             disabled={!isFormComplete}
-            className={`flex-1 h-[70px] rounded-full text-[20px] font-medium transition-all ${
-              isFormComplete ? "bg-[#E15859] text-white cursor-pointer" : "bg-[#BDBDBD] text-white/50 cursor-not-allowed"
-            }`}
+            className={`flex-1 h-[70px] rounded-full text-[20px] font-medium transition-all ${isFormComplete ? "bg-[#E15859] text-white cursor-pointer" : "bg-[#BDBDBD] text-white/50 cursor-not-allowed"
+              }`}
           >
             {texts.continue}
           </button>

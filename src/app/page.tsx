@@ -6,7 +6,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { ProfileFormScreen } from "@/components/ProfileFormScreen";
 import { BestInMeScreen } from "@/components/BestInMeScreen";
-import { MeetingConditionsScreen } from "@/components/MeetingConditionsScreen";
+import { MeetingConditionsScreen, type MeetingConditionsData } from "@/components/MeetingConditionsScreen";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { BookingScreen } from "@/components/BookingScreen";
 import { PromotionsScreen } from "@/components/PromotionsScreen";
@@ -25,13 +25,7 @@ import { ru } from "@/lib/i18n";
 
 type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin" | "privacy" | "consent" | "offer";
 
-interface MeetingConditionsData {
-  metro: string[];
-  days: string[];
-  time: { from: string; to: string };
-  goal: string;
-  format: string;
-}
+// MeetingConditionsData is now imported from the screen component
 
 // const DEV_SKIP_PROFILE_LOADING = process.env.NEXT_PUBLIC_DEV_SKIP_PROFILE_LOADING === 'false' || false;
 
@@ -315,7 +309,7 @@ export default function Home() {
 
   const handleBestInMeBack = async (data: any) => {
     // Сохранить текущие данные (даже если форма неполная)
-    await updateProfile({
+    updateProfile({
       strengths: data.strengths?.length > 0 ? data.strengths : undefined,
       weaknesses: data.weaknesses || undefined,
       values: data.values?.length > 0 ? data.values : undefined,
@@ -329,6 +323,20 @@ export default function Home() {
     }).catch((err) => {
       console.error("Error saving BestInMe on back:", err);
     });
+
+    // ← ИСПРАВЛЕНИЕ: Перезагрузить данные из БД перед переходом назад
+    if (userId && userToken) {
+      try {
+        const profileData = await getProfile(userId, userToken);
+        if (profileData.profile) {
+          setFullProfile(profileData.profile);
+          console.log('✅ Profile reloaded after BestInMe back');
+        }
+      } catch (err) {
+        console.error("Error reloading profile on back:", err);
+      }
+    }
+
     // Перезагрузить данные из БД
     setCurrentScreen("profile_form");
   };
@@ -414,7 +422,13 @@ export default function Home() {
                   initialData={{
                     name: fullProfile.name || "",
                     gender: fullProfile.gender === "male" ? "Мужской" : fullProfile.gender === "female" ? "Женский" : "",
-                    age: fullProfile.age !== undefined ? Number(fullProfile.age) : 25,
+                    age: (() => {
+                      if (fullProfile.age === undefined) return 25;
+                      if (typeof fullProfile.age === "number") return fullProfile.age;
+                      // Handle legacy range strings like "25-29" by taking the first number
+                      const match = String(fullProfile.age).match(/\d+/);
+                      return match ? parseInt(match[0]) : 25;
+                    })(),
                     zodiac: fullProfile.zodiac || "",
                     career: fullProfile.occupation || "",
                     familyStatus: fullProfile.relationship_status || "",
@@ -454,8 +468,8 @@ export default function Home() {
                     metro: userMeetingConditions.metro?.length ? userMeetingConditions.metro : (Array.isArray(fullProfile.meeting_metro) ? fullProfile.meeting_metro : []),
                     days: userMeetingConditions.days?.length ? userMeetingConditions.days : (Array.isArray(fullProfile.meeting_days) ? fullProfile.meeting_days : []),
                     time: userMeetingConditions.time?.from ? userMeetingConditions.time : { from: fullProfile.meeting_time_from || "17:00", to: fullProfile.meeting_time_to || "21:00" },
-                    goal: userMeetingConditions.goal?.length ? userMeetingConditions.goal : (Array.isArray(fullProfile.goal) ? fullProfile.goal : []),
-                    format: userMeetingConditions.format?.length ? userMeetingConditions.format : (Array.isArray(fullProfile.format) ? fullProfile.format : [])
+                    goal: userMeetingConditions.goal?.length ? (Array.isArray(userMeetingConditions.goal) ? userMeetingConditions.goal : [userMeetingConditions.goal]) : (Array.isArray(fullProfile.goal) ? fullProfile.goal : (fullProfile.goal ? [fullProfile.goal] : [])),
+                    format: userMeetingConditions.format?.length ? (Array.isArray(userMeetingConditions.format) ? userMeetingConditions.format : [userMeetingConditions.format]) : (Array.isArray(fullProfile.format) ? fullProfile.format : (fullProfile.format ? [fullProfile.format] : []))
                   }}
                 />
               </motion.div>

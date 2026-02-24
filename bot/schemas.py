@@ -22,7 +22,7 @@ class UserProfile(BaseModel):
     children: Optional[str] = Field(None, description="Children status")
     occupation: Optional[str] = Field(None, description="Occupation type")
     goal: Optional[List[str]] = Field(None, description="Meeting goals (multiple selection)")
-    interests: Optional[str] = Field(None, description="Short interests text")
+    interests: Optional[List[str]] = Field(None, description="Interests list (multiple selection)")
     comfort_level: Optional[int] = Field(None, description="Comfort level")
     social_frequency: Optional[int] = Field(None, description="Social frequency")
     communication_format: Optional[str] = Field(None, description="Communication format")
