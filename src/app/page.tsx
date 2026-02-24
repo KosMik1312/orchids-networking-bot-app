@@ -353,6 +353,7 @@ export default function Home() {
       meeting_time_to: data.time.to,
       format: data.format,
       goal: data.goal,
+      city: data.city || undefined,
       is_profile_completed: true
     });
 
@@ -368,6 +369,7 @@ export default function Home() {
       meeting_time_to: data.time.to,
       format: data.format,
       goal: data.goal,
+      city: data.city || undefined,
     }).catch((err) => {
       console.error("Error saving MeetingConditions on back:", err);
     });
@@ -469,7 +471,8 @@ export default function Home() {
                     days: userMeetingConditions.days?.length ? userMeetingConditions.days : (Array.isArray(fullProfile.meeting_days) ? fullProfile.meeting_days : []),
                     time: userMeetingConditions.time?.from ? userMeetingConditions.time : { from: fullProfile.meeting_time_from || "17:00", to: fullProfile.meeting_time_to || "21:00" },
                     goal: userMeetingConditions.goal?.length ? (Array.isArray(userMeetingConditions.goal) ? userMeetingConditions.goal : [userMeetingConditions.goal]) : (Array.isArray(fullProfile.goal) ? fullProfile.goal : (fullProfile.goal ? [fullProfile.goal] : [])),
-                    format: userMeetingConditions.format?.length ? (Array.isArray(userMeetingConditions.format) ? userMeetingConditions.format : [userMeetingConditions.format]) : (Array.isArray(fullProfile.format) ? fullProfile.format : (fullProfile.format ? [fullProfile.format] : []))
+                    format: userMeetingConditions.format?.length ? (Array.isArray(userMeetingConditions.format) ? userMeetingConditions.format : [userMeetingConditions.format]) : (Array.isArray(fullProfile.format) ? fullProfile.format : (fullProfile.format ? [fullProfile.format] : [])),
+                    city: userMeetingConditions.city || fullProfile.city || null,
                   }}
                 />
               </motion.div>

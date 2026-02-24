@@ -14,6 +14,7 @@ export interface MeetingConditionsData {
   time: { from: string; to: string };
   goal: string[];
   format: string[];
+  city: string | null; // Derived from metro city selection
 }
 
 interface MeetingConditionsScreenProps {
@@ -21,6 +22,12 @@ interface MeetingConditionsScreenProps {
   onBack: (data: MeetingConditionsData) => void;
   initialData?: Partial<MeetingConditionsData>;
 }
+
+// Map internal metro city key → human-readable city name saved in DB
+const METRO_CITY_TO_NAME: Record<"moscow" | "spb", string> = {
+  moscow: "Москва",
+  spb: "Санкт-Петербург",
+};
 
 export function MeetingConditionsScreen({ onContinue, onBack, initialData }: MeetingConditionsScreenProps) {
   const texts = ru.meetingConditions;
@@ -31,10 +38,17 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     time: initialData?.time || { from: "17:00", to: "21:00" },
     goal: Array.isArray(initialData?.goal) ? initialData.goal : [],
     format: Array.isArray(initialData?.format) ? initialData.format : [],
+    city: initialData?.city || null,
   });
 
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const [selectedMetroCity, setSelectedMetroCity] = useState<MetroCity>(null);
+  // If initialData already has a city, pre-select the metro city selector
+  const resolveInitialMetroCity = (): MetroCity => {
+    if (initialData?.city === "Москва") return "moscow";
+    if (initialData?.city === "Санкт-Петербург") return "spb";
+    return null;
+  };
+  const [selectedMetroCity, setSelectedMetroCity] = useState<MetroCity>(resolveInitialMetroCity);
   const [metroStations, setMetroStations] = useState<string[]>([]);
   const fromRef = useRef<HTMLInputElement | null>(null);
   const toRef = useRef<HTMLInputElement | null>(null);
@@ -72,6 +86,9 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
         if (initialData.format && Array.isArray(initialData.format)) {
           updated.format = initialData.format;
         }
+        if (initialData.city) {
+          updated.city = initialData.city;
+        }
 
         return updated;
       });
@@ -84,6 +101,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
     if (city) {
       const stations = getMetroStations(city);
       setMetroStations(stations);
+      // Save humanreadable city name into formData so it is included in callbacks
+      setFormData((prev) => ({ ...prev, metro: [], city: METRO_CITY_TO_NAME[city] }));
     }
   }, []);
 
@@ -214,8 +233,8 @@ export function MeetingConditionsScreen({ onContinue, onBack, initialData }: Mee
                   key={city.id}
                   onClick={() => handleSelectMetroCity(city.id)}
                   className={`w-full py-3 px-4 rounded-[16px] font-semibold text-[16px] transition-all ${selectedMetroCity === city.id
-                      ? 'bg-[#E15859] text-white'
-                      : 'bg-[#F5F5F5] text-[#2A2021] border-2 border-[#E15859]'
+                    ? 'bg-[#E15859] text-white'
+                    : 'bg-[#F5F5F5] text-[#2A2021] border-2 border-[#E15859]'
                     }`}
                 >
                   {city.name}
