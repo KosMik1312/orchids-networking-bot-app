@@ -85,7 +85,7 @@ def validate_init_data(init_data: str) -> dict | None:
         
         logger.info(f"⏰ Auth date: {auth_date}, current time: {current_time}, diff: {time_diff}s")
         
-        if time_diff > 300:  # 5 минут
+        if time_diff > 86400:  # 24 часа (согласно требованиям удобства использования)
             logger.warning(f"⏰ InitData too old: {time_diff} seconds ago")
             return None
         

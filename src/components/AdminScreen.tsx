@@ -127,6 +127,79 @@ const AdminCalendar = ({ value, onChange, onClose }: { value: string, onChange: 
   );
 };
 
+const AdminDialog = ({
+  isOpen,
+  title,
+  message,
+  type,
+  inputValue,
+  onClose,
+  onConfirm
+}: {
+  isOpen: boolean,
+  title: string,
+  message: string,
+  type: "confirm" | "prompt",
+  inputValue?: string,
+  onClose: () => void,
+  onConfirm: (val?: string) => void
+}) => {
+  const [val, setVal] = useState(inputValue || "");
+  useEffect(() => { if (isOpen) setVal(inputValue || ""); }, [isOpen, inputValue]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-[101] px-6 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[32px] p-6 shadow-2xl w-full max-w-[320px] pointer-events-auto"
+            >
+              <h3 className="text-[#E15859] text-lg font-bold mb-2">{title}</h3>
+              <p className="text-[#404243] text-sm mb-4 leading-relaxed">{message}</p>
+
+              {type === "prompt" && (
+                <input
+                  autoFocus
+                  value={val}
+                  onChange={(e) => setVal(e.target.value)}
+                  className={`${inputClass} mb-6`}
+                  placeholder="Введите значение..."
+                />
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-gray-100 text-[#404243] font-medium text-sm transition-colors hover:bg-gray-200"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => { onConfirm(type === "prompt" ? val : undefined); onClose(); }}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-[#E15859] text-white font-medium text-sm transition-colors shadow-lg shadow-[#E15859]/20 hover:opacity-90"
+                >
+                  Готово
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorizedProp, mockStats, mockUsers, mockSlots, mockGroups, initialTab = "dashboard" }: AdminScreenProps) {
   const [tab, setTab] = useState<AdminTab>(initialTab);
   const [authorized, setAuthorized] = useState<boolean | null>(isAuthorizedProp ?? null);
@@ -142,6 +215,30 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Custom Dialog State
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "confirm" | "prompt";
+    inputValue?: string;
+    onConfirm: (val?: string) => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "confirm",
+    onConfirm: () => { },
+  });
+
+  const openConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setDialog({ isOpen: true, title, message, type: "confirm", onConfirm });
+  };
+
+  const openPrompt = (title: string, message: string, defaultValue: string, onConfirm: (val: string) => void) => {
+    setDialog({ isOpen: true, title, message, type: "prompt", inputValue: defaultValue, onConfirm: (v) => onConfirm(v || "") });
+  };
 
   const [showSlotForm, setShowSlotForm] = useState(false);
   const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
@@ -289,65 +386,79 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   };
 
   const handleDeleteGroup = async (groupId: number) => {
-    if (!confirm("Вы уверены, что хотите удалить эту группу?")) return;
-    try {
-      await deleteAdminGroup(initData, groupId);
-      setSelectedGroupId(null);
-      setTab("groups");
-      await loadGroups();
-    } catch (e: any) { setError(e.message); }
+    openConfirm(
+      "Удаление группы",
+      "Вы уверены, что хотите окончательно удалить эту группу? Это действие нельзя отменить.",
+      async () => {
+        try {
+          await deleteAdminGroup(initData, groupId);
+          setSelectedGroupId(null);
+          setTab("groups");
+          await loadGroups();
+        } catch (e: any) { setError(e.message); }
+      }
+    );
   };
 
   const handleManualGrouping = async () => {
     if (selectedUserIds.length === 0) return;
-    const groupName = prompt("Введите название новой группы:");
-    if (!groupName) return;
-    setLoading(true);
-    try {
-      const g = await createAdminGroup(initData, groupName);
-      await addGroupMembers(initData, g.id, selectedUserIds);
-      setSelectedUserIds([]);
-      setTab("groups");
-      await loadGroups();
-    } catch (e: any) { setError(e.message); }
-    setLoading(false);
+    openPrompt(
+      "Название группы",
+      "Введите уникальное название для новой группы участников:",
+      "",
+      async (groupName) => {
+        if (!groupName.trim()) return;
+        setLoading(true);
+        try {
+          const g = await createAdminGroup(initData, groupName.trim());
+          await addGroupMembers(initData, g.id, selectedUserIds);
+          setSelectedUserIds([]);
+          setTab("groups");
+          await loadGroups();
+        } catch (e: any) { setError(e.message); }
+        setLoading(false);
+      }
+    );
   };
 
   const handleAutoSplit = async () => {
     if (!selectedSlotId || participants.length === 0) return;
-    const teamSizeStr = prompt("По сколько человек в каждой команде? (напр. 3 или 4)", "3");
-    if (!teamSizeStr) return;
-    const teamSize = parseInt(teamSizeStr);
-    if (isNaN(teamSize) || teamSize <= 0) return;
+    openPrompt(
+      "Автоматическое деление",
+      "Укажите размер команды (количество человек в одной группе):",
+      "3",
+      async (teamSizeStr) => {
+        const teamSize = parseInt(teamSizeStr);
+        if (isNaN(teamSize) || teamSize <= 0) return;
 
-    setLoading(true);
-    setIsSplitting(true);
-    try {
-      // For simplicity, we split frontend-side by making multiple calls
-      // In a real prod environment, a single backend endpoint is better, but let's see if this works for current scale.
-      const usersToSplit = selectedUserIds.length > 0
-        ? participants.filter(p => selectedUserIds.includes(p.user_id))
-        : participants;
+        setLoading(true);
+        setIsSplitting(true);
+        try {
+          const usersToSplit = selectedUserIds.length > 0
+            ? participants.filter(p => selectedUserIds.includes(p.user_id))
+            : participants;
 
-      const shuffled = [...usersToSplit].sort(() => Math.random() - 0.5);
-      const teamsCount = Math.ceil(shuffled.length / teamSize);
+          const shuffled = [...usersToSplit].sort(() => Math.random() - 0.5);
+          const teamsCount = Math.ceil(shuffled.length / teamSize);
 
-      const slot = slots.find(s => s.id === selectedSlotId);
-      const baseName = slot ? `${slot.date} ${slot.city}` : "Команда";
+          const slot = slots.find(s => s.id === selectedSlotId);
+          const baseName = slot ? `${slot.date} ${slot.city}` : "Команда";
 
-      for (let i = 0; i < teamsCount; i++) {
-        const teamMembers = shuffled.slice(i * teamSize, (i + 1) * teamSize);
-        const gName = `${baseName} - Группа ${i + 1}`;
-        const g = await createAdminGroup(initData, gName);
-        await addGroupMembers(initData, g.id, teamMembers.map(m => m.user_id));
+          for (let i = 0; i < teamsCount; i++) {
+            const teamMembers = shuffled.slice(i * teamSize, (i + 1) * teamSize);
+            const gName = `${baseName} - Группа ${i + 1}`;
+            const g = await createAdminGroup(initData, gName);
+            await addGroupMembers(initData, g.id, teamMembers.map(m => m.user_id));
+          }
+
+          setSelectedUserIds([]);
+          setTab("groups");
+          await loadGroups();
+        } catch (e: any) { setError(e.message); }
+        setIsSplitting(false);
+        setLoading(false);
       }
-
-      setSelectedUserIds([]);
-      setTab("groups");
-      await loadGroups();
-    } catch (e: any) { setError(e.message); }
-    setIsSplitting(false);
-    setLoading(false);
+    );
   };
 
   const handleAddMembers = async () => {
@@ -765,6 +876,16 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         )}
 
       </div>
+
+      <AdminDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        inputValue={dialog.inputValue}
+        onClose={() => setDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={dialog.onConfirm}
+      />
     </div>
   );
 }

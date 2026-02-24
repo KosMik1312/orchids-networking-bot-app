@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_session
 from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo
 from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN, AUTH_DISABLED
-from auth_token import validate_init_data
+from auth_token import validate_auth_header
 from logger import get_api_logger
 from utils import format_date
 
@@ -68,10 +68,10 @@ async def require_admin(
         logger.error("❌ No initData provided")
         raise HTTPException(status_code=401, detail="Missing initData")
 
-    result = validate_init_data(init_data)
+    result = validate_auth_header(init_data)
     if not result:
-        logger.error("❌ Invalid or expired initData")
-        raise HTTPException(status_code=401, detail="Invalid or expired initData")
+        logger.error("❌ Authentication failed - invalid initData and invalid JWT token")
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication")
 
     user_id = result["user_id"]
     logger.info(f"🔍 Checking admin access for user_id={user_id}")
