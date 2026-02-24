@@ -16,6 +16,7 @@ from middleware.admin_middleware import AdminMiddleware
 from commands.user_commands import user_router
 from commands.admin_commands import admin_router
 from menu_setup import set_bot_commands
+from i18n import i18n
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -69,12 +70,13 @@ async def save_profile(message: Message) -> None:
     # В реальности, эти данные должен присылать фронтенд.
     profile_data = {"name": "Пример", "age": 25, "interests": "ужины"}
 
+    lang = message.from_user.language_code
     try:
         # Note: В реальном приложении профиль сохраняется через API
-        await message.answer("Профиль можешь сохранить через приложение. Теперь можешь искать компанию.")
+        await message.answer(i18n.get("bot_profile_save_hint", lang))
     except Exception as e:
         logger.error(f"Profile save failed for user {user_id}: {e}")
-        await message.answer(f"Ошибка при сохранении профиля: {e}")
+        await message.answer(i18n.get("bot_profile_save_error", lang, error=str(e)))
 
 async def main() -> None:
     """Главная функция запуска бота"""

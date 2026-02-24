@@ -507,6 +507,7 @@ export default function Home() {
                   onProfile={() => navigateTo("profile")}
                   onSettings={() => navigateTo("settings")}
                   onContacts={() => navigateTo("contacts")}
+                  onOffer={() => navigateTo("offer")}
                 />
               </motion.div>
             )}

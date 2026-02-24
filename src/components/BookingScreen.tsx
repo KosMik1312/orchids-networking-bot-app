@@ -27,9 +27,10 @@ interface BookingScreenProps {
   onProfile?: () => void;
   onSettings?: () => void;
   onContacts?: () => void;
+  onOffer?: () => void;
 }
 
-export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", authToken, selectedEventId, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts }: BookingScreenProps) {
+export function BookingScreen({ city = "Москва", authToken, selectedEventId, onBack, onComplete, onPromotions, onAfisha, onProfile, onSettings, onContacts, onOffer }: BookingScreenProps) {
   const t = ru.booking;
   const [step, setStep] = useState<BookingStep>("slots");
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -112,7 +113,7 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
             </div>
 
             {/* Dining Image */}
-            <div className="rounded-[24px] overflow-hidden shadow-lg h-[220px] mb-8">
+            <div className="rounded-[24px] overflow-hidden shadow-lg h-[160px] mb-6">
               <img
                 src="/images/dining.png"
                 alt="Dining"
@@ -155,7 +156,7 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
             {/* Promo Button */}
             <button
               onClick={onPromotions}
-              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
+              className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
             >
               {t.promotionsButton}
             </button>
@@ -163,7 +164,7 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
             {/* Contacts Button */}
             <button
               onClick={onContacts}
-              className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
+              className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
             >
               {t.contactsButton}
             </button>
@@ -202,63 +203,67 @@ export function BookingScreen({ city = "\u041c\u043e\u0441\u043a\u0432\u0430", a
             </div>
 
             {/* Payment Card */}
-            <div className="bg-white rounded-t-[32px] -mt-4 px-6 py-8 flex-1 relative z-10">
-               {/* Date & Time */}
-               <div className="border-b border-gray-100 pb-4 mb-4">
-                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
-                 <p className="text-[#E15859] text-[22px] font-bold mt-1">{selectedSlot?.date || "07.11.25"}, {selectedSlot?.time || "18:00"}</p>
-               </div>
+            <div className="bg-white rounded-t-[32px] -mt-6 px-6 py-6 flex-1 relative z-10">
+              {/* Date & Time */}
+              <div className="border-b border-gray-100 pb-3 mb-3">
+                <p className="text-[#404243] text-[13px] font-medium">{t.payment.date}</p>
+                <p className="text-[#E15859] text-[18px] font-bold mt-0.5">{selectedSlot?.date || "07.11.25"}, {selectedSlot?.time || "18:00"}</p>
+              </div>
 
-               {/* Location */}
-               <div className="border-b border-gray-100 pb-4 mb-4">
-                 <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
-                 <p className="text-[#E15859] text-[22px] font-bold mt-1">{city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
-               </div>
+              {/* Location */}
+              <div className="border-b border-gray-100 pb-3 mb-3">
+                <p className="text-[#404243] text-[13px] font-medium">{t.payment.location}</p>
+                <p className="text-[#E15859] text-[18px] font-bold mt-0.5 line-clamp-1">{city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
+              </div>
 
               {/* Promo Code */}
-              <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium mb-3">{t.payment.promoCode}</p>
+              <div className="border-b border-gray-100 pb-3 mb-3">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder={t.payment.promoPlaceholder}
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
-                    className="flex-1 bg-white border border-[#E0E0E0] rounded-full px-5 py-4 text-[15px] focus:outline-none focus:border-[#E15859]"
+                    className="flex-1 bg-white border border-[#E0E0E0] rounded-full px-4 py-3 text-[14px] focus:outline-none focus:border-[#E15859]"
                   />
-                  <button className="w-24 bg-[#E15859] rounded-[18px] flex items-center justify-center">
-                    <Check className="text-white" size={24} />
+                  <button className="w-16 bg-[#E15859] rounded-[14px] flex items-center justify-center">
+                    <Check className="text-white" size={20} />
                   </button>
                 </div>
               </div>
 
               {/* Total */}
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-[#404243] text-[17px] font-medium">{t.payment.total}</span>
-                <span className="text-[#2A2021] text-[22px] font-bold">1 500 ₽</span>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[#404243] text-[15px] font-medium">{t.payment.total}</span>
+                <span className="text-[#2A2021] text-[20px] font-bold">1 500 ₽</span>
               </div>
 
               {/* Info Text */}
-              <p className="text-[11px] text-[#404243] leading-relaxed mb-4 opacity-70">
+              <p className="text-[10px] text-[#404243] leading-[1.3] mb-4 opacity-70">
                 {t.payment.refundPolicy}
               </p>
 
               {/* Offer Checkbox */}
-              <button
-                onClick={() => setAcceptedOffer(!acceptedOffer)}
-                className="flex items-center gap-3 mb-5"
-              >
-                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${acceptedOffer ? "bg-[#E15859] border-[#E15859]" : "border-[#D1D1D1]"}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <button
+                  onClick={() => setAcceptedOffer(!acceptedOffer)}
+                  className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${acceptedOffer ? "bg-[#E15859] border-[#E15859]" : "border-[#D1D1D1]"}`}
+                >
                   {acceptedOffer && <Check className="text-white" size={14} strokeWidth={3} />}
-                </div>
-                <span className="text-[#404243] text-[14px] underline">{t.payment.acceptOffer}</span>
-              </button>
+                </button>
+                <button
+                  onClick={onOffer}
+                  className="text-[#404243] text-[13px] underline text-left"
+                >
+                  {t.payment.acceptOffer}
+                </button>
+              </div>
 
               {/* Pay Button */}
               <button
                 disabled={!acceptedOffer}
                 onClick={handlePayment}
-                className={`w-full py-5 rounded-[20px] text-[17px] font-semibold transition-all ${acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
+                className={`w-full py-4 rounded-[20px] text-[17px] font-semibold transition-all ${acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
                   }`}
               >
                 {t.payment.payButton}
