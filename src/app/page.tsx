@@ -46,6 +46,7 @@ export default function Home() {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Хранит предыдущий экран для динамической кнопки "Назад" (например, в Избранном)
   const [previousScreen, setPreviousScreen] = useState<Screen>("afisha");
@@ -271,7 +272,13 @@ export default function Home() {
       const profileData = await getProfile(userId, userToken);
       setFullProfile(profileData.profile);
     }
-    setCurrentScreen("onboarding");
+
+    if (isEditMode) {
+      setIsEditMode(false);
+      setCurrentScreen("profile");
+    } else {
+      setCurrentScreen("onboarding");
+    }
   };
 
   const handleBestInMeComplete = async (data: any) => {
@@ -357,7 +364,12 @@ export default function Home() {
       is_profile_completed: true
     });
 
-    setCurrentScreen("booking");
+    if (isEditMode) {
+      setIsEditMode(false);
+      setCurrentScreen("profile");
+    } else {
+      setCurrentScreen("booking");
+    }
   };
 
   const handleMeetingConditionsBack = async (data: MeetingConditionsData) => {
@@ -548,7 +560,10 @@ export default function Home() {
                   onAfisha={() => setCurrentScreen("afisha")}
                   onFavorites={() => navigateTo("favorites")}
                   onBookings={() => navigateTo("my_bookings")}
-                  onEditProfile={() => navigateTo("profile_form")}
+                  onEditProfile={() => {
+                    setIsEditMode(true);
+                    navigateTo("profile_form");
+                  }}
                   onSettings={() => navigateTo("settings")}
                   onHelp={() => window.open('https://t.me/alloraclub_support', '_blank')} // ИСПРАВЛЕНИЕ: Ссылка на саппорт
                 />
