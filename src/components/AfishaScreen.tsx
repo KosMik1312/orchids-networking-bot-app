@@ -88,7 +88,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
             <div className="text-center py-10 text-gray-500">{ru.afisha.noEvents}</div>
           ) : (
             slots.map((slot) => {
-              const isFav = favoriteIds.has(slot.id);
+              const isFav = favoriteIds.has(Number(slot.id));
               const seatsAvailable = slot.max_people - slot.current_bookings;
               return (
                 <div key={slot.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">

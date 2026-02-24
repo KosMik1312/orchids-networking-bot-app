@@ -149,14 +149,17 @@ class UserRepo(BaseRepo):
         if not user:
             raise ValueError(f"User {user_id} not found")
             
-        favorites = list(user.favorite_slots) if user.favorite_slots else []
+        favorites = user.favorite_slots or []
+        # Обеспечиваем, что все ID — числа
+        favorites = [int(fid) for fid in favorites]
         
-        if slot_id in favorites:
-            favorites.remove(slot_id)
-            logger.info(f"Removed slot {slot_id} from favorites for user {user_id}")
+        slot_id_int = int(slot_id)
+        if slot_id_int in favorites:
+            favorites.remove(slot_id_int)
+            logger.info(f"Removed slot {slot_id_int} from favorites for user {user_id}")
         else:
-            favorites.append(slot_id)
-            logger.info(f"Added slot {slot_id} to favorites for user {user_id}")
+            favorites.append(slot_id_int)
+            logger.info(f"Added slot {slot_id_int} to favorites for user {user_id}")
             
         user.favorite_slots = favorites
         await self.session.commit()
@@ -168,7 +171,9 @@ class UserRepo(BaseRepo):
         user = await self.session.get(User, user_id)
         if not user:
             return []
-        return list(user.favorite_slots) if user.favorite_slots else []
+        faves = user.favorite_slots or []
+        # Принудительно приводим к int для надёжности
+        return [int(fid) for fid in faves]
 
 
 class SlotRepo(BaseRepo):
@@ -246,7 +251,9 @@ class SlotRepo(BaseRepo):
         """Получает слоты по списку ID."""
         if not slot_ids:
             return []
-        stmt = select(DinnerSlot).where(DinnerSlot.id.in_(slot_ids)).order_by(DinnerSlot.date, DinnerSlot.time)
+        # Принудительно приводим к int для SQL запроса
+        clean_ids = [int(sid) for sid in slot_ids]
+        stmt = select(DinnerSlot).where(DinnerSlot.id.in_(clean_ids)).order_by(DinnerSlot.date, DinnerSlot.time)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

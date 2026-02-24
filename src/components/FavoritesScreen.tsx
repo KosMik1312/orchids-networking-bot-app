@@ -37,7 +37,7 @@ export function FavoritesScreen({ favoriteIds, authToken, onBack, onBook, onTogg
   }, [authToken]);
 
   // Фильтруем слоты по текущему набору ID (на случай если пользователь нажал "дизлайк" на этом же экране)
-  const favorites = slots.filter((s) => favoriteIds.has(s.id));
+  const favorites = slots.filter((s) => favoriteIds.has(Number(s.id)));
 
   const formatDate = (dateStr: string) => {
     try {

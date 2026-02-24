@@ -79,8 +79,8 @@ export interface Slot {
   restaurant: string;
   max_people: number;
   current_bookings: number;
-  created_at: string;
-  is_active: number;
+  created_at: string | null;
+  is_active: boolean;
 }
 
 export interface Booking {
