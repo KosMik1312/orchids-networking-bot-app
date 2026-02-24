@@ -42,7 +42,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
 
   // Форма создания мероприятия
   const [showSlotForm, setShowSlotForm] = useState(false);
-  const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "", restaurant: "", max_people: "" });
+  const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
 
   // Создание группы
   const [newGroupName, setNewGroupName] = useState("");
@@ -60,7 +60,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   useEffect(() => {
     // Если isAuthorized уже установлен (для Storybook), не проверяем
     if (isAuthorizedProp !== undefined) return;
-    
+
     checkAdmin(initData)
       .then(() => setAuthorized(true))
       .catch(() => setAuthorized(false));
@@ -350,8 +350,15 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               <div className={`${cardClass} flex flex-col gap-2`}>
                 <input placeholder="Дата (ДД.ММ.ГГГГ)" value={slotForm.date} onChange={e => setSlotForm(p => ({ ...p, date: e.target.value }))} className={inputClass} />
                 <input placeholder="Время (ЧЧ:ММ)" value={slotForm.time} onChange={e => setSlotForm(p => ({ ...p, time: e.target.value }))} className={inputClass} />
-                <input placeholder="Город" value={slotForm.city} onChange={e => setSlotForm(p => ({ ...p, city: e.target.value }))} className={inputClass} />
-                <input placeholder="Ресторан" value={slotForm.restaurant} onChange={e => setSlotForm(p => ({ ...p, restaurant: e.target.value }))} className={inputClass} />
+                <select
+                  value={slotForm.city}
+                  onChange={e => setSlotForm(p => ({ ...p, city: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="Москва">Москва</option>
+                  <option value="Санкт-Петербург">Санкт-Петербург</option>
+                </select>
+                <input placeholder="Место / Адрес" value={slotForm.restaurant} onChange={e => setSlotForm(p => ({ ...p, restaurant: e.target.value }))} className={inputClass} />
                 <input placeholder="Макс. участников" type="number" value={slotForm.max_people} onChange={e => setSlotForm(p => ({ ...p, max_people: e.target.value }))} className={inputClass} />
                 <button onClick={handleCreateSlot} disabled={loading} className={btnPrimary}>
                   {loading ? "Создание..." : "Создать"}
