@@ -55,9 +55,14 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
         await message.answer(i18n.get("admin_miniapp_not_set", lang))
         return
 
-    # initData передаётся автоматически в MiniApp API
+    # Дополнительно обновляем меню команд именно для этого админа, 
+    # чтобы гарантировать наличие кнопки /admin в его интерфейсе
+    try:
+        await set_bot_commands(message.bot)
+    except Exception as e:
+        logger.warning(f"Failed to refresh commands for admin {user_id}: {e}")
+
     admin_url = MINIAPP_URL
-    
     logger.info(f"🔒 Sending admin to {user_id}. MiniApp will authenticate via Telegram initData")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
