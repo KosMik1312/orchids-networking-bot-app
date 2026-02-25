@@ -1,6 +1,6 @@
 """
 Класс для работы с API Ю-Кассы.
-Использует официальный Python SDK для YooMoney.
+Использует официальный Python SDK Ю-Кассы (yookassa).
 """
 
 import uuid
@@ -20,7 +20,7 @@ class YooKassaPayment:
         self.shop_id = YOOKASSA_SHOP_ID
         self.secret_key = YOOKASSA_SECRET_KEY
         self.test_mode = YOOKASSA_TEST_MODE
-        print(f"[PAYMENT] YooKassaPayment initialized with Shop ID: {self.shop_id}")
+        print(f"[PAYMENT] YooKassaPayment initialized (Shop ID: {self.shop_id[:4]}***, Key: {self.secret_key[:4]}***)")
     
     def create_payment(
         self, 
@@ -90,10 +90,15 @@ class YooKassaPayment:
             }
             
         except Exception as e:
-            print(f"[PAYMENT ERROR] Failed to create payment: {str(e)}")
+            # Пытаемся достать оригинальное тело ответа от Ю-Кассы для диагностики
+            error_details = str(e)
+            if hasattr(e, 'response') and hasattr(e.response, 'text'):
+                error_details = f"{str(e)} - Ответ API Ю-Кассы: {e.response.text}"
+            
+            print(f"[PAYMENT ERROR] Failed to create payment: {error_details}")
             return {
                 "success": False,
-                "error": str(e)
+                "error": error_details
             }
     
     def get_payment(self, payment_id: str) -> Dict[str, Any]:
@@ -125,10 +130,15 @@ class YooKassaPayment:
             }
             
         except Exception as e:
-            print(f"[PAYMENT ERROR] Failed to get payment: {str(e)}")
+            # Пытаемся достать оригинальное тело ответа от Ю-Кассы для диагностики
+            error_details = str(e)
+            if hasattr(e, 'response') and hasattr(e.response, 'text'):
+                error_details = f"{str(e)} - Ответ API Ю-Кассы: {e.response.text}"
+
+            print(f"[PAYMENT ERROR] Failed to get payment {payment_id}: {error_details}")
             return {
                 "success": False,
-                "error": str(e)
+                "error": error_details
             }
     
     def cancel_payment(self, payment_id: str) -> Dict[str, Any]:

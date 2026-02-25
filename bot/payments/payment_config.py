@@ -20,9 +20,9 @@ from logger import get_payment_logger
 
 logger = get_payment_logger()
 
-# Получаем данные из переменных окружения
-YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1247817")  # Live Shop ID
-YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_MQWRpQKNQxtNxjKxRpWIUyfe7fIZ7xh2R89qVWPdny8")  # Live Secret Key
+# Получаем данные из переменных окружения (с очисткой от пробелов)
+YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1247817").strip()
+YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_MQWRpQKNQxtNxjKxRpWIUyfe7fIZ7xh2R89qVWPdny8").strip()
 YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "false").lower() == "true"
 
 # URL для возврата после платежа (может переопределяться при запросе)
@@ -92,8 +92,9 @@ def verify_webhook_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(expected_signature, signature)
 
 
-# Логирование конфигурации
-logger.info(f"YooKassa configuration:")
-logger.info(f"  Shop ID: {YOOKASSA_SHOP_ID}")
+# Логирование конфигурации (безопасное)
+logger.info(f"YooKassa configuration initialized:")
+logger.info(f"  Shop ID: {YOOKASSA_SHOP_ID[:4]}***")
+logger.info(f"  Secret Key: {YOOKASSA_SECRET_KEY[:4]}***{YOOKASSA_SECRET_KEY[-4:]}")
 logger.info(f"  Test Mode: {YOOKASSA_TEST_MODE}")
 logger.info(f"  Return URL: {DEFAULT_RETURN_URL}")
