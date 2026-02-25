@@ -250,8 +250,10 @@ export async function createBooking(slotId: number, authToken?: string): Promise
   console.log(`[API] Booking response status: ${response.status}`);
 
   if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    console.log(`[API] Booking error response:`, text);
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.detail || `Booking failed with status ${response.status}`;
+    console.error(`[API] Booking error:`, errorMessage);
+    throw new Error(errorMessage);
   }
 
   return handleResponse(response);

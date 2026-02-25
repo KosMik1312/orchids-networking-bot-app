@@ -270,16 +270,44 @@ class BookingRepo(BaseRepo):
         logger.info(f"Creating booking: user={user_id}, slot={slot_id}")
         
         try:
-            # 1. Проверяем, не забронировал ли пользователь этот слот ранее
-            existing_booking = await self.session.execute(
+            # 1. Проверяем существующее бронирование
+            existing_booking_result = await self.session.execute(
                 select(Booking).where(
                     Booking.user_id == user_id,
                     Booking.slot_id == slot_id
                 )
             )
-            if existing_booking.scalar_one_or_none() is not None:
-                logger.warning(f"User {user_id} already booked slot {slot_id}")
-                return None
+            existing_booking = existing_booking_result.scalar_one_or_none()
+            
+            if existing_booking:
+                if existing_booking.status == 'active':
+                    logger.info(f"User {user_id} already has an active booking for slot {slot_id}. Reusing it.")
+                    return existing_booking
+                
+                # Если бронирование было отменено, пробуем его восстановить
+                if existing_booking.status == 'cancelled':
+                    logger.info(f"User {user_id} has a cancelled booking. Attempting to reactivate.")
+                    
+                    # Получаем слот с блокировкой для проверки мест
+                    slot_result = await self.session.execute(
+                        select(DinnerSlot).where(DinnerSlot.id == slot_id).with_for_update()
+                    )
+                    slot = slot_result.scalar_one_or_none()
+                    
+                    if not slot or not slot.is_active:
+                        logger.warning(f"Slot {slot_id} not found or not active")
+                        return None
+                        
+                    if slot.current_bookings >= slot.max_people:
+                        logger.warning(f"Slot {slot_id} is full ({slot.current_bookings}/{slot.max_people})")
+                        return None
+                        
+                    # Реактивируем бронирование
+                    existing_booking.status = 'active'
+                    slot.current_bookings += 1
+                    await self.session.commit()
+                    logger.info(f"Booking {existing_booking.id} reactivated successfully")
+                    return existing_booking
 
             # 2. Получаем слот с блокировкой FOR UPDATE (атомарная операция)
             # Это предотвращает race condition при одновременных бронированиях
