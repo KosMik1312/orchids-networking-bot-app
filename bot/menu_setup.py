@@ -1,5 +1,5 @@
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeAllPrivateChats
+from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from config import ADMIN_IDS
 import logging
 
@@ -20,25 +20,32 @@ async def set_bot_commands(bot: Bot):
     ]
     
     try:
-        # Устанавливаем команды по умолчанию для всех пользователей
+        # 1. Сначала ОЧИЩАЕМ старую глобальную область видимости (если она была установлена ранее)
+        # Это критично, так как AllPrivateChats имеет приоритет над Default
+        await bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
+        logger.info("Cleared old AllPrivateChats commands")
+
+        # 2. Устанавливаем команды по умолчанию для всех пользователей
         await bot.set_my_commands(user_commands, BotCommandScopeDefault())
         logger.info("Default commands (user only) set successfully")
         
-        # Устанавливаем персональное меню для каждого администратора
-        # Это скрывает команду /admin от обычных пользователей
+        # 3. Устанавливаем персональное меню для каждого администратора
         if ADMIN_IDS:
+            logger.info(f"Setting specialized menu for admins: {ADMIN_IDS}")
             for admin_id in ADMIN_IDS:
                 try:
                     await bot.set_my_commands(
                         admin_commands, 
                         scope=BotCommandScopeChat(chat_id=admin_id)
                     )
+                    logger.info(f"✅ Specialized menu set for admin {admin_id}")
                 except Exception as e:
-                    logger.warning(f"Could not set specialized menu for admin {admin_id}: {e}")
-            logger.info(f"Specialized admin menu set for {len(ADMIN_IDS)} admins")
+                    logger.warning(f"⚠️ Could not set specialized menu for admin {admin_id}: {e}")
+        else:
+            logger.warning("⚠️ No ADMIN_IDS found in config, specialized menu not set")
             
     except Exception as e:
-        logger.error(f"Error setting bot commands: {e}")
+        logger.error(f"❌ Error setting bot commands: {e}")
 
 async def remove_bot_commands(bot: Bot):
     """Удаление команд бота (для отладки)"""
