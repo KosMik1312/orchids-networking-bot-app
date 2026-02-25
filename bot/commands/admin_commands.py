@@ -62,7 +62,7 @@ async def admin_panel(message: Message, is_admin: bool) -> None:
     except Exception as e:
         logger.warning(f"Failed to refresh commands for admin {user_id}: {e}")
 
-    admin_url = MINIAPP_URL
+    admin_url = f"{MINIAPP_URL}?mode=admin"
     logger.info(f"🔒 Sending admin to {user_id}. MiniApp will authenticate via Telegram initData")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[

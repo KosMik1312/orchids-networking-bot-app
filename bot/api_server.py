@@ -159,6 +159,7 @@ class ContactsRequest(BaseModel):
 
 class InitDataRequest(BaseModel):
     initData: str
+    mode: Optional[str] = "user"
 
 
 # ===== Публичные эндпоинты (без аутентификации) =====
@@ -228,6 +229,7 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
 
 @app.post("/api/user/initial-screen")
 async def get_user_initial_screen_endpoint(
+    request: InitDataRequest,
     user_id: Optional[int] = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session)
 ):
@@ -267,7 +269,7 @@ async def get_user_initial_screen_endpoint(
         logger.info(f"📋 Current ADMIN_IDS from config: {ADMIN_IDS}, type={type(ADMIN_IDS)}")
         logger.info(f"❓ Is user_id {user_id} in ADMIN_IDS? {user_id in ADMIN_IDS}")
         
-        screen = await get_user_initial_screen(user_id)
+        screen = await get_user_initial_screen(user_id, request.mode)
         logger.info(f"✅ Determined screen for user {user_id}: {screen}")
         
         logger.info(f"📤 Returning response: screen={screen}, user_id={user_id}, success=True")

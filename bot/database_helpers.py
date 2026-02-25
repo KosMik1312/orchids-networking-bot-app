@@ -84,12 +84,12 @@ async def get_total_bookings_count() -> int:
         return result.scalar() or 0
 
 
-async def get_user_initial_screen(user_id: int) -> str:
+async def get_user_initial_screen(user_id: int, mode: str = "user") -> str:
     """
     Определяет начальный экран для пользователя на основе данных в БД.
     
     ВАЖНО! Определение типа пользователя происходит в БЭКЕНДЕ:
-    1. Если пользователь администратор → "admin"
+    1. Если пользователь администратор И запрашивает админку (mode="admin") → "admin"
        - Проверяются ОБА источника: ADMIN_IDS из конфига И поле is_admin в БД
     2. Если профиль заполнен → "booking"
     3. Если новый пользователь → "welcome"
@@ -102,14 +102,30 @@ async def get_user_initial_screen(user_id: int) -> str:
     from logger import get_api_logger
     
     logger = get_api_logger()
-    logger.info(f"🔍 get_user_initial_screen() called for user_id={user_id}")
+    logger.info(f"🔍 get_user_initial_screen() called for user_id={user_id}, mode={mode}")
     
-    # 1. Проверяем ОБА источника администратора:
-    #    а) ADMIN_IDS из конфига (для быстрой проверки)
-    logger.info(f"📋 ADMIN_IDS from config: {ADMIN_IDS}")
+    # ПРОВЕРКА ПРАВ АДМИНИСТРАТОРА (ОБЩАЯ)
+    user_is_admin = False
     if user_id in ADMIN_IDS:
-        logger.info(f"✅ User {user_id} is ADMIN (found in ADMIN_IDS config)")
-        return "admin"
+        user_is_admin = True
+    
+    # 1. Если администратор ХОЧЕТ в админку - пускаем
+    if mode == "admin":
+        if user_is_admin:
+            logger.info(f"✅ User {user_id} is ADMIN and requested admin mode")
+            return "admin"
+        
+        # Если не в конфиге - проверяем БД
+        try:
+            async_session = get_session_factory()
+            async with async_session() as session:
+                user_repo = UserRepo(session)
+                user = await user_repo.get_user_profile(user_id)
+                if user and user.is_admin:
+                    logger.info(f"✅ User {user_id} is ADMIN (DB) and requested admin mode")
+                    return "admin"
+        except Exception as e:
+            logger.error(f"Error checking admin DB: {e}")
     
     #    б) Проверяем поле is_admin в БД
     try:
