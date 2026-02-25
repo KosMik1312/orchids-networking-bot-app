@@ -92,9 +92,9 @@ class Booking(Base):
     user = relationship("User", back_populates="bookings")
     slot = relationship("DinnerSlot", back_populates="bookings")
 
-    # Составной уникальный индекс: пользователь может забронировать слот только один раз
+    # Составной индекс: пользователь может забронировать слот несколько раз
     __table_args__ = (
-        Index('ix_bookings_user_slot', 'user_id', 'slot_id', unique=True),
+        Index('ix_bookings_user_slot', 'user_id', 'slot_id'),
         Index('ix_bookings_user_status', 'user_id', 'status'),
     )
 
@@ -103,15 +103,17 @@ class Payment(Base):
     __tablename__ = 'payments'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    yookassa_payment_id = Column(String, unique=True, nullable=False, index=True)  # Индекс для поиска по yookassa_id
+    yookassa_payment_id = Column(String, unique=True, nullable=False, index=True)
     user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
+    slot_id = Column(Integer, ForeignKey('dinner_slots.id', ondelete="SET NULL"), nullable=True)
     booking_id = Column(Integer, ForeignKey('bookings.id', ondelete="SET NULL"), nullable=True)
     amount = Column(String, nullable=False)
-    status = Column(String, default='created', index=True)  # Индекс для фильтрации по статусу
+    status = Column(String, default='created', index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User")
+    slot = relationship("DinnerSlot")
     booking = relationship("Booking")
 
     # Составной индекс для поиска платежей пользователя

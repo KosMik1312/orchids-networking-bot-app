@@ -334,8 +334,8 @@ export interface PaymentResponse {
   status: string;
 }
 
-export async function createPayment(params: { amount: string; bookingId?: number; returnUrl: string }, authToken?: string): Promise<PaymentResponse> {
-  console.log(`[API] Creating payment for amount=${params.amount}`);
+export async function createPayment(params: { amount: string; slotId: number; returnUrl: string }, authToken?: string): Promise<PaymentResponse> {
+  console.log(`[API] Creating payment for slot_id=${params.slotId}`);
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -349,7 +349,11 @@ export async function createPayment(params: { amount: string; bookingId?: number
     method: 'POST',
     headers,
     cache: 'no-store',
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      amount: params.amount,
+      slotId: params.slotId,
+      returnUrl: params.returnUrl,
+    }),
   });
 
   return handleResponse(response);

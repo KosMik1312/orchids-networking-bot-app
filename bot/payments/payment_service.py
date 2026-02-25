@@ -35,7 +35,7 @@ class PaymentService:
         self,
         user_id: int,
         amount: float,
-        booking_id: Optional[int] = None,
+        slot_id: int,
         return_url: Optional[str] = None,
         description: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -45,14 +45,11 @@ class PaymentService:
         Args:
             user_id: ID пользователя
             amount: Сумма платежа в рублях
-            booking_id: ID бронирования (опционально)
+            slot_id: ID слота для бронирования
             return_url: URL возврата после платежа (опционально)
             description: Описание платежа (опционально)
-            
-        Returns:
-            Dict с информацией о платеже
         """
-        logger.info(f"Creating payment: user={user_id}, amount={amount}, booking_id={booking_id}")
+        logger.info(f"Creating payment: user={user_id}, amount={amount}, slot_id={slot_id}")
         
         # Используем дефолтный URL если не указан
         if not return_url:
@@ -60,12 +57,12 @@ class PaymentService:
         
         # Подготавливаем описание
         if not description:
-            description = f"Бронирование ужина для пользователя {user_id}"
+            description = f"Бронирование ужина (слот {slot_id}) для пользователя {user_id}"
         
         # Подготавливаем metadata
         metadata = {
             "user_id": user_id,
-            "booking_id": booking_id if booking_id else None
+            "slot_id": slot_id
         }
         
         # Создаём платёж через Ю-Кассу (в отдельном потоке, так как SDK синхронный)

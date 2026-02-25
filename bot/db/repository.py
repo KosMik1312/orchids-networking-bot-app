@@ -346,8 +346,57 @@ class BookingRepo(BaseRepo):
             
         except Exception as e:
             await self.session.rollback()
-            logger.error(f"Booking creation failed: {e}")
-            raise
+            logger.error(f"Error creating booking: {e}")
+            return None
+
+    async def create_booking_after_payment(self, user_id: int, slot_id: int, payment_id: int) -> Optional[Booking]:
+        """
+        Создает бронирование ПОСЛЕ успешной оплаты.
+        Используется в обработчике вебхука.
+        """
+        logger.info(f"🚀 Creating booking after payment: user={user_id}, slot={slot_id}, payment={payment_id}")
+        
+        try:
+            # 1. Получаем слот с блокировкой
+            slot_result = await self.session.execute(
+                select(DinnerSlot).where(DinnerSlot.id == slot_id).with_for_update()
+            )
+            slot = slot_result.scalar_one_or_none()
+            
+            if not slot or not slot.is_active:
+                logger.error(f"❌ Slot {slot_id} not found or not active for payment {payment_id}")
+                return None
+            
+            if slot.current_bookings >= slot.max_people:
+                logger.error(f"❌ Slot {slot_id} is full for payment {payment_id}. Capacity: {slot.current_bookings}/{slot.max_people}")
+                # Тут можно подумать о возврате средств, но пока просто логируем
+                return None
+            
+            # 2. Создаем бронирование
+            new_booking = Booking(user_id=user_id, slot_id=slot_id, status='active')
+            self.session.add(new_booking)
+            
+            # 3. Обновляем счетчик в слоте
+            slot.current_bookings += 1
+            
+            # 4. Привязываем бронирование к платежу
+            payment_repo = PaymentRepo(self.session)
+            payment = await payment_repo.get_payment(payment_id)
+            if payment:
+                # Сначала фиксируем бронь, чтобы получить её ID
+                await self.session.flush()
+                payment.booking_id = new_booking.id
+            
+            await self.session.commit()
+            await self.session.refresh(new_booking)
+            
+            logger.info(f"✅ Booking created after payment: id={new_booking.id}")
+            return new_booking
+            
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(f"❌ Error creating booking after payment: {e}")
+            return None
 
     async def get_user_bookings(self, user_id: int) -> List[Booking]:
         """Получает активные бронирования пользователя с предзагруженными слотами."""
@@ -416,6 +465,7 @@ class PaymentRepo(BaseRepo):
         user_id: int, 
         yookassa_payment_id: str,
         amount: str,
+        slot_id: Optional[int] = None,
         booking_id: Optional[int] = None,
         status: str = 'created'
     ) -> Payment:
@@ -424,13 +474,14 @@ class PaymentRepo(BaseRepo):
             user_id=user_id,
             yookassa_payment_id=yookassa_payment_id,
             amount=amount,
+            slot_id=slot_id,
             booking_id=booking_id,
             status=status
         )
         self.session.add(payment)
         await self.session.commit()
         await self.session.refresh(payment)
-        logger.info(f"Payment created: id={payment.id}, user={user_id}, yookassa_id={yookassa_payment_id}")
+        logger.info(f"Payment created: id={payment.id}, user={user_id}, slot={slot_id}, yookassa_id={yookassa_payment_id}")
         return payment
 
     async def get_payment(self, payment_id: int) -> Optional[Payment]:

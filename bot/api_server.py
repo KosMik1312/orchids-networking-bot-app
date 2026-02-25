@@ -147,7 +147,7 @@ class BookingRequest(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: str
-    bookingId: Optional[int] = None
+    slotId: int
     returnUrl: str
 
 
@@ -764,7 +764,7 @@ async def create_payment_endpoint(
         payment_result = await payment_service.create_payment(
             user_id=user_id,
             amount=request.amount,
-            booking_id=request.bookingId,
+            slot_id=request.slotId,
             return_url=request.returnUrl
         )
         
@@ -782,11 +782,11 @@ async def create_payment_endpoint(
             user_id=user_id,
             yookassa_payment_id=payment_result['payment_id'],
             amount=request.amount,
-            booking_id=request.bookingId,
+            slot_id=request.slotId,
             status='created'
         )
         
-        logger.info(f"Payment saved to DB: id={db_payment.id}, yookassa_id={db_payment.yookassa_payment_id}")
+        logger.info(f"Payment saved to DB: id={db_payment.id}, user={user_id}, slot={request.slotId}")
         
         return {
             "paymentId": db_payment.id,
@@ -881,77 +881,58 @@ async def payment_webhook(
 ):
     """
     Обработчик вебхука от Yookassa.
-    Проверяет подпись и обновляет статус платежа.
+    Создает бронирование только после успешной оплаты.
     """
-    logger.info("Received payment webhook")
+    logger.info("🔔 Received payment webhook")
     
     try:
-        # Получаем тело запроса для проверки подписи
         body = await request.body()
-        
-        # Проверяем подпись (в тестовом режиме можно пропустить)
         signature = request.headers.get("YooKassa-Signature", "")
         
-        # Если подпись передана - проверяем её
-        # В тестовом режиме Ю-Касса может не отправлять подпись
         if signature and not verify_webhook_signature(body, signature):
-            logger.warning("Invalid webhook signature")
+            logger.error("❌ Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
-        
-        # Парсим JSON
-        webhook_data = await request.json()
-        logger.debug(f"Webhook data: {webhook_data}")
-        
+
+        payload = await request.json()
         payment_service = PaymentService()
-        result = await payment_service.handle_webhook(webhook_data)
+        result = await payment_service.handle_webhook(payload)
         
-        yookassa_id = result.get('payment_id')
-        status = result.get('status')
-        
-        if not yookassa_id:
-            return {"success": True, "status": "no_payment_id"}
-        
+        if not result.get("success"):
+            return {"status": "ignored"}
+
         payment_repo = PaymentRepo(session)
-        payment = await payment_repo.get_payment_by_yookassa_id(yookassa_id)
+        db_payment = await payment_repo.get_payment_by_yookassa_id(result["payment_id"])
         
-        if not payment:
-            logger.warning(f"Payment not found for yookassa_id={yookassa_id}")
-            return {"success": True, "status": "payment_not_found"}
+        if not db_payment:
+            logger.error(f"❌ Payment {result['payment_id']} not found in DB")
+            return {"status": "error", "message": "Payment not found"}
+
+        # Обновляем статус платежа
+        await payment_repo.update_payment_status(db_payment.id, result["status"])
         
-        # Обработка успешного платежа
-        if status == 'succeeded':
-            await payment_repo.update_payment_status(payment.id, 'succeeded')
-            
-            # Подтверждаем бронирование если есть
-            if payment.booking_id:
+        # Если оплата прошла успешно - создаем бронирование
+        if result["action"] == "confirm_booking":
+            if not db_payment.booking_id:
+                logger.info(f"✨ Payment successful! Creating booking for user={db_payment.user_id}, slot={db_payment.slot_id}")
                 booking_repo = BookingRepo(session)
-                await booking_repo.confirm_booking(payment.booking_id)
-            
-            logger.info(f"Payment {payment.id} marked as succeeded")
+                booking = await booking_repo.create_booking_after_payment(
+                    user_id=db_payment.user_id,
+                    slot_id=db_payment.slot_id,
+                    payment_id=db_payment.id
+                )
+                if booking:
+                    logger.info(f"✅ Booking finalized: {booking.id}")
+                else:
+                    logger.error(f"❌ Failed to finalize booking for payment {db_payment.id}")
+            else:
+                logger.info(f"ℹ️ Booking {db_payment.booking_id} already exists for this payment")
+
+        return {"status": "ok"}
         
-        # Обработка отменённого платежа
-        elif status == 'canceled':
-            await payment_repo.update_payment_status(payment.id, 'canceled')
-            
-            # Отменяем бронирование если есть
-            if payment.booking_id:
-                booking_repo = BookingRepo(session)
-                await booking_repo.cancel_booking(payment.booking_id)
-            
-            logger.info(f"Payment {payment.id} canceled, booking cancelled")
-        
-        else:
-            await payment_repo.update_payment_status(payment.id, status or 'unknown')
-            logger.info(f"Payment {payment.id} status updated to {status}")
-        
-        return {"success": True, "status": status}
-    
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Webhook handling error: {e}")
+        logger.error(f"❌ Webhook error: {e}")
         traceback.print_exc()
-        return {"success": False, "error": str(e)}
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":

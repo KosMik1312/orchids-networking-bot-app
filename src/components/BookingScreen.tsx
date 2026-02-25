@@ -96,25 +96,14 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
     if (!selectedSlot || !authToken) return;
     try {
       setIsLoading(true);
-      // 1. Создаем бронирование
-      console.log("💳 [PAYMENT] Creating booking for slot:", selectedSlot.id);
-      const bookingData = await createBooking(selectedSlot.id, authToken);
-
-      if (!bookingData.success || !bookingData.bookingId) {
-        throw new Error("Failed to create booking");
-      }
-
-      console.log("✅ [PAYMENT] Booking created:", bookingData.bookingId);
-
-      // 2. Создаем платеж в Ю-Кассе
-      // Формируем returnUrl так, чтобы вернуться на этот же экран с флагом успеха
+      // 1. Создаем платеж в Ю-Кассе напрямую (бронь создастся на бэкенде после оплаты)
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.set('payment_success', 'true');
 
-      console.log("💳 [PAYMENT] Initiating YooMoney payment...");
+      console.log("💳 [PAYMENT] Initiating YooMoney payment for slot:", selectedSlot.id);
       const paymentData = await createPayment({
         amount: "1500", // Фиксированная стоимость
-        bookingId: bookingData.bookingId,
+        slotId: selectedSlot.id,
         returnUrl: currentUrl.toString()
       }, authToken);
 
