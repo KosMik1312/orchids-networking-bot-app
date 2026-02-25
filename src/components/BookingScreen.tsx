@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Settings, ChevronRight, Check } from "lucide-react";
+import { MapPin, Settings, ChevronRight, Check, ArrowLeft, AlertCircle } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { getSlots, createBooking, createPayment } from "@/lib/api";
 import { ru } from "@/lib/i18n/ru";
@@ -40,6 +40,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     // Проверка возврата с оплаты
@@ -124,9 +125,9 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         console.log("✅ [PAYMENT] No confirmation needed, showing success");
         setStep("success");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("❌ [PAYMENT] Payment flow failed:", e);
-      alert(t.errors.bookingFailed);
+      setPaymentError(e.message || t.errors.bookingFailed);
     } finally {
       setIsLoading(false);
     }
@@ -308,15 +309,60 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                 </button>
               </div>
 
-              {/* Pay Button */}
-              <button
-                disabled={!acceptedOffer}
-                onClick={handlePayment}
-                className={`w-full py-4 rounded-[20px] text-[17px] font-semibold transition-all ${acceptedOffer ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
-                  }`}
-              >
-                {t.payment.payButton}
-              </button>
+              {/* Error Message */}
+              <AnimatePresence>
+                {paymentError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="mb-4 p-4 rounded-[16px] bg-[#E15859]/10 border border-[#E15859]/20 flex items-start gap-3"
+                  >
+                    <AlertCircle className="text-[#E15859] flex-shrink-0 mt-0.5" size={18} />
+                    <div className="flex-1">
+                      <p className="text-[#E15859] text-[13px] font-medium leading-[1.4]">
+                        {paymentError}
+                      </p>
+                      <button
+                        onClick={() => setPaymentError(null)}
+                        className="text-[#E15859] text-[11px] font-bold uppercase mt-1 opacity-70"
+                      >
+                        Закрыть
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                {/* Back Button */}
+                <button
+                  onClick={() => setStep("slots")}
+                  className="w-16 h-14 bg-[#FFF7EF] border border-[#E15859]/20 rounded-[20px] flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                >
+                  <ArrowLeft className="text-[#E15859]" size={24} />
+                </button>
+
+                {/* Pay Button */}
+                <button
+                  disabled={!acceptedOffer || isLoading}
+                  onClick={handlePayment}
+                  className={`flex-1 py-4 rounded-[20px] text-[17px] font-semibold transition-all active:scale-[0.98] shadow-sm ${acceptedOffer && !isLoading ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
+                    }`}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                      <span>Подождите...</span>
+                    </div>
+                  ) : t.payment.payButton}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

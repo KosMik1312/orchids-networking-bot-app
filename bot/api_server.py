@@ -768,6 +768,14 @@ async def create_payment_endpoint(
             return_url=request.returnUrl
         )
         
+        # Проверяем успешность создания платежа в Ю-Кассе
+        if not payment_result.get('success'):
+            error_msg = payment_result.get('error', 'Failed to create payment in YooKassa')
+            logger.error(f"❌ YooKassa payment creation failed: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+            
+        logger.info(f"✅ YooKassa payment created: {payment_result['payment_id']}")
+
         # Сохраняем платеж в базу данных
         payment_repo = PaymentRepo(session)
         db_payment = await payment_repo.create_payment(
@@ -778,7 +786,7 @@ async def create_payment_endpoint(
             status='created'
         )
         
-        logger.info(f"Payment created: id={db_payment.id}, yookassa_id={db_payment.yookassa_payment_id}")
+        logger.info(f"Payment saved to DB: id={db_payment.id}, yookassa_id={db_payment.yookassa_payment_id}")
         
         return {
             "paymentId": db_payment.id,
