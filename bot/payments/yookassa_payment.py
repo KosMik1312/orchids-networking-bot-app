@@ -42,6 +42,9 @@ class YooKassaPayment:
             Dict с информацией о платеже (id, status, confirmation_url)
         """
         try:
+            # Принудительно приводим к float, если пришла строка
+            amount = float(amount)
+            
             # Генерируем уникальный ключ идемпотентности
             idempotency_key = str(uuid.uuid4())
             
