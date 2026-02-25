@@ -103,7 +103,7 @@ export const ru = {
         ],
       },
       weaknesses: {
-        placeholder: "Мои слабости",
+        placeholder: "О себе своими словами",
         optional: "необязательно",
         hint: "",
       },
