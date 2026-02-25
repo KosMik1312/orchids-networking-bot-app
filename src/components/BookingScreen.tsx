@@ -102,7 +102,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
       console.log("💳 [PAYMENT] Initiating YooMoney payment for slot:", selectedSlot.id);
       const paymentData = await createPayment({
-        amount: "1500", // Фиксированная стоимость
+        amount: "10", // Фиксированная стоимость (временно для тестов)
         slotId: selectedSlot.id,
         returnUrl: currentUrl.toString()
       }, authToken);
@@ -280,7 +280,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Total */}
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[#404243] text-[15px] font-medium">{t.payment.total}</span>
-                <span className="text-[#2A2021] text-[20px] font-bold">1 500 ₽</span>
+                <span className="text-[#2A2021] text-[20px] font-bold">10 ₽</span>
               </div>
 
               {/* Info Text */}
