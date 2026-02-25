@@ -49,9 +49,10 @@ class YooKassaPayment:
             idempotency_key = str(uuid.uuid4())
             
             # Подготавливаем параметры платежа
+            price_str = f"{amount:.2f}"
             payment_params = {
                 "amount": {
-                    "value": f"{amount:.2f}",
+                    "value": price_str,
                     "currency": "RUB"
                 },
                 "confirmation": {
@@ -60,7 +61,25 @@ class YooKassaPayment:
                 },
                 "capture": True,  # Сразу захватываем деньги
                 "description": description[:128],  # Обрезаем до 128 символов
-                "test": self.test_mode  # Режим тестирования
+                "test": self.test_mode,  # Режим тестирования
+                "receipt": {
+                    "customer": {
+                        "email": "no-reply@leracinema.ru"  # Фиктивный email, так как мы его не собираем
+                    },
+                    "items": [
+                        {
+                            "description": description[:128],
+                            "quantity": "1.00",
+                            "amount": {
+                                "value": price_str,
+                                "currency": "RUB"
+                            },
+                            "vat_code": 1, # 1 = Без НДС
+                            "payment_mode": "full_payment",
+                            "payment_subject": "service"
+                        }
+                    ]
+                }
             }
             
             # Добавляем metadata если есть
