@@ -86,6 +86,9 @@ class YooKassaPayment:
             if metadata:
                 payment_params["metadata"] = metadata
             
+            import json
+            print(f"[YOO_PAYLOAD] Sending FZ-54 payload: {json.dumps(payment_params, ensure_ascii=False)}")
+                
             # Создаём платёж
             payment = Payment.create(
                 payment_params,
