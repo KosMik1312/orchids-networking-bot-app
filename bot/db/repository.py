@@ -262,7 +262,7 @@ class SlotRepo(BaseRepo):
 class BookingRepo(BaseRepo):
     """Репозиторий для работы с бронированиями."""
     
-    async def create_booking(self, user_id: int, slot_id: int) -> bool:
+    async def create_booking(self, user_id: int, slot_id: int) -> Optional[Booking]:
         """
         Создает бронирование с атомарной блокировкой слота.
         Использует SELECT FOR UPDATE для предотвращения race condition.
@@ -279,7 +279,7 @@ class BookingRepo(BaseRepo):
             )
             if existing_booking.scalar_one_or_none() is not None:
                 logger.warning(f"User {user_id} already booked slot {slot_id}")
-                return False
+                return None
 
             # 2. Получаем слот с блокировкой FOR UPDATE (атомарная операция)
             # Это предотвращает race condition при одновременных бронированиях
@@ -293,15 +293,15 @@ class BookingRepo(BaseRepo):
             
             if not slot:
                 logger.warning(f"Slot {slot_id} not found")
-                return False
+                return None
             
             if not slot.is_active:
                 logger.warning(f"Slot {slot_id} is not active")
-                return False
+                return None
             
             if slot.current_bookings >= slot.max_people:
                 logger.warning(f"Slot {slot_id} is full ({slot.current_bookings}/{slot.max_people})")
-                return False
+                return None
             
             # 3. Создаем бронирование
             new_booking = Booking(user_id=user_id, slot_id=slot_id)
@@ -314,7 +314,7 @@ class BookingRepo(BaseRepo):
             await self.session.commit()
             
             logger.info(f"Booking created successfully: user={user_id}, slot={slot_id}")
-            return True
+            return new_booking
             
         except Exception as e:
             await self.session.rollback()

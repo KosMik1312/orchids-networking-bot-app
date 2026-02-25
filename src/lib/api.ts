@@ -227,7 +227,7 @@ export async function getUserBookings(userId: number, authToken?: string): Promi
   return result;
 }
 
-export async function createBooking(slotId: number, authToken?: string): Promise<{ success: boolean }> {
+export async function createBooking(slotId: number, authToken?: string): Promise<{ success: boolean; bookingId?: number }> {
   console.log(`[API] Creating booking: slotId=${slotId}`);
 
   const headers: HeadersInit = {
@@ -321,5 +321,53 @@ export async function getFavorites(authToken?: string): Promise<{ favorites: Slo
   });
 
   console.log(`[API] Get favorites response status: ${response.status}`);
+  return handleResponse(response);
+}
+
+// Payments API
+export interface PaymentResponse {
+  paymentId: number;
+  yookassaPaymentId: string;
+  confirmationUrl: string;
+  status: string;
+}
+
+export async function createPayment(params: { amount: string; bookingId?: number; returnUrl: string }, authToken?: string): Promise<PaymentResponse> {
+  console.log(`[API] Creating payment for amount=${params.amount}`);
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  const response = await fetch(`${API_BASE}/api/payments`, {
+    method: 'POST',
+    headers,
+    cache: 'no-store',
+    body: JSON.stringify(params),
+  });
+
+  return handleResponse(response);
+}
+
+export async function getPaymentStatus(paymentId: number, authToken?: string): Promise<PaymentResponse> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  const response = await fetch(`${API_BASE}/api/payments/${paymentId}`, {
+    method: 'POST', // Backend requires POST for this with auth
+    headers,
+    cache: 'no-store',
+    body: JSON.stringify({ initData: authToken }), // Backend InitDataRequest model
+  });
+
   return handleResponse(response);
 }

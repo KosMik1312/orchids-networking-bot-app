@@ -598,13 +598,13 @@ async def create_booking_endpoint(
         logger.info(f"📦 Creating booking: user={user_id}, slot={request.slotId}")
         
         booking_repo = BookingRepo(session)
-        success = await booking_repo.create_booking(user_id, request.slotId)
+        booking = await booking_repo.create_booking(user_id, request.slotId)
         
-        if not success:
+        if not booking:
             raise HTTPException(status_code=400, detail="Slot is full or already booked")
         
-        logger.info(f"✅ Booking created successfully")
-        return {"success": True}
+        logger.info(f"✅ Booking created successfully: id={booking.id}")
+        return {"success": True, "bookingId": booking.id}
     except HTTPException:
         raise
     except Exception as e:

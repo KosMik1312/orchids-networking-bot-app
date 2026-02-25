@@ -21,9 +21,9 @@ from logger import get_payment_logger
 logger = get_payment_logger()
 
 # Получаем данные из переменных окружения
-YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "100500")  # Demo Shop ID по умолчанию
-YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "test_1234567890abcdef")  # Demo Secret Key
-YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "true").lower() == "true"
+YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1247817")  # Live Shop ID
+YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_MQWRpQKNQxtNxjKxRpWIUyfe7fIZ7xh2R89qVWPdny8")  # Live Secret Key
+YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "false").lower() == "true"
 
 # URL для возврата после платежа (может переопределяться при запросе)
 DEFAULT_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", "https://orchids-networking-bot-app.vercel.app/")

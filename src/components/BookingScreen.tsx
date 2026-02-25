@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Settings, ChevronRight, Check } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { getSlots, createBooking } from "@/lib/api";
+import { getSlots, createBooking, createPayment } from "@/lib/api";
 import { ru } from "@/lib/i18n/ru";
 
 type BookingStep = "slots" | "payment" | "success";
@@ -40,6 +40,15 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Проверка возврата с оплаты
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment_success') === 'true') {
+      console.log("💰 [PAYMENT] Detected redirect back from success payment");
+      setStep("success");
+    }
+  }, []);
   useEffect(() => {
     let isMounted = true;
     async function fetchSlots() {
@@ -85,11 +94,41 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const handlePayment = async () => {
     if (!selectedSlot || !authToken) return;
     try {
-      await createBooking(selectedSlot.id, authToken);
-      setStep("success");
+      setIsLoading(true);
+      // 1. Создаем бронирование
+      console.log("💳 [PAYMENT] Creating booking for slot:", selectedSlot.id);
+      const bookingData = await createBooking(selectedSlot.id, authToken);
+
+      if (!bookingData.success || !bookingData.bookingId) {
+        throw new Error("Failed to create booking");
+      }
+
+      console.log("✅ [PAYMENT] Booking created:", bookingData.bookingId);
+
+      // 2. Создаем платеж в Ю-Кассе
+      // Формируем returnUrl так, чтобы вернуться на этот же экран с флагом успеха
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('payment_success', 'true');
+
+      console.log("💳 [PAYMENT] Initiating YooMoney payment...");
+      const paymentData = await createPayment({
+        amount: "1500", // Фиксированная стоимость
+        bookingId: bookingData.bookingId,
+        returnUrl: currentUrl.toString()
+      }, authToken);
+
+      if (paymentData.confirmationUrl) {
+        console.log("🚀 [PAYMENT] Redirecting to:", paymentData.confirmationUrl);
+        window.location.href = paymentData.confirmationUrl;
+      } else {
+        console.log("✅ [PAYMENT] No confirmation needed, showing success");
+        setStep("success");
+      }
     } catch (e) {
-      console.error("Booking failed", e);
+      console.error("❌ [PAYMENT] Payment flow failed:", e);
       alert(t.errors.bookingFailed);
+    } finally {
+      setIsLoading(false);
     }
   };
 
