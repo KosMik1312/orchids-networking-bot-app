@@ -131,7 +131,9 @@ export default function Home() {
         // Парсим параметры URL
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode') || 'user';
-        console.log(`🔍 Detected mode from URL: ${mode}`);
+        console.log(`🔍 [DEBUG] RAW URL: ${window.location.href}`);
+        console.log(`🔍 [DEBUG] SEARCH PARAMS: ${window.location.search}`);
+        console.log(`🔍 [DEBUG] Detected mode from URL: ${mode}`);
 
         // 🎯 Отправляем initData и mode в Authorization заголовке и теле запроса
         console.log("📤 Sending to /api/user/initial-screen...");

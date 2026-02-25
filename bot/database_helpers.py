@@ -88,46 +88,41 @@ async def get_user_initial_screen(user_id: int, mode: str = "user") -> str:
     """
     Определяет начальный экран для пользователя на основе данных в БД.
     
-    ВАЖНО! Определение типа пользователя происходит в БЭКЕНДЕ:
-    1. Если пользователь администратор И запрашивает админку (mode="admin") → "admin"
-       - Проверяются ОБА источника: ADMIN_IDS из конфига И поле is_admin в БД
-    2. Если профиль заполнен → "booking"
-    3. Если новый пользователь → "welcome"
-    
-    Эта функция вызывается:
-    - При /start команде в боте
-    - При API запросе /api/user/initial-screen (используется фронтендом)
+    СТРОГАЯ ЛОГИКА:
+    1. Сначала проверяем, является ли пользователь администратором.
+    2. Если пользователь администратор И mode="admin" -> возвращаем "admin".
+    3. В ЛЮБЫХ ДРУГИХ СЛУЧАЯХ игнорируем статус админа и идем по пути пользователя:
+       - Если профиль заполнен -> "booking"
+       - Иначе -> "welcome"
     """
     from config import ADMIN_IDS
     from logger import get_api_logger
     
     logger = get_api_logger()
-    logger.info(f"🔍 get_user_initial_screen() called for user_id={user_id}, mode={mode}")
+    logger.info(f"🔍 get_user_initial_screen() called: user_id={user_id}, mode={mode}")
     
-    # ПРОВЕРКА ПРАВ АДМИНИСТРАТОРА (ОБЩАЯ)
-    user_is_admin = False
-    if user_id in ADMIN_IDS:
-        user_is_admin = True
+    # 1. Сначала просто определяем, админ ли это
+    is_admin = (user_id in ADMIN_IDS)
     
-    # 1. Если администратор ХОЧЕТ в админку - пускаем
-    if mode == "admin":
-        if user_is_admin:
-            logger.info(f"✅ User {user_id} is ADMIN and requested admin mode")
-            return "admin"
-        
-        # Если не в конфиге - проверяем БД
+    # Если не в конфиге - проверяем БД
+    if not is_admin:
         try:
             async_session = get_session_factory()
             async with async_session() as session:
                 user_repo = UserRepo(session)
                 user = await user_repo.get_user_profile(user_id)
                 if user and user.is_admin:
-                    logger.info(f"✅ User {user_id} is ADMIN (DB) and requested admin mode")
-                    return "admin"
+                    is_admin = True
         except Exception as e:
-            logger.error(f"Error checking admin DB: {e}")
+            logger.error(f"Error checking admin status in DB: {e}")
+
+    # 2. Если это админ И он просит админку - пускаем
+    if is_admin and mode == "admin":
+        logger.info(f"✅ User {user_id} is ADMIN and requested mode=admin. Sending to admin panel.")
+        return "admin"
     
-    #    б) Проверяем поле is_admin в БД
+    # 3. В ОСТАЛЬНЫХ СЛУЧАЯХ (даже если админ) - проверяем как обычного пользователя
+    logger.info(f"👤 Following user flow for user_id={user_id} (requested mode={mode})")
     try:
         async_session = get_session_factory()
         async with async_session() as session:
@@ -135,19 +130,9 @@ async def get_user_initial_screen(user_id: int, mode: str = "user") -> str:
             user = await user_repo.get_user_profile(user_id)
             
             if user:
-                logger.info(f"👤 User {user_id} found in DB. is_admin={user.is_admin}, is_profile_completed={user.is_profile_completed}")
-                
-                # Проверяем администатора ИЗ БД
-                if user.is_admin:
-                    logger.info(f"✅ User {user_id} is ADMIN (is_admin=True in DB)")
-                    return "admin"
-                
-                # Если не администратор - проверяем профиль
+                logger.info(f"👤 User {user_id} found in DB. is_profile_completed={user.is_profile_completed}")
                 if user.is_profile_completed:
-                    logger.info(f"✅ User {user_id} has completed profile")
                     return "booking"
-                
-                logger.info(f"❌ User {user_id} profile is NOT completed")
                 return "welcome"
             else:
                 logger.info(f"⚠️ User {user_id} not found in DB - first time user")
@@ -155,6 +140,4 @@ async def get_user_initial_screen(user_id: int, mode: str = "user") -> str:
                 
     except Exception as e:
         logger.error(f"❌ Error checking user profile for {user_id}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
         return "welcome"
