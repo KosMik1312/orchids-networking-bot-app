@@ -109,7 +109,13 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
       if (paymentData.confirmationUrl) {
         console.log("🚀 [PAYMENT] Redirecting to:", paymentData.confirmationUrl);
-        window.location.href = paymentData.confirmationUrl;
+        // Используем Telegram API для открытия внешней ссылки, чтобы избежать ошибки X-Frame-Options: sameorigin
+        const tg = (window as any).Telegram;
+        if (tg && tg.WebApp && tg.WebApp.openLink) {
+          tg.WebApp.openLink(paymentData.confirmationUrl);
+        } else {
+          window.location.href = paymentData.confirmationUrl;
+        }
       } else {
         console.log("✅ [PAYMENT] No confirmation needed, showing success");
         setStep("success");
