@@ -527,6 +527,32 @@ async def get_profile_endpoint(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@app.delete("/api/profile")
+async def delete_profile_endpoint(
+    user_id: Optional[int] = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    🗑️ Удалить профиль пользователя (гибридная аутентификация)
+    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authentication")
+
+    logger.info(f"🗑️ DELETE /api/profile called for user {user_id}")
+    
+    try:
+        user_repo = UserRepo(session)
+        success = await user_repo.delete_user(user_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return {"success": True, "message": "User profile and associated data deleted"}
+    except Exception as e:
+        logger.error(f"❌ Delete profile failed for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/bookings/list")
 async def get_user_bookings_endpoint(
     user_id: Optional[int] = Depends(get_current_user_id),

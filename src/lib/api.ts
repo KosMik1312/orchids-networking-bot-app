@@ -176,6 +176,33 @@ export async function getProfile(userId?: number, authToken?: string): Promise<{
   return handleResponse(response);
 }
 
+export async function deleteProfile(userId?: number, authToken?: string): Promise<{ success: boolean }> {
+  const url = `${API_BASE}/api/profile`;
+  console.log('🔗 Удаление профиля:', url);
+  console.log('📤 userId:', userId);
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  const queryParams = userId ? `?userId=${userId}` : '';
+  const fullUrl = url + queryParams;
+
+  const response = await fetch(fullUrl, {
+    method: 'DELETE',
+    cache: 'no-store',
+    headers,
+  });
+
+  console.log('📡 Ответ:', response.status, response.statusText);
+
+  return handleResponse(response);
+}
+
 // Slots API
 export async function getSlots(city?: string): Promise<{ slots: Slot[] }> {
   const url = city ? `${API_BASE}/api/slots?city=${encodeURIComponent(city)}` : `${API_BASE}/api/slots`;

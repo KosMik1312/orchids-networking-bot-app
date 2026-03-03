@@ -13,6 +13,7 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent }: SettingsScreenProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const menuItems = [
     { label: ru.settings.privacyText, onClick: onPrivacy },
@@ -114,15 +115,33 @@ export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent }: Settin
                 </p>
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => {
-                      // TODO: Добавить логику удаления аккаунта
-                      console.log("Удаление аккаунта...");
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        const { deleteProfile } = await import("@/lib/api");
+                        // We rely on the API to handle userId/auth from session/headers
+                        const result = await deleteProfile();
+                        if (result.success) {
+                          // Redirect to welcome or reload
+                          window.location.href = "/?screen=welcome";
+                        } else {
+                          alert("Ошибка при удалении аккаунта");
+                          setIsDeleting(false);
+                        }
+                      } catch (error) {
+                        console.error("Delete failed:", error);
+                        alert("Произошла ошибка при удалении");
+                        setIsDeleting(false);
+                      }
                     }}
-                    className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
+                    className={`w-full py-4 rounded-[20px] text-white text-[17px] font-semibold ${isDeleting ? "bg-gray-400" : "bg-[#E15859]"
+                      }`}
                   >
-                    {ru.settings.deleteConfirmButton}
+                    {isDeleting ? "Удаление..." : ru.settings.deleteConfirmButton}
                   </button>
                   <button
+                    disabled={isDeleting}
                     onClick={() => setShowDeleteConfirm(false)}
                     className="w-full py-4 rounded-[20px] border-2 border-[#E15859] bg-white text-[#E15859] text-[17px] font-semibold"
                   >
