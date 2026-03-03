@@ -35,10 +35,13 @@ bun.lockb
 package-lock.json
 yarn.lock
 
-# Environment files
+# Environment files (КРИТИЧНО!)
 .env
 .env.local
 .env.*.local
+.env.production
+bot/.env
+bot/.env.local
 
 # Logs
 npm-debug.log*

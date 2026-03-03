@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: antre_postgres
+    environment:
+      POSTGRES_DB: antre_club_db
+      POSTGRES_USER: antre_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - antre_network
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antre_user -d antre_club_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (FastAPI + Aiogram)
+  backend:
+    image: python:3.12-slim
+    container_name: antre_backend
+    working_dir: /app
+    command: >
+      bash -c "
+      pip install --no-cache-dir -r requirements.txt &&
+      python start_all.py
+      "
+    volumes:
+      - ./bot:/app
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=antre_club_db
+      - DB_USER=antre_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DATABASE_URL=postgresql+asyncpg://antre_user:${DB_PASSWORD}@postgres:5432/antre_club_db
+      - BOT_TOKEN=${BOT_TOKEN}
+      - MINIAPP_URL=https://${DOMAIN}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - YOOKASSA_SHOP_ID=${YOOKASSA_SHOP_ID}
+      - YOOKASSA_SECRET_KEY=${YOOKASSA_SECRET_KEY}
+      - YOOKASSA_TEST_MODE=${YOOKASSA_TEST_MODE:-false}
+      - DB_ECHO=${DB_ECHO:-false}
+      - DB_POOL_SIZE=${DB_POOL_SIZE:-5}
+      - DB_POOL_MAX_OVERFLOW=${DB_POOL_MAX_OVERFLOW:-10}
+      - DB_POOL_RECYCLE=${DB_POOL_RECYCLE:-3600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - antre_network
+    restart: unless-stopped
+    mem_limit: 256m
+
+  # Frontend (Next.js)
+  frontend:
+    image: node:20-alpine
+    container_name: antre_frontend
+    working_dir: /app
+    command: >
+      sh -c "
+      npm install &&
+      npm run build &&
+      npm start
+      "
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./next.config.ts:/app/next.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./components.json:/app/components.json
+      - ./next-env.d.ts:/app/next-env.d.ts
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api
+      - NEXT_PUBLIC_BOT_USERNAME=${BOT_USERNAME}
+      - NODE_ENV=production
+    networks:
+      - antre_network
+    restart: unless-stopped
+    mem_limit: 256m
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: antre_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - antre_network
+    restart: unless-stopped
+    mem_limit: 128m
+
+volumes:
+  postgres_data:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  frontend_next:
+    driver: local
+
+networks:
+  antre_network:
+    driver: bridge
