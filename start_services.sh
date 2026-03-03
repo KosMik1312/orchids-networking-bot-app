@@ -7,7 +7,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-cd /opt/allora_bot/bot
+cd /opt/antre_club/bot
 
 # Активировать виртуальное окружение
 source venv/bin/activate
@@ -538,9 +538,9 @@ recreate_database() {
     echo -e "${YELLOW}🧹 Пересоздаю базу данных...${NC}"
 
     # Фиксированные значения для БД
-    FIXED_DB_USER="allora_user"
-    FIXED_DB_NAME="allora_db"
-    FIXED_DB_PASS="31642300"
+    FIXED_DB_USER="antre_user"
+    FIXED_DB_NAME="antre_club_db"
+    FIXED_DB_PASS="AnTrE_cLuB_2024_sEcUrE_pAsS_9x7K"
 
     DB_URL=$(python - <<PY
 from config import DATABASE_URL
