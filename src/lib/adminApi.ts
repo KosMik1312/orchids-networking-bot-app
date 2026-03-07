@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://api.leracinema.ru';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://antreclub-app.ru';
 
 async function adminFetch<T>(path: string, initData: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
