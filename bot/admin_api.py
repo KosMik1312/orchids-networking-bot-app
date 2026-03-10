@@ -4,7 +4,7 @@
 """
 
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -381,15 +381,44 @@ async def admin_remove_group_member(
 
 # ===== Рассылка =====
 
+async def send_broadcast_task(text: str, target_user_ids: set[int], admin_id: int):
+    """Фоновая задача рассылки сообщений."""
+    import asyncio
+    from aiogram import Bot
+    
+    bot = Bot(token=BOT_TOKEN)
+    sent = 0
+    failed = 0
+    errors = []
+
+    try:
+        for uid in target_user_ids:
+            try:
+                await bot.send_message(chat_id=uid, text=text)
+                sent += 1
+                await asyncio.sleep(0.05)
+            except Exception as e:
+                failed += 1
+                errors.append(f"user {uid}: {str(e)[:80]}")
+    finally:
+        await bot.session.close()
+
+    logger.info(f"Admin {admin_id} broadcast completed: sent={sent}, failed={failed}, total={len(target_user_ids)}")
+    if errors:
+        logger.warning(f"Broadcast errors (first 10): {errors[:10]}")
+
+
 @admin_router_api.post("/broadcast")
 async def admin_broadcast(
     request: BroadcastRequest,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-    """Рассылка текстового сообщения по группам, участникам слота или всем пользователям."""
+    """Рассылка текстового сообщения по группам, участникам слота или всем пользователям.
+    
+    Рассылка выполняется в фоновом режиме, API возвращает ответ сразу.
+    """
     admin_id = await require_admin(request.initData, session)
-    import asyncio
-    from aiogram import Bot
 
     if not request.group_ids and not request.slot_id and not request.all_users:
         raise HTTPException(status_code=400, detail="Specify group_ids, slot_id or all_users=true")
@@ -412,24 +441,15 @@ async def admin_broadcast(
             target_user_ids.add(p["user_id"])
 
     if not target_user_ids:
-        return {"sent": 0, "failed": 0, "errors": ["No target users found"]}
+        return {"status": "no_recipients", "target_count": 0}
 
-    bot = Bot(token=BOT_TOKEN)
-    sent = 0
-    failed = 0
-    errors = []
-
-    try:
-        for uid in target_user_ids:
-            try:
-                await bot.send_message(chat_id=uid, text=request.text)
-                sent += 1
-                await asyncio.sleep(0.05)
-            except Exception as e:
-                failed += 1
-                errors.append(f"user {uid}: {str(e)[:80]}")
-    finally:
-        await bot.session.close()
-
-    logger.info(f"Admin {admin_id} broadcast: sent={sent}, failed={failed}, all_users={request.all_users}")
-    return {"sent": sent, "failed": failed, "errors": errors[:20]}
+    # Запускаем рассылку в фоне
+    background_tasks.add_task(send_broadcast_task, request.text, target_user_ids, admin_id)
+    
+    logger.info(f"Admin {admin_id} started broadcast to {len(target_user_ids)} users (background task)")
+    
+    return {
+        "status": "started",
+        "target_count": len(target_user_ids),
+        "message": f"Рассылка запущена для {len(target_user_ids)} пользователей"
+    }

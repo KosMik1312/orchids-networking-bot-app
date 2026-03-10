@@ -489,11 +489,18 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
       if (broadcastTarget === "all") data.all_users = true;
       if (broadcastTarget === "groups" && broadcastGroupIds.length > 0) data.group_ids = broadcastGroupIds;
       if (broadcastTarget === "slot" && broadcastSlotId) data.slot_id = broadcastSlotId;
-      if (!data.all_users && !data.group_ids && !data.slot_id) { setError("Выберите получателей"); setLoading(false); return; }
+      if (!data.all_users && !data.group_ids && !data.slot_id) { 
+        setError("Выберите получателей"); 
+        setLoading(false); 
+        return; 
+      }
       const result = await sendBroadcast(initData, data);
       setBroadcastResult(result);
-    } catch (e: any) { setError(e.message); }
-    setLoading(false);
+    } catch (e: any) { 
+      setError(e.message); 
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderHeader = (title: string, backTo?: AdminTab) => (
@@ -873,12 +880,15 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             {broadcastResult && (
               <div className={`${cardClass} mt-3`}>
                 <div className="text-sm font-medium text-[#404243]">Результат:</div>
-                <div className="text-sm text-green-600 mt-1">Отправлено: {broadcastResult.sent}</div>
-                {broadcastResult.failed > 0 && <div className="text-sm text-red-500">Ошибок: {broadcastResult.failed}</div>}
-                {broadcastResult.errors.length > 0 && (
-                  <div className="mt-1 text-xs text-gray-400 max-h-20 overflow-y-auto">
-                    {broadcastResult.errors.map((e, i) => <div key={i}>{e}</div>)}
-                  </div>
+                {broadcastResult.status === 'started' && (
+                  <>
+                    <div className="text-sm text-green-600 mt-1">✅ Рассылка запущена</div>
+                    <div className="text-sm text-gray-600 mt-1">Получателей: {broadcastResult.target_count}</div>
+                    <div className="text-xs text-gray-400 mt-2 italic">Сообщения отправляются в фоновом режиме</div>
+                  </>
+                )}
+                {broadcastResult.status === 'no_recipients' && (
+                  <div className="text-sm text-yellow-600 mt-1">⚠️ Не найдено получателей</div>
                 )}
               </div>
             )}

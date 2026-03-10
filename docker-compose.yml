@@ -60,7 +60,7 @@ services:
     networks:
       - antre_network
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
 
   # Frontend (Next.js)
   frontend:

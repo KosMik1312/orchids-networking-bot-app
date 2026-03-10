@@ -82,9 +82,12 @@ export interface AdminStats {
 }
 
 export interface BroadcastResult {
-  sent: number;
-  failed: number;
-  errors: string[];
+  status: string;
+  target_count: number;
+  message?: string;
+  sent?: number;
+  failed?: number;
+  errors?: string[];
 }
 
 // Проверка авторизации
