@@ -20,10 +20,11 @@ import { AdminScreen } from "@/components/AdminScreen";
 import { PrivacyPolicyScreen } from "@/components/PrivacyPolicyScreen";
 import { ConsentScreen } from "@/components/ConsentScreen";
 import { OfferScreen } from "@/components/OfferScreen";
+import { HelpCenterScreen } from "@/components/HelpCenterScreen";
 import { getProfile, saveProfile, getFavorites, toggleFavorite, type UserProfile } from "@/lib/api";
 import { ru } from "@/lib/i18n";
 
-type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin" | "privacy" | "consent" | "offer";
+type Screen = "welcome" | "onboarding" | "profile_form" | "best_in_me" | "meeting_conditions" | "booking" | "promotions" | "afisha" | "favorites" | "profile" | "settings" | "contacts" | "my_bookings" | "admin" | "privacy" | "consent" | "offer" | "help_center";
 
 // MeetingConditionsData is now imported from the screen component
 
@@ -579,7 +580,7 @@ export default function Home() {
                     navigateTo("profile_form");
                   }}
                   onSettings={() => navigateTo("settings")}
-                  onHelp={() => window.open('https://t.me/alloraclub_support', '_blank')} // ИСПРАВЛЕНИЕ: Ссылка на саппорт
+                  onHelp={() => navigateTo("help_center")}
                 />
               </motion.div>
             )}
@@ -612,6 +613,12 @@ export default function Home() {
             {currentScreen === "consent" && (
               <motion.div key="consent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ConsentScreen onBack={() => setCurrentScreen(previousScreen || "settings")} />
+              </motion.div>
+            )}
+
+            {currentScreen === "help_center" && (
+              <motion.div key="help_center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <HelpCenterScreen onBack={() => setCurrentScreen(previousScreen || "profile")} />
               </motion.div>
             )}
 
