@@ -241,7 +241,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   };
 
   const [showSlotForm, setShowSlotForm] = useState(false);
-  const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
+  const [slotForm, setSlotForm] = useState({ date: "", time: "", city: "Москва", restaurant: "", max_people: "", price: "10" });
   const [showCalendar, setShowCalendar] = useState(false);
 
   const [newGroupName, setNewGroupName] = useState("");
@@ -358,12 +358,12 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   }
 
   const handleCreateSlot = async () => {
-    if (!slotForm.date || !slotForm.time || !slotForm.city || !slotForm.restaurant || !slotForm.max_people) return;
+    if (!slotForm.date || !slotForm.time || !slotForm.city || !slotForm.restaurant || !slotForm.max_people || !slotForm.price) return;
     setLoading(true);
     try {
-      await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people) });
+      await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people), price: parseInt(slotForm.price) });
       setShowSlotForm(false);
-      setSlotForm({ date: "", time: "", city: "Москва", restaurant: "", max_people: "" });
+      setSlotForm({ date: "", time: "", city: "Москва", restaurant: "", max_people: "", price: "10" });
       await loadSlots();
     } catch (e: any) { setError(e.message); }
     setLoading(false);
@@ -489,15 +489,15 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
       if (broadcastTarget === "all") data.all_users = true;
       if (broadcastTarget === "groups" && broadcastGroupIds.length > 0) data.group_ids = broadcastGroupIds;
       if (broadcastTarget === "slot" && broadcastSlotId) data.slot_id = broadcastSlotId;
-      if (!data.all_users && !data.group_ids && !data.slot_id) { 
-        setError("Выберите получателей"); 
-        setLoading(false); 
-        return; 
+      if (!data.all_users && !data.group_ids && !data.slot_id) {
+        setError("Выберите получателей");
+        setLoading(false);
+        return;
       }
       const result = await sendBroadcast(initData, data);
       setBroadcastResult(result);
-    } catch (e: any) { 
-      setError(e.message); 
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -659,7 +659,10 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                   />
 
                   <input placeholder="Место / Адрес" value={slotForm.restaurant} onChange={e => setSlotForm(p => ({ ...p, restaurant: e.target.value }))} className={inputClass} />
-                  <input placeholder="Максимально участников" type="number" value={slotForm.max_people} onChange={e => setSlotForm(p => ({ ...p, max_people: e.target.value }))} className={inputClass} />
+                  <div className="flex gap-2">
+                    <input placeholder="Макс. мест" type="number" value={slotForm.max_people} onChange={e => setSlotForm(p => ({ ...p, max_people: e.target.value }))} className={`${inputClass} flex-1`} />
+                    <input placeholder="Стоимость (₽)" type="number" value={slotForm.price} onChange={e => setSlotForm(p => ({ ...p, price: e.target.value }))} className={`${inputClass} flex-1`} />
+                  </div>
 
                   <button onClick={handleCreateSlot} disabled={loading} className={`${btnPrimary} mt-2 shadow-lg shadow-[#E15859]/20`}>
                     {loading ? "Создание..." : "Создать мероприятие"}
@@ -676,6 +679,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                     <div className="text-xs text-gray-400 mt-0.5">{s.date} {s.time} | {s.city}</div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#E15859] mr-2">{s.price} ₽</span>
                     <span className="text-xs text-gray-400">{s.current_bookings}/{s.max_people}</span>
                     <div className={`w-2.5 h-2.5 rounded-full ${s.is_active ? "bg-green-400" : "bg-red-400"}`} />
                   </div>

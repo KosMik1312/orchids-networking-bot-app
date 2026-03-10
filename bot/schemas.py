@@ -62,6 +62,7 @@ class SlotResponse(BaseModel):
     city: str
     restaurant: str
     max_people: int
+    price: int
     current_bookings: int
     available_places: int
     created_at: Optional[str] = None

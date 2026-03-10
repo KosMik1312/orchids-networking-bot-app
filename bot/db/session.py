@@ -78,6 +78,14 @@ async def init_db():
         async with engine.begin() as conn:
             # Создаем все таблицы согласно ORM моделям
             await conn.run_sync(Base.metadata.create_all)
+
+            # Безопасное добавление колонки price в существующую БД
+            from sqlalchemy import text
+            try:
+                await conn.execute(text("ALTER TABLE dinner_slots ADD COLUMN price INTEGER DEFAULT 10"))
+            except Exception:
+                # Если колонка уже существует, будет ошибка, которую мы игнорируем
+                pass
         
         logger.info("✅ Database initialized successfully!")
     except Exception as e:

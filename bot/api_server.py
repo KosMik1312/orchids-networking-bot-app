@@ -217,6 +217,7 @@ async def test_endpoint(session: AsyncSession = Depends(get_session)):
                     "city": slot.city,
                     "restaurant": slot.restaurant,
                     "max_people": slot.max_people,
+                    "price": slot.price,
                     "current_bookings": slot.current_bookings
                 }
                 for slot in slots[:3]
@@ -335,6 +336,7 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
                 "city": slot.city,
                 "restaurant": slot.restaurant,
                 "max_people": slot.max_people,
+                "price": slot.price,
                 "current_bookings": slot.current_bookings,
                 "available_places": slot.max_people - slot.current_bookings,
                 "created_at": slot.created_at.isoformat() if slot.created_at else None,
@@ -588,6 +590,7 @@ async def get_user_bookings_endpoint(
                     "city": slot.city if slot else None,
                     "restaurant": slot.restaurant if slot else None,
                     "max_people": slot.max_people if slot else None,
+                    "price": slot.price if slot else None,
                     "current_bookings": slot.current_bookings if slot else None,
                 }
                 bookings_data.append(booking_dict)
@@ -751,6 +754,7 @@ async def get_favorites_endpoint(
                 "city": slot.city,
                 "restaurant": slot.restaurant,
                 "max_people": slot.max_people,
+                "price": slot.price,
                 "current_bookings": slot.current_bookings,
                 "available_places": slot.max_people - slot.current_bookings,
                 "created_at": slot.created_at.isoformat() if slot.created_at else None,
@@ -786,10 +790,16 @@ async def create_payment_endpoint(
         
         logger.info(f"💳 Creating payment: user={user_id}, amount={request.amount}")
         
+        # Получаем цену из базы данных для безопасности
+        slot = await session.get(DinnerSlot, request.slotId)
+        if not slot:
+            raise HTTPException(status_code=404, detail="Slot not found")
+        secure_amount = str(slot.price)
+
         payment_service = PaymentService()
         payment_result = await payment_service.create_payment(
             user_id=user_id,
-            amount=request.amount,
+            amount=secure_amount,
             slot_id=request.slotId,
             return_url=request.returnUrl
         )
@@ -807,7 +817,7 @@ async def create_payment_endpoint(
         db_payment = await payment_repo.create_payment(
             user_id=user_id,
             yookassa_payment_id=payment_result['payment_id'],
-            amount=request.amount,
+            amount=secure_amount,
             slot_id=request.slotId,
             status='created'
         )

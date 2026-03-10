@@ -98,6 +98,9 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#E15859] bg-[#FDEEEE] px-2 py-0.5 rounded-full">
                           {slot.city}
                         </span>
+                        <span className="text-[12px] font-bold text-[#404243]">
+                          {slot.price} ₽
+                        </span>
                       </div>
                       <h3 className="text-[#2A2021] text-[20px] font-bold">{slot.restaurant}</h3>
                       <p className="text-[#8E8E93] text-[15px] mt-1">{formatDate(slot.date)}</p>

@@ -41,6 +41,7 @@ export interface AdminSlot {
   city: string;
   restaurant: string;
   max_people: number;
+  price: number;
   current_bookings: number;
   is_active: boolean;
   created_at: string | null;
@@ -110,7 +111,7 @@ export async function getAdminSlots(initData: string): Promise<{ slots: AdminSlo
   return adminFetch('/api/admin/slots', initData);
 }
 
-export async function createAdminSlot(initData: string, data: { date: string; time: string; city: string; restaurant: string; max_people: number }) {
+export async function createAdminSlot(initData: string, data: { date: string; time: string; city: string; restaurant: string; max_people: number; price: number }) {
   return adminFetch('/api/admin/slots/create', initData, { body: JSON.stringify(data) });
 }
 

@@ -34,6 +34,7 @@ class SlotCreateRequest(InitDataRequest):
     city: str
     restaurant: str
     max_people: int
+    price: int = 10
 
 
 class SlotUpdateRequest(InitDataRequest):
@@ -42,6 +43,7 @@ class SlotUpdateRequest(InitDataRequest):
     city: Optional[str] = None
     restaurant: Optional[str] = None
     max_people: Optional[int] = None
+    price: Optional[int] = None
     is_active: Optional[bool] = None
 
 
@@ -173,6 +175,7 @@ async def admin_slots(request: InitDataRequest, session: AsyncSession = Depends(
                 "city": s.city,
                 "restaurant": s.restaurant,
                 "max_people": s.max_people,
+                "price": s.price,
                 "current_bookings": s.current_bookings,
                 "is_active": s.is_active,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
@@ -196,6 +199,7 @@ async def admin_create_slot(
         city=request.city,
         restaurant=request.restaurant,
         max_people=request.max_people,
+        price=request.price,
     )
     logger.info(f"Admin {admin_id} created slot {slot.id}")
     return {
@@ -205,6 +209,7 @@ async def admin_create_slot(
         "city": slot.city,
         "restaurant": slot.restaurant,
         "max_people": slot.max_people,
+        "price": slot.price,
     }
 
 

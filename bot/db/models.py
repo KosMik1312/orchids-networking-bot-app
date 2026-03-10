@@ -67,6 +67,7 @@ class DinnerSlot(Base):
     city = Column(String, nullable=False)
     restaurant = Column(String, nullable=False)
     max_people = Column(Integer, nullable=False)
+    price = Column(Integer, nullable=False, default=10)
     current_bookings = Column(Integer, default=0)
     is_active = Column(Boolean, default=True, index=True)  # Индекс для фильтрации активных
     created_at = Column(TIMESTAMP, server_default=func.now())

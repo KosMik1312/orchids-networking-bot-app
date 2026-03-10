@@ -242,7 +242,7 @@ class SlotRepo(BaseRepo):
     """Репозиторий для работы со слотами ужинов."""
     
     async def create_slot(
-        self, date: str, time: str, city: str, restaurant: str, max_people: int
+        self, date: str, time: str, city: str, restaurant: str, max_people: int, price: int = 10
     ) -> DinnerSlot:
         """Создает новый слот."""
         # Парсим дату из строки "DD.MM.YYYY" в date object
@@ -257,6 +257,7 @@ class SlotRepo(BaseRepo):
             city=city,
             restaurant=restaurant,
             max_people=max_people,
+            price=price,
         )
         self.session.add(new_slot)
         await self.session.commit()

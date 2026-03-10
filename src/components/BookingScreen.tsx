@@ -14,6 +14,7 @@ interface Slot {
   date: string;
   time: string;
   address: string;
+  price: number;
 }
 
 interface BookingScreenProps {
@@ -66,7 +67,8 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             date: new Date(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
             time: s.time,
             address: s.restaurant,
-            city: s.city
+            city: s.city,
+            price: s.price
           }));
           setSlots(mappedSlots);
 
@@ -106,7 +108,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
       console.log("💳 [PAYMENT] Initiating YooMoney payment for slot:", selectedSlot.id);
       const paymentData = await createPayment({
-        amount: "10", // Фиксированная стоимость (временно для тестов)
+        amount: selectedSlot.price ? selectedSlot.price.toString() : "10",
         slotId: selectedSlot.id,
         returnUrl: currentUrl.toString()
       }, authToken);
@@ -284,7 +286,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Total */}
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[#404243] text-[15px] font-medium">{t.payment.total}</span>
-                <span className="text-[#2A2021] text-[20px] font-bold">10 ₽</span>
+                <span className="text-[#2A2021] text-[20px] font-bold">{selectedSlot?.price || 10} ₽</span>
               </div>
 
               {/* Info Text */}
