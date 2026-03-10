@@ -149,6 +149,6 @@ export async function removeGroupMember(initData: string, groupId: number, userI
 }
 
 // Рассылка
-export async function sendBroadcast(initData: string, data: { text: string; group_ids?: number[]; slot_id?: number }): Promise<BroadcastResult> {
+export async function sendBroadcast(initData: string, data: { text: string; group_ids?: number[]; slot_id?: number; all_users?: boolean }): Promise<BroadcastResult> {
   return adminFetch('/api/admin/broadcast', initData, { method: 'POST', body: JSON.stringify(data) });
 }

@@ -248,7 +248,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [addMemberIds, setAddMemberIds] = useState("");
 
   const [broadcastText, setBroadcastText] = useState("");
-  const [broadcastTarget, setBroadcastTarget] = useState<"groups" | "slot">("groups");
+  const [broadcastTarget, setBroadcastTarget] = useState<"groups" | "slot" | "all">("groups");
   const [broadcastGroupIds, setBroadcastGroupIds] = useState<number[]>([]);
   const [broadcastSlotId, setBroadcastSlotId] = useState<number | null>(null);
   const [broadcastResult, setBroadcastResult] = useState<BroadcastResult | null>(null);
@@ -486,9 +486,10 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     setBroadcastResult(null);
     try {
       const data: any = { text: broadcastText };
+      if (broadcastTarget === "all") data.all_users = true;
       if (broadcastTarget === "groups" && broadcastGroupIds.length > 0) data.group_ids = broadcastGroupIds;
       if (broadcastTarget === "slot" && broadcastSlotId) data.slot_id = broadcastSlotId;
-      if (!data.group_ids && !data.slot_id) { setError("Выберите получателей"); setLoading(false); return; }
+      if (!data.all_users && !data.group_ids && !data.slot_id) { setError("Выберите получателей"); setLoading(false); return; }
       const result = await sendBroadcast(initData, data);
       setBroadcastResult(result);
     } catch (e: any) { setError(e.message); }
@@ -807,7 +808,10 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
 
             <div className={cardClass}>
               <div className="text-sm font-medium text-[#404243] mb-2">Получатели:</div>
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-3 flex-wrap">
+                <button onClick={() => setBroadcastTarget("all")} className={`flex-1 py-2 rounded-xl text-sm font-medium ${broadcastTarget === "all" ? "bg-[#E15859] text-white" : "bg-gray-100 text-gray-500"}`}>
+                  Всем пользователям
+                </button>
                 <button onClick={() => setBroadcastTarget("groups")} className={`flex-1 py-2 rounded-xl text-sm font-medium ${broadcastTarget === "groups" ? "bg-[#E15859] text-white" : "bg-gray-100 text-gray-500"}`}>
                   По группам
                 </button>
@@ -815,6 +819,12 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                   По мероприятию
                 </button>
               </div>
+
+              {broadcastTarget === "all" && (
+                <div className="mb-3 px-3 py-2 rounded-xl bg-yellow-50 text-yellow-700 text-sm">
+                  ⚠️ Сообщение будет отправлено всем зарегистрированным пользователям
+                </div>
+              )}
 
               {broadcastTarget === "groups" && (
                 <div className="flex flex-col gap-1.5 mb-3">

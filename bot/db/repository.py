@@ -671,6 +671,11 @@ class AdminRepo(BaseRepo):
             "total_paid": paid_count,
         }
 
+    async def get_all_user_ids(self) -> List[int]:
+        """Возвращает user_id всех зарегистрированных пользователей."""
+        result = await self.session.execute(select(User.user_id))
+        return [row[0] for row in result.all()]
+
 
 class GroupRepo(BaseRepo):
     """Репозиторий для работы с группами."""

@@ -180,6 +180,10 @@ export async function deleteProfile(userId?: number, authToken?: string): Promis
   const url = `${API_BASE}/api/profile`;
   console.log('🔗 Удаление профиля:', url);
   console.log('📤 userId:', userId);
+  console.log('📤 authToken present:', !!authToken);
+  if (authToken) {
+    console.log('📤 authToken (first 100 chars):', authToken.substring(0, 100));
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -187,12 +191,12 @@ export async function deleteProfile(userId?: number, authToken?: string): Promis
 
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
+    console.log('📤 Auth header set');
+  } else {
+    console.warn('⚠️ No authToken provided for delete!');
   }
 
-  const queryParams = userId ? `?userId=${userId}` : '';
-  const fullUrl = url + queryParams;
-
-  const response = await fetch(fullUrl, {
+  const response = await fetch(url, {
     method: 'DELETE',
     cache: 'no-store',
     headers,

@@ -1,5 +1,5 @@
-"""
-Админские API эндпоинты для MiniApp.
+﻿"""
+Административные API эндпоинты для MiniApp.
 Все эндпоинты защищены проверкой is_admin.
 """
 
@@ -57,6 +57,7 @@ class BroadcastRequest(InitDataRequest):
     text: str
     group_ids: Optional[List[int]] = None
     slot_id: Optional[int] = None
+    all_users: bool = False
 
 
 async def require_admin(
@@ -76,12 +77,12 @@ async def require_admin(
     user_id = result["user_id"]
     logger.info(f"🔍 Checking admin access for user_id={user_id}")
     logger.info(f"📋 ADMIN_IDS from config: {ADMIN_IDS}")
-    
+
     # If auth is disabled (development), allow access
     if AUTH_DISABLED:
         logger.warning(f"⚠️ AUTH_DISABLED=True, allowing access for user_id={user_id}")
         return user_id or 0
-    
+
     # 1. Проверка по конфигу (супер-админы)
     if user_id in ADMIN_IDS:
         logger.info(f"✅ User {user_id} is in ADMIN_IDS")
@@ -92,7 +93,7 @@ async def require_admin(
     from db.repository import UserRepo
     user_repo = UserRepo(session)
     user = await user_repo.get_user(user_id)
-    
+
     if user:
         logger.info(f"👤 User {user_id} found in DB. is_admin={user.is_admin}")
         if user.is_admin:
@@ -109,7 +110,7 @@ async def require_admin(
 
 @admin_router_api.post("/me")
 async def admin_me(request: InitDataRequest, session: AsyncSession = Depends(get_session)):
-    """Проверка: текущий пользователь — админ."""
+    """Проверка: текущий пользователь – админ."""
     admin_id = await require_admin(request.initData, session)
     return {"user_id": admin_id, "is_admin": True}
 
@@ -385,15 +386,20 @@ async def admin_broadcast(
     request: BroadcastRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    """Рассылка текстового сообщения по группам и/или участникам слота."""
+    """Рассылка текстового сообщения по группам, участникам слота или всем пользователям."""
     admin_id = await require_admin(request.initData, session)
     import asyncio
     from aiogram import Bot
 
-    if not request.group_ids and not request.slot_id:
-        raise HTTPException(status_code=400, detail="Specify group_ids or slot_id")
+    if not request.group_ids and not request.slot_id and not request.all_users:
+        raise HTTPException(status_code=400, detail="Specify group_ids, slot_id or all_users=true")
 
     target_user_ids: set[int] = set()
+    admin_repo = AdminRepo(session)
+
+    if request.all_users:
+        all_user_ids = await admin_repo.get_all_user_ids()
+        target_user_ids.update(all_user_ids)
 
     if request.group_ids:
         group_repo = GroupRepo(session)
@@ -401,7 +407,6 @@ async def admin_broadcast(
         target_user_ids.update(ids)
 
     if request.slot_id:
-        admin_repo = AdminRepo(session)
         participants = await admin_repo.get_slot_participants(request.slot_id)
         for p in participants:
             target_user_ids.add(p["user_id"])
@@ -426,5 +431,5 @@ async def admin_broadcast(
     finally:
         await bot.session.close()
 
-    logger.info(f"Admin {admin_id} broadcast: sent={sent}, failed={failed}")
+    logger.info(f"Admin {admin_id} broadcast: sent={sent}, failed={failed}, all_users={request.all_users}")
     return {"sent": sent, "failed": failed, "errors": errors[:20]}
