@@ -9,9 +9,11 @@ interface SettingsScreenProps {
   onPrivacy?: () => void;
   onOffer?: () => void;
   onConsent?: () => void;
+  userId?: number;
+  authToken?: string | null;
 }
 
-export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent }: SettingsScreenProps) {
+export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, userId, authToken }: SettingsScreenProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -120,8 +122,8 @@ export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent }: Settin
                       setIsDeleting(true);
                       try {
                         const { deleteProfile } = await import("@/lib/api");
-                        // We rely on the API to handle userId/auth from session/headers
-                        const result = await deleteProfile();
+                        // Передаём userId и authToken для аутентификации
+                        const result = await deleteProfile(userId, authToken || undefined);
                         if (result.success) {
                           // Redirect to welcome or reload
                           window.location.href = "/?screen=welcome";

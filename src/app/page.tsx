@@ -587,10 +587,12 @@ export default function Home() {
             {currentScreen === "settings" && (
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <SettingsScreen
-                  onBack={() => setCurrentScreen("profile")} // ИСПРАВЛЕНИЕ: возврат в профиль
+                  onBack={() => setCurrentScreen("profile")}
                   onPrivacy={() => navigateTo("privacy")}
                   onOffer={() => navigateTo("offer")}
                   onConsent={() => navigateTo("consent")}
+                  userId={userId}
+                  authToken={userToken}
                 />
               </motion.div>
             )}
