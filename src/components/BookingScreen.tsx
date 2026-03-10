@@ -43,11 +43,15 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Проверка возврата с оплаты
+    // Проверка возврата с оплаты или сброс на список мероприятий
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment_success') === 'true') {
       console.log("💰 [PAYMENT] Detected redirect back from success payment");
       setStep("success");
+    } else {
+      // Всегда начинаем с списка мероприятий при открытии BookingScreen (шаг 1: slots)
+      // Это гарантирует, что нажатие на "Home" всегда показывает список, а не форму оплаты
+      setStep("slots");
     }
   }, []);
   useEffect(() => {
