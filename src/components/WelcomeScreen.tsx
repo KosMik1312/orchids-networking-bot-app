@@ -10,9 +10,10 @@ interface WelcomeScreenProps {
   onStart: () => void;
   onShowConsent?: () => void;
   onShowPrivacy?: () => void;
+  onShowEmailConsent?: () => void;
 }
 
-export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy, onShowEmailConsent }: WelcomeScreenProps) {
   const [accepted, setAccepted] = useState(false);
   const texts = ru.welcome;
 
@@ -114,6 +115,16 @@ export function WelcomeScreen({ onStart, onShowConsent, onShowPrivacy }: Welcome
               style={{ touchAction: 'manipulation', padding: '2px 0' }}
             >
               {texts.privacyLink}
+            </span>
+            <span onClick={() => setAccepted(!accepted)} className="cursor-pointer">
+              {" и "}
+            </span>
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowEmailConsent?.(); }}
+              className="underline decoration-1 underline-offset-2 cursor-pointer hover:text-[#E15859] transition-colors"
+              style={{ touchAction: 'manipulation', padding: '2px 0' }}
+            >
+              согласием на рассылку
             </span>
           </div>
         </motion.div>

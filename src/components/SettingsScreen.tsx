@@ -9,11 +9,12 @@ interface SettingsScreenProps {
   onPrivacy?: () => void;
   onOffer?: () => void;
   onConsent?: () => void;
+  onEmailConsent?: () => void;
   userId?: number;
   authToken?: string | null;
 }
 
-export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, userId, authToken }: SettingsScreenProps) {
+export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, onEmailConsent, userId, authToken }: SettingsScreenProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -21,6 +22,7 @@ export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, userId, 
     { label: ru.settings.privacyText, onClick: onPrivacy },
     { label: ru.settings.offerText, onClick: onOffer },
     { label: ru.settings.consentText, onClick: onConsent },
+    { label: "Согласие на рассылку", onClick: onEmailConsent },
   ];
 
   return (
