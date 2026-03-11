@@ -156,20 +156,14 @@ async def admin_users(
     }
 
 
-@admin_router_api.get("/users/{user_id}/profile")
+@admin_router_api.post("/users/{user_id}/profile")
 async def admin_user_profile(
     user_id: int,
-    request: Request,
+    request: InitDataRequest,
     session: AsyncSession = Depends(get_session),
 ):
     """Детальный профиль пользователя для администратора."""
-    # Получаем токен из заголовка Authorization
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-        
-    init_data = auth_header.replace("Bearer ", "")
-    admin_id = await require_admin(init_data, session)
+    admin_id = await require_admin(request.initData, session)
     
     from db.repository import UserRepo
     user_repo = UserRepo(session)
@@ -222,11 +216,6 @@ async def admin_user_profile(
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
-@admin_router_api.post("/slots")
-            }
-            for u in users
-        ],
-    }
 
 
 # ===== Слоты (мероприятия) =====
