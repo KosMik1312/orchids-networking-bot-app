@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -26,16 +24,14 @@ services:
 
   # Backend (FastAPI + Aiogram)
   backend:
-    image: python:3.12-slim
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
     container_name: antre_backend
     working_dir: /app
-    command: >
-      bash -c "
-      pip install --no-cache-dir -r requirements.txt &&
-      python start_docker.py
-      "
     volumes:
       - ./bot:/app
+      - pip_cache:/root/.cache/pip
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -61,6 +57,11 @@ services:
       - antre_network
     restart: unless-stopped
     mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Frontend (Next.js)
   frontend:
@@ -77,6 +78,11 @@ services:
       - antre_network
     restart: unless-stopped
     mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Nginx Reverse Proxy
   nginx:
@@ -95,9 +101,16 @@ services:
       - antre_network
     restart: unless-stopped
     mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
+    driver: local
+  pip_cache:
     driver: local
 
 networks:
