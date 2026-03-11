@@ -203,6 +203,7 @@ const AdminDialog = ({
 
 export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorizedProp, mockStats, mockUsers, mockSlots, mockGroups, initialTab = "dashboard" }: AdminScreenProps) {
   const [tab, setTab] = useState<AdminTab>(initialTab);
+  const [previousTab, setPreviousTab] = useState<AdminTab | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<AdminUserProfile | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(isAuthorizedProp ?? null);
   const [stats, setStats] = useState<AdminStats | null>(mockStats || null);
@@ -591,6 +592,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                    try {
                        const profile = await getAdminUserProfile(initData, u.user_id);
                        setSelectedUserProfile(profile);
+                       setPreviousTab("users");
                        setTab("user_profile");
                    } catch (e: any) {
                        setError(e.message || "Ошибка загрузки профиля");
@@ -634,7 +636,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                 userMap={selectedUserProfile} 
                 onBack={() => {
                     setSelectedUserProfile(null);
-                    setTab("users");
+                    setTab(previousTab || "users");
                 }} 
             />
         )}
@@ -779,13 +781,27 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                   onChange={() => setSelectedUserIds(prev => prev.includes(p.user_id) ? prev.filter(id => id !== p.user_id) : [...prev, p.user_id])}
                   className="w-4 h-4 accent-[#E15859]"
                 />
-                <div className="flex-1 flex justify-between items-start">
-                  <div>
-                    <div className="font-medium text-[#404243]">{p.name || "Без имени"}</div>
+                  <div 
+                    className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={async (e) => {
+                      e.preventDefault(); // Prevent label click
+                      setLoading(true);
+                      try {
+                        const profile = await getAdminUserProfile(initData, p.user_id);
+                        setSelectedUserProfile(profile);
+                        setPreviousTab("slot_detail");
+                        setTab("user_profile");
+                      } catch (e: any) {
+                        setError(e.message || "Ошибка загрузки профиля");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    <div className="font-medium text-[#404243] hover:text-[#E15859] transition-colors">{p.name || "Без имени"}</div>
                     <div className="text-xs text-gray-400 mt-1">TG: {p.telegram || "—"} | Оплата: {p.paid ? "✅" : "⏳"}</div>
                   </div>
                   <div className="text-xs bg-gray-50 px-2 py-1 rounded text-gray-500">{p.booking_status}</div>
-                </div>
               </label>
             ))}
           </>
@@ -830,8 +846,23 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             </div>
             {groupMembers.map(m => (
               <div key={m.user_id} className={`${cardClass} flex justify-between items-center`}>
-                <div>
-                  <div className="text-sm font-medium text-[#404243]">{m.name || "Без имени"}</div>
+                <div 
+                  className="cursor-pointer hover:opacity-80 transition-opacity flex-1"
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const profile = await getAdminUserProfile(initData, m.user_id);
+                      setSelectedUserProfile(profile);
+                      setPreviousTab("group_detail");
+                      setTab("user_profile");
+                    } catch (e: any) {
+                      setError(e.message || "Ошибка загрузки профиля");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  <div className="text-sm font-medium text-[#404243] hover:text-[#E15859] transition-colors">{m.name || "Без имени"}</div>
                   <div className="text-xs text-gray-400">ID: {m.user_id} | TG: {m.telegram || "—"}</div>
                 </div>
                 <button onClick={() => handleRemoveMember(m.user_id)} className="w-8 h-8 flex items-center justify-center text-red-400">
