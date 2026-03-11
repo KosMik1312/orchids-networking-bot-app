@@ -681,7 +681,7 @@ class AdminRepo(BaseRepo):
 class GroupRepo(BaseRepo):
     """Репозиторий для работы с группами."""
 
-    async def get_all_groups(self) -> List[dict]:
+    async def get_all_groups(self, slot_id: Optional[int] = None) -> List[dict]:
         """Возвращает все группы с количеством участников."""
         stmt = (
             select(Group, func.count(UserGroup.id).label("member_count"))
@@ -689,6 +689,8 @@ class GroupRepo(BaseRepo):
             .group_by(Group.id)
             .order_by(Group.created_at.desc())
         )
+        if slot_id is not None:
+            stmt = stmt.where(Group.slot_id == slot_id)
         result = await self.session.execute(stmt)
         rows = result.all()
         return [
@@ -701,9 +703,9 @@ class GroupRepo(BaseRepo):
             for group, count in rows
         ]
 
-    async def create_group(self, name: str) -> Group:
+    async def create_group(self, name: str, slot_id: Optional[int] = None) -> Group:
         """Создаёт новую группу."""
-        group = Group(name=name)
+        group = Group(name=name, slot_id=slot_id)
         self.session.add(group)
         await self.session.commit()
         await self.session.refresh(group)

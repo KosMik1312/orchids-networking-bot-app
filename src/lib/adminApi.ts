@@ -157,12 +157,12 @@ export async function getSlotParticipants(initData: string, slotId: number): Pro
 }
 
 // Группы
-export async function getAdminGroups(initData: string): Promise<{ groups: AdminGroup[] }> {
-  return adminFetch('/api/admin/groups', initData);
+export async function getAdminGroups(initData: string, slotId?: number): Promise<{ groups: AdminGroup[] }> {
+  return adminFetch('/api/admin/groups', initData, { body: JSON.stringify({ slot_id: slotId }) });
 }
 
-export async function createAdminGroup(initData: string, name: string): Promise<AdminGroup> {
-  return adminFetch<AdminGroup>('/api/admin/groups/create', initData, { body: JSON.stringify({ name }) });
+export async function createAdminGroup(initData: string, name: string, slotId?: number): Promise<AdminGroup> {
+  return adminFetch<AdminGroup>('/api/admin/groups/create', initData, { body: JSON.stringify({ name, slot_id: slotId }) });
 }
 
 export async function deleteAdminGroup(initData: string, groupId: number) {

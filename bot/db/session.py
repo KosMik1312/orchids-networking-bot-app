@@ -79,13 +79,28 @@ async def init_db():
             # Создаем все таблицы согласно ORM моделям
             await conn.run_sync(Base.metadata.create_all)
 
-            # Безопасное добавление колонки price в существующую БД
-            from sqlalchemy import text
-            try:
-                await conn.execute(text("ALTER TABLE dinner_slots ADD COLUMN price INTEGER DEFAULT 10"))
-            except Exception:
-                # Если колонка уже существует, будет ошибка, которую мы игнорируем
-                pass
+        # Безопасное добавление колонки price в существующую БД
+        from sqlalchemy import text
+        try:
+            async with engine.begin() as conn2:
+                await conn2.execute(text("ALTER TABLE dinner_slots ADD COLUMN price INTEGER DEFAULT 10"))
+        except Exception:
+            # Если колонка уже существует, будет ошибка, которую мы игнорируем
+            pass
+
+        try:
+            # Добавляем колонку slot_id в группы
+            async with engine.begin() as conn3:
+                await conn3.execute(text("ALTER TABLE groups ADD COLUMN slot_id INTEGER REFERENCES dinner_slots(id) ON DELETE CASCADE"))
+        except Exception:
+            pass
+            
+        try:
+            # Удаляем уникальность имени группы
+            async with engine.begin() as conn4:
+                await conn4.execute(text("ALTER TABLE groups DROP CONSTRAINT IF EXISTS groups_name_key"))
+        except Exception:
+            pass
         
         logger.info("✅ Database initialized successfully!")
     except Exception as e:

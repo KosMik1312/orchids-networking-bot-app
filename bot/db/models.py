@@ -127,9 +127,11 @@ class Group(Base):
     __tablename__ = 'groups'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)
+    slot_id = Column(Integer, ForeignKey('dinner_slots.id', ondelete="CASCADE"), nullable=True, index=True)
+    name = Column(String, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    slot = relationship("DinnerSlot")
     members = relationship("UserGroup", back_populates="group", cascade="all, delete-orphan")
 
 

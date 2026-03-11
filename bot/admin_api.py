@@ -49,6 +49,11 @@ class SlotUpdateRequest(InitDataRequest):
 
 class GroupCreateRequest(InitDataRequest):
     name: str
+    slot_id: Optional[int] = None
+
+
+class GroupListRequest(InitDataRequest):
+    slot_id: Optional[int] = None
 
 
 class GroupMembersRequest(InitDataRequest):
@@ -346,13 +351,13 @@ async def admin_slot_participants(
 
 @admin_router_api.post("/groups")
 async def admin_groups(
-    request: InitDataRequest,
+    request: GroupListRequest,
     session: AsyncSession = Depends(get_session),
 ):
     """Список групп."""
     admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
-    groups = await repo.get_all_groups()
+    groups = await repo.get_all_groups(request.slot_id)
     return {"groups": groups}
 
 
@@ -365,7 +370,7 @@ async def admin_create_group(
     admin_id = await require_admin(request.initData, session)
     repo = GroupRepo(session)
     try:
-        group = await repo.create_group(request.name)
+        group = await repo.create_group(request.name, request.slot_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Group with this name already exists")
     logger.info(f"Admin {admin_id} created group '{group.name}' (id={group.id})")

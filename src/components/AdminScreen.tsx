@@ -303,10 +303,10 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     setLoading(false);
   }, [initData]);
 
-  const loadGroups = useCallback(async () => {
+  const loadGroups = useCallback(async (slotId?: number) => {
     setLoading(true);
     try {
-      const res = await getAdminGroups(initData);
+      const res = await getAdminGroups(initData, slotId);
       setGroups(res.groups);
     } catch (e: any) { setError(e.message); }
     setLoading(false);
@@ -328,13 +328,21 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   useEffect(() => {
     if (tab === "users") loadUsers(0);
     if (tab === "slots") loadSlots();
-    if (tab === "groups") loadGroups();
-    if (tab === "broadcast") { loadGroups(); loadSlots(); }
-  }, [tab, loadUsers, loadSlots, loadGroups]);
+    if (tab === "broadcast") loadSlots();
+  }, [tab, loadUsers, loadSlots]);
 
   useEffect(() => {
-    if (selectedSlotId && tab === "slot_detail") loadParticipants(selectedSlotId);
-  }, [selectedSlotId, tab, loadParticipants]);
+    if (tab === "broadcast" && broadcastTarget === "groups" && broadcastSlotId) {
+      loadGroups(broadcastSlotId);
+    }
+  }, [tab, broadcastTarget, broadcastSlotId, loadGroups]);
+
+  useEffect(() => {
+    if (selectedSlotId && tab === "slot_detail") {
+      loadParticipants(selectedSlotId);
+      loadGroups(selectedSlotId);
+    }
+  }, [selectedSlotId, tab, loadParticipants, loadGroups]);
 
   useEffect(() => {
     if (selectedGroupId && tab === "group_detail") loadGroupMembers(selectedGroupId);
@@ -391,78 +399,38 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const handleDeleteGroup = async (groupId: number) => {
     openConfirm(
       "Удаление группы",
-      "Вы уверены, что хотите окончательно удалить эту группу? Это действие нельзя отменить.",
+      "Вы уверены, что хотите окончательно удалить эту команду? Это действие нельзя отменить.",
       async () => {
         try {
           await deleteAdminGroup(initData, groupId);
           setSelectedGroupId(null);
-          setTab("groups");
-          await loadGroups();
+          setTab("slot_detail");
+          if (selectedSlotId) await loadGroups(selectedSlotId);
         } catch (e: any) { setError(e.message); }
       }
     );
   };
 
   const handleManualGrouping = async () => {
-    if (selectedUserIds.length === 0) return;
+    if (selectedUserIds.length === 0 || !selectedSlotId) return;
     openPrompt(
-      "Название группы",
-      "Введите уникальное название для новой группы участников:",
+      "Название команды",
+      "Введите уникальное название для новой команды:",
       "",
       async (groupName) => {
         if (!groupName.trim()) return;
         setLoading(true);
         try {
-          const g = await createAdminGroup(initData, groupName.trim());
+          const g = await createAdminGroup(initData, groupName.trim(), selectedSlotId);
           await addGroupMembers(initData, g.id, selectedUserIds);
           setSelectedUserIds([]);
-          setTab("groups");
-          await loadGroups();
+          await loadGroups(selectedSlotId);
         } catch (e: any) { setError(e.message); }
         setLoading(false);
       }
     );
   };
 
-  const handleAutoSplit = async () => {
-    if (!selectedSlotId || participants.length === 0) return;
-    openPrompt(
-      "Автоматическое деление",
-      "Укажите размер команды (количество человек в одной группе):",
-      "3",
-      async (teamSizeStr) => {
-        const teamSize = parseInt(teamSizeStr);
-        if (isNaN(teamSize) || teamSize <= 0) return;
-
-        setLoading(true);
-        setIsSplitting(true);
-        try {
-          const usersToSplit = selectedUserIds.length > 0
-            ? participants.filter(p => selectedUserIds.includes(p.user_id))
-            : participants;
-
-          const shuffled = [...usersToSplit].sort(() => Math.random() - 0.5);
-          const teamsCount = Math.ceil(shuffled.length / teamSize);
-
-          const slot = slots.find(s => s.id === selectedSlotId);
-          const baseName = slot ? `${slot.date} ${slot.city}` : "Команда";
-
-          for (let i = 0; i < teamsCount; i++) {
-            const teamMembers = shuffled.slice(i * teamSize, (i + 1) * teamSize);
-            const gName = `${baseName} - Группа ${i + 1}`;
-            const g = await createAdminGroup(initData, gName);
-            await addGroupMembers(initData, g.id, teamMembers.map(m => m.user_id));
-          }
-
-          setSelectedUserIds([]);
-          setTab("groups");
-          await loadGroups();
-        } catch (e: any) { setError(e.message); }
-        setIsSplitting(false);
-        setLoading(false);
-      }
-    );
-  };
 
   const handleAddMembers = async () => {
     if (!selectedGroupId || !addMemberIds.trim()) return;
@@ -563,7 +531,6 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               {[
                 { icon: Users, label: "Пользователи", t: "users" as AdminTab },
                 { icon: Calendar, label: "Мероприятия", t: "slots" as AdminTab },
-                { icon: UsersRound, label: "Группы", t: "groups" as AdminTab },
                 { icon: Send, label: "Рассылка", t: "broadcast" as AdminTab },
               ].map(({ icon: Icon, label, t }) => (
                 <button key={t} onClick={() => setTab(t)} className={`${cardClass} flex items-center gap-4 text-left`}>
@@ -755,18 +722,25 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                     disabled={selectedUserIds.length === 0 || loading}
                     className={`${btnPrimary} !w-auto !py-2 !px-4 !text-xs flex items-center gap-1 disabled:opacity-50`}
                   >
-                    <Users size={14} /> Создать группу из выбранных ({selectedUserIds.length})
-                  </button>
-                  <button
-                    onClick={handleAutoSplit}
-                    disabled={loading || isSplitting}
-                    className={`${btnSecondary} !w-auto !py-2 !px-4 !text-xs flex items-center gap-1 disabled:opacity-50`}
-                  >
-                    <Grid size={14} /> {isSplitting ? "Создание..." : selectedUserIds.length > 0 ? "Разбить выбранных на команды" : "Разбить всех на команды"}
+                    <Users size={14} /> Создать команду из выбранных ({selectedUserIds.length})
                   </button>
                 </div>
-                <div className="text-[10px] text-gray-400 mt-2 italic">
-                  * Команды будут созданы автоматически с именами на основе даты и места.
+              </div>
+            )}
+
+            {groups.length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs text-gray-400 mb-2">Команды ({groups.length}):</div>
+                <div className="flex flex-col gap-2">
+                  {groups.map(g => (
+                    <button key={g.id} onClick={() => { setSelectedGroupId(g.id); setTab("group_detail"); }} className={`${cardClass} w-full text-left flex justify-between items-center !mb-0`}>
+                      <div>
+                        <div className="font-medium text-[#404243]">{g.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">Участников: {g.member_count}</div>
+                      </div>
+                      <ChevronRight size={18} className="text-gray-300" />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -900,17 +874,40 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               )}
 
               {broadcastTarget === "groups" && (
-                <div className="flex flex-col gap-1.5 mb-3">
-                  {groups.map(g => (
-                    <button key={g.id} onClick={() => {
-                      setBroadcastGroupIds(prev => prev.includes(g.id) ? prev.filter(id => id !== g.id) : [...prev, g.id]);
-                    }} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${broadcastGroupIds.includes(g.id) ? "bg-[#E15859]/10 text-[#E15859]" : "bg-gray-50 text-gray-500"}`}>
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${broadcastGroupIds.includes(g.id) ? "border-[#E15859] bg-[#E15859]" : "border-gray-300"}`}>
-                        {broadcastGroupIds.includes(g.id) && <Check size={12} className="text-white" />}
-                      </div>
-                      {g.name} ({g.member_count})
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-3 mb-3">
+                  <div className="text-xs text-gray-400">1. Выберите мероприятие:</div>
+                  <div className="flex flex-col gap-1.5">
+                    {slots.filter(s => s.is_active).map(s => (
+                      <button key={s.id} onClick={() => setBroadcastSlotId(s.id)} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${broadcastSlotId === s.id ? "bg-[#E15859]/10 text-[#E15859]" : "bg-gray-50 text-gray-500"}`}>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${broadcastSlotId === s.id ? "border-[#E15859] bg-[#E15859]" : "border-gray-300"}`}>
+                          {broadcastSlotId === s.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                        </div>
+                        {s.restaurant} | {s.date} {s.time}
+                      </button>
+                    ))}
+                  </div>
+
+                  {broadcastSlotId && (
+                    <>
+                      <div className="text-xs text-gray-400 mt-2">2. Выберите команды для рассылки:</div>
+                      {groups.length === 0 ? (
+                        <div className="text-sm text-gray-400 py-2">Нет команд для этого мероприятия</div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5 mb-1">
+                          {groups.map(g => (
+                            <button key={g.id} onClick={() => {
+                              setBroadcastGroupIds(prev => prev.includes(g.id) ? prev.filter(id => id !== g.id) : [...prev, g.id]);
+                            }} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${broadcastGroupIds.includes(g.id) ? "bg-[#E15859]/10 text-[#E15859]" : "bg-gray-50 text-gray-500"}`}>
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${broadcastGroupIds.includes(g.id) ? "border-[#E15859] bg-[#E15859]" : "border-gray-300"}`}>
+                                {broadcastGroupIds.includes(g.id) && <Check size={12} className="text-white" />}
+                              </div>
+                              {g.name} ({g.member_count})
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
