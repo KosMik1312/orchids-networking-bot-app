@@ -1,4 +1,4 @@
-﻿"""
+"""
 Административные API эндпоинты для MiniApp.
 Все эндпоинты защищены проверкой is_admin.
 """
@@ -139,8 +139,6 @@ async def admin_users(
     users, total = await repo.get_all_users(limit=limit, offset=offset)
     return {
         "total": total,
-        "limit": limit,
-        "offset": offset,
         "users": [
             {
                 "user_id": u.user_id,
@@ -152,6 +150,79 @@ async def admin_users(
                 "instagram": u.instagram,
                 "is_profile_completed": u.is_profile_completed,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ]
+    }
+
+
+@admin_router_api.get("/users/{user_id}/profile")
+async def admin_user_profile(
+    user_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """Детальный профиль пользователя для администратора."""
+    # Получаем токен из заголовка Authorization
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        
+    init_data = auth_header.replace("Bearer ", "")
+    admin_id = await require_admin(init_data, session)
+    
+    from db.repository import UserRepo
+    user_repo = UserRepo(session)
+    user = await user_repo.get_user_profile(user_id)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Преобразуем строку JSON (interests, strengths и т.д.) в списки для фронтенда, если необходимо.
+    import json
+    def parse_json_field(field_value):
+        if not field_value:
+            return None
+        try:
+            return json.loads(field_value)
+        except:
+            return field_value
+
+    return {
+        "user_id": user.user_id,
+        "name": user.name,
+        "age": user.age,
+        "gender": user.gender,
+        "city": user.city,
+        "telegram": user.telegram,
+        "instagram": user.instagram,
+        "photo": user.photo,
+        "about_me": user.about_me,
+        "occupation": user.occupation,
+        "interests": parse_json_field(user.interests),
+        "goal": parse_json_field(user.goal),
+        "comfort_level": user.comfort_level,
+        "social_frequency": user.social_frequency,
+        "communication_format": parse_json_field(user.communication_format),
+        "evening_scenario": user.evening_scenario,
+        "relationship_status": user.relationship_status,
+        "children": user.children,
+        "zodiac": user.zodiac,
+        "strengths": parse_json_field(user.strengths),
+        "weaknesses": user.weaknesses,
+        "values": parse_json_field(user.values),
+        "love_language": parse_json_field(user.love_language),
+        "goals": user.goals,
+        "dreams": user.dreams,
+        "meeting_metro": parse_json_field(user.meeting_metro),
+        "meeting_days": parse_json_field(user.meeting_days),
+        "meeting_time_from": user.meeting_time_from,
+        "meeting_time_to": user.meeting_time_to,
+        "is_profile_completed": user.is_profile_completed,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+    }
+
+@admin_router_api.post("/slots")
             }
             for u in users
         ],

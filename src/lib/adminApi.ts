@@ -34,6 +34,31 @@ export interface AdminUser {
   created_at: string | null;
 }
 
+export interface AdminUserProfile extends AdminUser {
+  photo?: string;
+  about_me?: string;
+  occupation?: string;
+  interests?: string | string[];
+  goal?: string | string[];
+  comfort_level?: number;
+  social_frequency?: number;
+  communication_format?: string | string[];
+  evening_scenario?: string;
+  relationship_status?: string;
+  children?: string;
+  zodiac?: string;
+  strengths?: string | string[];
+  weaknesses?: string;
+  values?: string | string[];
+  love_language?: string | string[];
+  goals?: string;
+  dreams?: string;
+  meeting_metro?: string | string[];
+  meeting_days?: string | string[];
+  meeting_time_from?: string;
+  meeting_time_to?: string;
+}
+
 export interface AdminSlot {
   id: number;
   date: string;
@@ -104,6 +129,10 @@ export async function getAdminStats(initData: string): Promise<AdminStats> {
 // Пользователи
 export async function getAdminUsers(initData: string, limit = 50, offset = 0): Promise<{ total: number; users: AdminUser[] }> {
   return adminFetch(`/api/admin/users?limit=${limit}&offset=${offset}`, initData);
+}
+
+export async function getAdminUserProfile(initData: string, userId: number): Promise<AdminUserProfile> {
+  return adminFetch(`/api/admin/users/${userId}/profile`, initData);
 }
 
 // Мероприятия (слоты)

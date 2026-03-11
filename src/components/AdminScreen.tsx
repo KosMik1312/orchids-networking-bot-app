@@ -7,12 +7,13 @@ import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
   updateAdminSlot, getSlotParticipants, getAdminGroups, createAdminGroup,
   deleteAdminGroup, getGroupMembers, addGroupMembers, removeGroupMember,
-  sendBroadcast,
+  sendBroadcast, getAdminUserProfile,
   type AdminStats, type AdminUser, type AdminSlot, type SlotParticipant,
-  type AdminGroup, type GroupMember, type BroadcastResult,
+  type AdminGroup, type GroupMember, type BroadcastResult, type AdminUserProfile
 } from "@/lib/adminApi";
+import { AdminUserProfileScreen } from "./AdminUserProfileScreen";
 
-type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast";
+type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast" | "user_profile";
 
 interface AdminScreenProps {
   token: string;
@@ -202,6 +203,7 @@ const AdminDialog = ({
 
 export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorizedProp, mockStats, mockUsers, mockSlots, mockGroups, initialTab = "dashboard" }: AdminScreenProps) {
   const [tab, setTab] = useState<AdminTab>(initialTab);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<AdminUserProfile | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(isAuthorizedProp ?? null);
   const [stats, setStats] = useState<AdminStats | null>(mockStats || null);
   const [users, setUsers] = useState<AdminUser[]>(mockUsers || []);
@@ -581,10 +583,28 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             {renderHeader("Пользователи", "dashboard")}
             <div className="text-xs text-gray-400 mb-3">Всего: {usersTotal}</div>
             {users.map(u => (
-              <div key={u.user_id} className={cardClass}>
+              <div 
+                key={u.user_id} 
+                className={`${cardClass} cursor-pointer hover:border-[#E15859] border-2 border-transparent transition-colors`}
+                onClick={async () => {
+                   setLoading(true);
+                   try {
+                       const profile = await getAdminUserProfile(initData, u.user_id);
+                       setSelectedUserProfile(profile);
+                       setTab("user_profile");
+                   } catch (e: any) {
+                       setError(e.message || "Ошибка загрузки профиля");
+                   } finally {
+                       setLoading(false);
+                   }
+                }}
+              >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-medium text-[#404243]">{u.name || "Без имени"}</div>
+                    <div className="font-medium text-[#404243] flex items-center gap-1">
+                        {u.name || "Без имени"}
+                        <ChevronRight size={14} className="text-[#E15859]" />
+                    </div>
                     <div className="text-xs text-gray-400 mt-0.5">ID: {u.user_id}</div>
                   </div>
                   <div className={`text-xs px-2 py-1 rounded-full ${u.is_profile_completed ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"}`}>
@@ -606,6 +626,17 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               </div>
             )}
           </>
+        )}
+
+        {/* ===== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ===== */}
+        {tab === "user_profile" && selectedUserProfile && (
+            <AdminUserProfileScreen 
+                userMap={selectedUserProfile} 
+                onBack={() => {
+                    setSelectedUserProfile(null);
+                    setTab("users");
+                }} 
+            />
         )}
 
         {/* ===== МЕРОПРИЯТИЯ ===== */}
