@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
 from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo, PromotionRepo
+from db.models import DinnerSlot, Booking
+from sqlalchemy import func, Integer
 from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN, AUTH_DISABLED
 from auth_token import validate_auth_header
 from logger import get_api_logger
@@ -541,6 +543,180 @@ async def admin_broadcast(
         "status": "started",
         "target_count": len(target_user_ids),
         "message": f"Рассылка запущена для {len(target_user_ids)} пользователей"
+    }
+
+
+# ===== Платежи =====
+
+@admin_router_api.post("/payments")
+async def admin_payments(
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Список всех платежей с фильтрацией по статусу."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.repository import PaymentRepo
+    from db.models import Payment, User
+    from sqlalchemy import select
+    
+    payment_repo = PaymentRepo(session)
+    
+    # Строим запрос с JOIN к User для получения имени
+    stmt = (
+        select(Payment, User)
+        .join(User, Payment.user_id == User.user_id, isouter=True)
+        .order_by(Payment.created_at.desc())
+    )
+    
+    # Фильтр по статусу
+    if status:
+        stmt = stmt.where(Payment.status == status)
+    
+    # Пагинация
+    stmt = stmt.limit(limit).offset(offset)
+    
+    result = await session.execute(stmt)
+    rows = result.all()
+    
+    # Подсчёт общего количества
+    count_stmt = select(func.count(Payment.id))
+    if status:
+        count_stmt = count_stmt.where(Payment.status == status)
+    total_result = await session.execute(count_stmt)
+    total = total_result.scalar_one()
+    
+    payments_data = []
+    for payment, user in rows:
+        payments_data.append({
+            "id": payment.id,
+            "user_id": payment.user_id,
+            "user_name": user.name if user else "Удалён",
+            "amount": payment.amount,
+            "status": payment.status,
+            "slot_id": payment.slot_id,
+            "booking_id": payment.booking_id,
+            "yookassa_payment_id": payment.yookassa_payment_id,
+            "created_at": payment.created_at.isoformat() if payment.created_at else None,
+            "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
+        })
+    
+    logger.info(f"Admin {admin_id} requested payments list: status={status}, limit={limit}, offset={offset}")
+    
+    return {
+        "total": total,
+        "payments": payments_data
+    }
+
+
+@admin_router_api.post("/payments/{payment_id}")
+async def admin_payment_detail(
+    payment_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Детальная информация о платеже."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.repository import PaymentRepo, UserRepo, SlotRepo, BookingRepo
+    from db.models import Payment
+    
+    payment_repo = PaymentRepo(session)
+    payment = await payment_repo.get_payment(payment_id)
+    
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Получаем связанные данные
+    user_repo = UserRepo(session)
+    user = await user_repo.get_user(payment.user_id) if payment.user_id else None
+    
+    slot = None
+    if payment.slot_id:
+        slot = await session.get(DinnerSlot, payment.slot_id)
+    
+    booking = None
+    if payment.booking_id:
+        booking = await session.get(Booking, payment.booking_id)
+    
+    return {
+        "id": payment.id,
+        "yookassa_payment_id": payment.yookassa_payment_id,
+        "user_id": payment.user_id,
+        "user_name": user.name if user else "Удалён",
+        "user_telegram": user.telegram if user else None,
+        "amount": payment.amount,
+        "status": payment.status,
+        "slot_id": payment.slot_id,
+        "slot_info": {
+            "date": slot.date.strftime("%d.%m.%Y") if slot else None,
+            "time": slot.time if slot else None,
+            "restaurant": slot.restaurant if slot else None,
+            "city": slot.city if slot else None,
+        } if slot else None,
+        "booking_id": payment.booking_id,
+        "booking_status": booking.status if booking else None,
+        "created_at": payment.created_at.isoformat() if payment.created_at else None,
+        "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
+    }
+
+
+@admin_router_api.post("/payments/stats")
+async def admin_payment_stats(
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Статистика по платежам."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.models import Payment
+    from sqlalchemy import select, func
+    
+    # Общая выручка (succeeded)
+    revenue_result = await session.execute(
+        select(func.sum(func.cast(Payment.amount, Integer)))
+        .where(Payment.status == 'succeeded')
+    )
+    total_revenue = revenue_result.scalar() or 0
+    
+    # Количество платежей по статусам
+    status_counts = {}
+    for status in ['created', 'pending', 'succeeded', 'failed', 'canceled', 'expired', 'refunded']:
+        count_result = await session.execute(
+            select(func.count(Payment.id)).where(Payment.status == status)
+        )
+        status_counts[status] = count_result.scalar_one()
+    
+    # Общее количество
+    total_result = await session.execute(select(func.count(Payment.id)))
+    total_payments = total_result.scalar_one()
+    
+    # Конверсия (created → succeeded)
+    conversion_rate = 0
+    if status_counts['created'] + status_counts['pending'] > 0:
+        conversion_rate = round(
+            (status_counts['succeeded'] / (status_counts['created'] + status_counts['pending'] + status_counts['succeeded'])) * 100,
+            2
+        )
+    
+    # Средний чек
+    avg_result = await session.execute(
+        select(func.avg(func.cast(Payment.amount, Integer)))
+        .where(Payment.status == 'succeeded')
+    )
+    average_payment = round(avg_result.scalar() or 0, 2)
+    
+    logger.info(f"Admin {admin_id} requested payment stats")
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_payments": total_payments,
+        "conversion_rate": conversion_rate,
+        "average_payment": average_payment,
+        "status_breakdown": status_counts,
     }
 
 

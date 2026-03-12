@@ -110,6 +110,9 @@ export default function Home() {
       console.log("   initData length:", initData.length);
       console.log("   initData sample (first 100 chars):", initData.substring(0, 100));
       setUserToken(initData);
+      
+      // 🔐 Сохраняем в sessionStorage для восстановления после редиректа с ЮКассы
+      sessionStorage.setItem('orchids_main_auth_token', initData);
 
       try {
         // Парсим initData чтобы получить user_id
@@ -207,6 +210,14 @@ export default function Home() {
     };
 
     const startApp = () => {
+      // 🔐 ПРОВЕРЯЕМ sessionStorage ПЕРВЫМ ДЕЛОМ (возврат с ЮКассы)
+      const savedToken = sessionStorage.getItem('orchids_main_auth_token');
+      if (savedToken) {
+        console.log('🔐 Restored auth token from sessionStorage (payment return)');
+        initializeApp(savedToken);
+        return;
+      }
+      
       // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
       const webApp = (window as any).Telegram?.WebApp;
 

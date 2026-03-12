@@ -34,6 +34,7 @@ from payments.payment_service import PaymentService
 from payments.payment_config import YOOKASSA_SECRET_KEY
 from logger import get_api_logger
 from admin_api import admin_router_api
+from notification_service import get_notification_service
 
 # Логгер для API
 logger = get_api_logger()
@@ -44,10 +45,10 @@ scheduler = None
 
 async def check_pending_payments():
     """
-    🔄 Проверяет платежи со статусом 'pending' или 'created', которые старше 5 минут.
+    🔄 Проверяет платежи со статусом 'pending' или 'created', которые старше 2 минут.
     Если статус в ЮКассе 'succeeded', а бронирование не создано - создает его.
     
-    Запускается каждые 5 минут.
+    Запускается каждые 2 минуты (улучшенный UX).
     """
     logger.info("🔍 [SCHEDULER] Starting pending payments check...")
     
@@ -63,62 +64,128 @@ async def check_pending_payments():
         async with async_session() as session:
             payment_repo = PaymentRepo(session)
             
-            # Получаем платежи старше 5 минут со статусом pending/created и без бронирования
-            pending_payments = await payment_repo.get_pending_payments(minutes=5)
+            # Получаем платежи старше 2 минут со статусом pending/created и без бронирования
+            pending_payments = await payment_repo.get_pending_payments(minutes=2)
             
             if not pending_payments:
                 logger.debug("✅ [SCHEDULER] No pending payments found")
-                return
-            
-            logger.warning(f"⚠️ [SCHEDULER] Found {len(pending_payments)} pending payments. Checking with YooKassa...")
-            
-            for payment in pending_payments:
-                try:
-                    logger.info(f"   📌 Checking payment {payment.id} (yookassa_id={payment.yookassa_payment_id})")
-                    
-                    # Проверяем статус в ЮКассе
-                    payment_service = PaymentService()
-                    yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
-                    
-                    logger.info(f"      YooKassa status: {yookassa_payment.get('status')}")
-                    
-                    # Если статус succeeded, но бронирования нет - создаём
-                    if yookassa_payment.get('status') == 'succeeded' and not payment.booking_id:
-                        logger.warning(f"   ⚠️ Payment {payment.id} succeeded but booking is missing! Creating booking...")
-                        
-                        # Обновляем статус платежа
-                        await payment_repo.update_payment_status(payment.id, 'succeeded')
-                        
-                        # Создаём бронирование
-                        booking_repo = BookingRepo(session)
-                        booking = await booking_repo.create_booking_after_payment(
-                            user_id=payment.user_id,
-                            slot_id=payment.slot_id,
-                            payment_id=payment.id
-                        )
-                        
-                        if booking:
-                            logger.info(f"   ✅ [SCHEDULER] Booking created for payment {payment.id}: booking_id={booking.id}")
-                        else:
-                            logger.error(f"   ❌ [SCHEDULER] Failed to create booking for payment {payment.id}")
-                    
-                    # Если статус failed/canceled - обновляем статус
-                    elif yookassa_payment.get('status') in ['failed', 'canceled']:
-                        logger.info(f"   ❌ [SCHEDULER] Payment {payment.id} is {yookassa_payment.get('status')} - updating status")
-                        await payment_repo.update_payment_status(payment.id, yookassa_payment.get('status'))
-                    
-                    else:
-                        logger.debug(f"   ℹ️ Payment {payment.id} status is {yookassa_payment.get('status')} - no action needed")
+            else:
+                logger.warning(f"⚠️ [SCHEDULER] Found {len(pending_payments)} pending payments. Checking with YooKassa...")
                 
-                except Exception as item_error:
-                    logger.error(f"   ❌ [SCHEDULER] Error checking payment {payment.id}: {item_error}")
-                    traceback.print_exc()
-                    continue
+                for payment in pending_payments:
+                    try:
+                        logger.info(f"   📌 Checking payment {payment.id} (yookassa_id={payment.yookassa_payment_id})")
+                        
+                        # Проверяем статус в ЮКассе
+                        payment_service = PaymentService()
+                        yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
+                        
+                        logger.info(f"      YooKassa status: {yookassa_payment.get('status')}")
+                        
+                        # Если статус succeeded, но бронирования нет - создаём
+                        if yookassa_payment.get('status') == 'succeeded' and not payment.booking_id:
+                            logger.warning(f"   ⚠️ Payment {payment.id} succeeded but booking is missing! Creating booking...")
+                            
+                            # Обновляем статус платежа
+                            await payment_repo.update_payment_status(payment.id, 'succeeded')
+                            
+                            # Создаём бронирование
+                            booking_repo = BookingRepo(session)
+                            booking = await booking_repo.create_booking_after_payment(
+                                user_id=payment.user_id,
+                                slot_id=payment.slot_id,
+                                payment_id=payment.id
+                            )
+                            
+                            if booking:
+                                logger.info(f"   ✅ [SCHEDULER] Booking created for payment {payment.id}: booking_id={booking.id}")
+                                
+                                # 🎯 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ
+                                try:
+                                    from db.models import DinnerSlot
+                                    slot = await session.get(DinnerSlot, payment.slot_id)
+                                    if slot:
+                                        from notification_service import get_notification_service
+                                        notification_service = get_notification_service()
+                                        await notification_service.notify_payment_success(
+                                            user_id=payment.user_id,
+                                            booking_id=booking.id,
+                                            slot_date=slot.date.strftime("%d.%m.%Y"),
+                                            slot_time=slot.time,
+                                            slot_city=slot.city,
+                                            slot_restaurant=slot.restaurant,
+                                            amount=payment.amount
+                                        )
+                                        logger.info(f"   📧 [SCHEDULER] Success notification sent to user {payment.user_id}")
+                                except Exception as notify_error:
+                                    logger.error(f"   ❌ [SCHEDULER] Failed to send notification: {notify_error}")
+                            else:
+                                logger.error(f"   ❌ [SCHEDULER] Failed to create booking for payment {payment.id}")
+                        
+                        # Если статус failed/canceled - обновляем статус
+                        elif yookassa_payment.get('status') in ['failed', 'canceled']:
+                            logger.info(f"   ❌ [SCHEDULER] Payment {payment.id} is {yookassa_payment.get('status')} - updating status")
+                            await payment_repo.update_payment_status(payment.id, yookassa_payment.get('status'))
+                        
+                        else:
+                            logger.debug(f"   ℹ️ Payment {payment.id} status is {yookassa_payment.get('status')} - no action needed")
+                    
+                    except Exception as item_error:
+                        logger.error(f"   ❌ [SCHEDULER] Error checking payment {payment.id}: {item_error}")
+                        traceback.print_exc()
+                        continue
             
             logger.info("✅ [SCHEDULER] Pending payments check completed")
     
     except Exception as e:
         logger.error(f"❌ [SCHEDULER] Error in check_pending_payments: {e}")
+        traceback.print_exc()
+
+
+async def release_expired_reservations():
+    """
+    🔓 Освобождает места в слотах для платежей, которые не были оплачены за 15 минут.
+    Это предотвращает блокировку мест неоплаченными резервациями.
+    
+    Запускается каждые 5 минут.
+    """
+    logger.info("🔓 [SCHEDULER] Starting expired reservations cleanup...")
+    
+    try:
+        from db.session import engine
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.orm import sessionmaker
+        
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        
+        async with async_session() as session:
+            payment_repo = PaymentRepo(session)
+            
+            # Получаем просроченные резервации (старше 15 минут)
+            expired = await payment_repo.get_expired_reservations(minutes=15)
+            
+            if not expired:
+                logger.debug("✅ [SCHEDULER] No expired reservations found")
+                return
+            
+            logger.warning(f"⚠️ [SCHEDULER] Found {len(expired)} expired reservations. Releasing...")
+            
+            for payment in expired:
+                try:
+                    logger.info(f"   🔓 Releasing reservation for payment {payment.id} (slot {payment.slot_id})")
+                    success = await payment_repo.release_reservation(payment.id)
+                    if success:
+                        logger.info(f"   ✅ Reservation released for payment {payment.id}")
+                    else:
+                        logger.error(f"   ❌ Failed to release reservation for payment {payment.id}")
+                except Exception as item_error:
+                    logger.error(f"   ❌ Error releasing reservation for payment {payment.id}: {item_error}")
+                    continue
+            
+            logger.info("✅ [SCHEDULER] Expired reservations cleanup completed")
+    
+    except Exception as e:
+        logger.error(f"❌ [SCHEDULER] Error in release_expired_reservations: {e}")
         traceback.print_exc()
 
 
@@ -133,19 +200,32 @@ async def lifespan(app: FastAPI):
     global scheduler
     scheduler = AsyncIOScheduler()
     
-    # Добавляем job для проверки платежей каждые 5 минут
+    # Job 1: Проверка pending платежей каждые 2 минуты
     scheduler.add_job(
         check_pending_payments,
         "interval",
-        minutes=5,
+        minutes=2,
         id="check_pending_payments",
         name="Check pending payments from Yookassa",
         replace_existing=True,
-        max_instances=1  # Только одна инстанция одновременно
+        max_instances=1
+    )
+    
+    # Job 2: Освобождение просроченных резерваций каждые 5 минут
+    scheduler.add_job(
+        release_expired_reservations,
+        "interval",
+        minutes=5,
+        id="release_expired_reservations",
+        name="Release expired payment reservations",
+        replace_existing=True,
+        max_instances=1
     )
     
     scheduler.start()
-    logger.info("✅ APScheduler started - pending payments check enabled (every 5 minutes)")
+    logger.info("✅ APScheduler started:")
+    logger.info("   - Pending payments check: every 2 minutes")
+    logger.info("   - Expired reservations cleanup: every 5 minutes")
     
     yield
     
@@ -745,6 +825,120 @@ async def get_user_bookings_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/bookings/finalize")
+async def finalize_booking(
+    request: dict,
+    user_id: Optional[int] = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    🎯 НОВЫЙ ЭНДПОИНТ: Финализация бронирования после успешной оплаты
+    
+    Вызывается из frontend после получения статуса 'succeeded' от polling.
+    Создаёт бронирование атомарно (idempotent - можно вызывать много раз).
+    """
+    try:
+        if not user_id:
+            logger.error("❌ Authentication failed for finalize booking")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
+        
+        payment_id = request.get('paymentId')
+        if not payment_id:
+            raise HTTPException(status_code=400, detail="paymentId required")
+        
+        logger.info(f"🎯 [FINALIZE] Finalizing booking for payment_id={payment_id}, user={user_id}")
+        
+        payment_repo = PaymentRepo(session)
+        payment = await payment_repo.get_payment(payment_id)
+        
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        # Проверяем, что платеж принадлежит пользователю
+        if payment.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Проверяем статус в ЮКассе
+        payment_service = PaymentService()
+        yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
+        
+        if yookassa_payment.get('status') != 'succeeded':
+            logger.warning(f"⚠️ [FINALIZE] Payment {payment_id} status is {yookassa_payment.get('status')}, not succeeded")
+            raise HTTPException(status_code=400, detail=f"Payment status is {yookassa_payment.get('status')}, not succeeded")
+        
+        # Обновляем статус платежа
+        await payment_repo.update_payment_status(payment_id, 'succeeded')
+        
+        # 🎯 IDEMPOTENT: Если бронирование уже существует - возвращаем его
+        if payment.booking_id:
+            booking_repo = BookingRepo(session)
+            booking = await session.get(Booking, payment.booking_id)
+            logger.info(f"ℹ️ [FINALIZE] Booking {payment.booking_id} already exists for payment {payment_id}")
+            return {
+                "success": True,
+                "bookingId": payment.booking_id,
+                "message": "Booking already exists",
+                "booking": {
+                    "id": booking.id,
+                    "slot_id": booking.slot_id,
+                    "status": booking.status
+                } if booking else None
+            }
+        
+        # Создаём бронирование
+        logger.info(f"✨ [FINALIZE] Creating booking for user={user_id}, slot={payment.slot_id}")
+        booking_repo = BookingRepo(session)
+        booking = await booking_repo.create_booking_after_payment(
+            user_id=user_id,
+            slot_id=payment.slot_id,
+            payment_id=payment_id
+        )
+        
+        if not booking:
+            logger.error(f"❌ [FINALIZE] Failed to create booking for payment {payment_id}")
+            raise HTTPException(status_code=500, detail="Failed to create booking")
+        
+        logger.info(f"✅ [FINALIZE] Booking created successfully: booking_id={booking.id}")
+        
+        # 🎯 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ ПОЛЬЗОВАТЕЛЮ
+        try:
+            slot = await session.get(DinnerSlot, payment.slot_id)
+            if slot:
+                notification_service = get_notification_service()
+                await notification_service.notify_payment_success(
+                    user_id=user_id,
+                    booking_id=booking.id,
+                    slot_date=slot.date.strftime("%d.%m.%Y"),
+                    slot_time=slot.time,
+                    slot_city=slot.city,
+                    slot_restaurant=slot.restaurant,
+                    amount=payment.amount
+                )
+                logger.info(f"📧 [FINALIZE] Success notification sent to user {user_id}")
+        except Exception as notify_error:
+            logger.error(f"❌ [FINALIZE] Failed to send success notification: {notify_error}")
+            # Не падаем, если уведомление не отправилось
+        
+        return {
+            "success": True,
+            "bookingId": booking.id,
+            "message": "Booking created successfully",
+            "booking": {
+                "id": booking.id,
+                "slot_id": booking.slot_id,
+                "status": booking.status,
+                "booking_date": booking.booking_date.isoformat() if booking.booking_date else None
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ [FINALIZE] Error finalizing booking: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/bookings")
 async def create_booking_endpoint(
     request: BookingRequest,
@@ -1069,6 +1263,25 @@ async def payment_webhook(
                 )
                 if booking:
                     logger.info(f"✅ Booking finalized: {booking.id}")
+                    
+                    # 🎯 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ ПОЛЬЗОВАТЕЛЮ
+                    try:
+                        slot = await session.get(DinnerSlot, db_payment.slot_id)
+                        if slot:
+                            notification_service = get_notification_service()
+                            await notification_service.notify_payment_success(
+                                user_id=db_payment.user_id,
+                                booking_id=booking.id,
+                                slot_date=slot.date.strftime("%d.%m.%Y"),
+                                slot_time=slot.time,
+                                slot_city=slot.city,
+                                slot_restaurant=slot.restaurant,
+                                amount=db_payment.amount
+                            )
+                            logger.info(f"📧 Success notification sent to user {db_payment.user_id}")
+                    except Exception as notify_error:
+                        logger.error(f"❌ Failed to send success notification: {notify_error}")
+                        # Не падаем, если уведомление не отправилось
                 else:
                     logger.error(f"❌ Failed to finalize booking for payment {db_payment.id}")
             else:

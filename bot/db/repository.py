@@ -415,11 +415,26 @@ class BookingRepo(BaseRepo):
         """
         Создает бронирование ПОСЛЕ успешной оплаты.
         Используется в обработчике вебхука.
+        
+        ВАЖНО: Резервирует место при создании платежа (soft reservation),
+        финализирует при успешной оплате.
         """
         logger.info(f"🚀 Creating booking after payment: user={user_id}, slot={slot_id}, payment={payment_id}")
         
         try:
-            # 1. Получаем слот с блокировкой
+            # 1. Проверяем, не создано ли уже бронирование для этого платежа (idempotency)
+            existing_booking_result = await self.session.execute(
+                select(Booking).join(Payment).where(
+                    Payment.id == payment_id,
+                    Booking.user_id == user_id
+                )
+            )
+            existing_booking = existing_booking_result.scalar_one_or_none()
+            if existing_booking:
+                logger.info(f"ℹ️ Booking {existing_booking.id} already exists for payment {payment_id}")
+                return existing_booking
+            
+            # 2. Получаем слот с блокировкой
             slot_result = await self.session.execute(
                 select(DinnerSlot).where(DinnerSlot.id == slot_id).with_for_update()
             )
@@ -427,11 +442,13 @@ class BookingRepo(BaseRepo):
             
             if not slot or not slot.is_active:
                 logger.error(f"❌ Slot {slot_id} not found or not active for payment {payment_id}")
+                # TODO: Инициировать возврат средств через ЮКассу
                 return None
             
             if slot.current_bookings >= slot.max_people:
-                logger.error(f"❌ Slot {slot_id} is full for payment {payment_id}. Capacity: {slot.current_bookings}/{slot.max_people}")
-                # Тут можно подумать о возврате средств, но пока просто логируем
+                logger.error(f"❌ OVERBOOKING DETECTED! Slot {slot_id} is full for payment {payment_id}. Capacity: {slot.current_bookings}/{slot.max_people}")
+                logger.error(f"⚠️ REFUND REQUIRED for payment {payment_id}, user {user_id}")
+                # TODO: Автоматический возврат средств
                 return None
             
             # 2. Создаем бронирование
@@ -531,7 +548,12 @@ class PaymentRepo(BaseRepo):
         booking_id: Optional[int] = None,
         status: str = 'created'
     ) -> Payment:
-        """Создает новый платеж."""
+        """
+        Создает новый платеж.
+        
+        ВАЖНО: При создании платежа для слота резервирует место (soft lock).
+        Если оплата не пройдет за 15 минут, scheduler освободит место.
+        """
         payment = Payment(
             user_id=user_id,
             yookassa_payment_id=yookassa_payment_id,
@@ -541,6 +563,19 @@ class PaymentRepo(BaseRepo):
             status=status
         )
         self.session.add(payment)
+        
+        # 🎯 SOFT LOCK: Резервируем место в слоте при создании платежа
+        if slot_id:
+            slot_result = await self.session.execute(
+                select(DinnerSlot).where(DinnerSlot.id == slot_id).with_for_update()
+            )
+            slot = slot_result.scalar_one_or_none()
+            if slot and slot.current_bookings < slot.max_people:
+                slot.current_bookings += 1
+                logger.info(f"🔒 Soft lock: Reserved place in slot {slot_id} for payment (current: {slot.current_bookings}/{slot.max_people})")
+            else:
+                logger.warning(f"⚠️ Cannot reserve place in slot {slot_id} - already full or not found")
+        
         await self.session.commit()
         await self.session.refresh(payment)
         logger.info(f"Payment created: id={payment.id}, user={user_id}, slot={slot_id}, yookassa_id={yookassa_payment_id}")
@@ -576,13 +611,13 @@ class PaymentRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_pending_payments(self, minutes: int = 5) -> List[Payment]:
+    async def get_pending_payments(self, minutes: int = 2) -> List[Payment]:
         """
         Получает платежи со статусом 'pending' или 'created', которые старше N минут.
         Используется для автопроверки "зависших" платежей scheduler'ом.
         
         Args:
-            minutes: Количество минут, после которых платёж считается "зависшим"
+            minutes: Количество минут, после которых платёж считается "зависшим" (по умолчанию 2)
         
         Returns:
             Список Payment'ов, которые могут быть потеряны
@@ -607,6 +642,57 @@ class PaymentRepo(BaseRepo):
             logger.warning(f"⚠️ Found {len(payments)} pending/orphaned payments older than {minutes} minutes")
         
         return payments
+
+    async def get_expired_reservations(self, minutes: int = 15) -> List[Payment]:
+        """
+        🕒 Получает платежи, которые зарезервировали место, но не оплатили за N минут.
+        Используется для освобождения soft lock'ов.
+        
+        Args:
+            minutes: Время жизни резервации (по умолчанию 15 минут)
+        """
+        from datetime import timedelta
+        
+        cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+        
+        stmt = (
+            select(Payment)
+            .where(
+                Payment.created_at <= cutoff_time,
+                Payment.status.in_(['created', 'pending']),
+                Payment.booking_id == None,
+                Payment.slot_id != None  # Только платежи со слотами
+            )
+            .order_by(Payment.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def release_reservation(self, payment_id: int) -> bool:
+        """
+        🔓 Освобождает зарезервированное место в слоте и отменяет платеж.
+        Используется для очистки просроченных резерваций.
+        """
+        payment = await self.session.get(Payment, payment_id)
+        if not payment or not payment.slot_id:
+            return False
+        
+        # Получаем слот с блокировкой
+        slot_result = await self.session.execute(
+            select(DinnerSlot).where(DinnerSlot.id == payment.slot_id).with_for_update()
+        )
+        slot = slot_result.scalar_one_or_none()
+        
+        if slot and slot.current_bookings > 0:
+            slot.current_bookings -= 1
+            logger.info(f"🔓 Released reservation: slot {slot.id} now has {slot.current_bookings}/{slot.max_people}")
+        
+        # Отменяем платеж
+        payment.status = 'expired'
+        await self.session.commit()
+        
+        logger.info(f"✅ Reservation released for payment {payment_id}")
+        return True
 
 
 class AdminRepo(BaseRepo):

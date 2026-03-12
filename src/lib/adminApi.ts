@@ -214,3 +214,69 @@ export async function updateAdminPromotion(initData: string, promotionId: number
 export async function deleteAdminPromotion(initData: string, promotionId: number) {
   return adminFetch(`/api/admin/promotions/${promotionId}/delete`, initData);
 }
+
+// Платежи
+export interface AdminPayment {
+  id: number;
+  user_id: number;
+  user_name: string;
+  amount: string;
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'canceled' | 'expired' | 'refunded';
+  slot_id: number | null;
+  booking_id: number | null;
+  yookassa_payment_id: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface AdminPaymentDetail extends AdminPayment {
+  user_telegram: string | null;
+  slot_info: {
+    date: string | null;
+    time: string | null;
+    restaurant: string | null;
+    city: string | null;
+  } | null;
+  booking_status: string | null;
+}
+
+export interface AdminPaymentStats {
+  total_revenue: number;
+  total_payments: number;
+  conversion_rate: number;
+  average_payment: number;
+  status_breakdown: {
+    created: number;
+    pending: number;
+    succeeded: number;
+    failed: number;
+    canceled: number;
+    expired: number;
+    refunded: number;
+  };
+}
+
+export async function getAdminPayments(
+  initData: string,
+  status?: string,
+  limit = 50,
+  offset = 0
+): Promise<{ total: number; payments: AdminPayment[] }> {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+  
+  return adminFetch(`/api/admin/payments?${params.toString()}`, initData);
+}
+
+export async function getAdminPaymentDetail(
+  initData: string,
+  paymentId: number
+): Promise<AdminPaymentDetail> {
+  return adminFetch(`/api/admin/payments/${paymentId}`, initData);
+}
+
+export async function getAdminPaymentStats(initData: string): Promise<AdminPaymentStats> {
+  return adminFetch('/api/admin/payments/stats', initData);
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Grid } from "lucide-react";
+import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Grid, CreditCard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
@@ -14,9 +14,10 @@ import {
   type AdminPromotion
 } from "@/lib/adminApi";
 import { AdminUserProfileScreen } from "./AdminUserProfileScreen";
+import { AdminPaymentsScreen } from "./AdminPaymentsScreen";
 import { Tag } from "lucide-react";
 
-type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast" | "user_profile" | "promotions";
+type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast" | "user_profile" | "promotions" | "payments";
 
 interface AdminScreenProps {
   token: string;
@@ -583,6 +584,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               {[
                 { icon: Users, label: "Пользователи", t: "users" as AdminTab },
                 { icon: Calendar, label: "Мероприятия", t: "slots" as AdminTab },
+                { icon: CreditCard, label: "Платежи", t: "payments" as AdminTab },
                 { icon: Tag, label: "Акции и спецпредложения", t: "promotions" as AdminTab },
                 { icon: Send, label: "Рассылка", t: "broadcast" as AdminTab },
               ].map(({ icon: Icon, label, t }) => (
@@ -1094,6 +1096,11 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             ))}
           </div>
         </>
+      )}
+
+      {/* ===== ПЛАТЕЖИ ===== */}
+      {tab === "payments" && (
+        <AdminPaymentsScreen token={initData} onBack={() => setTab("dashboard")} />
       )}
 
       <AdminDialog

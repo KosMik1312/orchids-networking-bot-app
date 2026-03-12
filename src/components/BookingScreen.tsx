@@ -45,7 +45,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   // Функция для проверки статуса платежа с polling
-  const checkPaymentStatus = async (paymentId: number, maxRetries = 15) => {
+  const checkPaymentStatus = async (paymentId: number, effectiveToken: string, maxRetries = 20) => {
     console.log("🔍 [PAYMENT] Checking payment status:", String(paymentId).replace(/[\r\n]/g, ""));
     setIsCheckingPayment(true);
 
@@ -54,16 +54,41 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
       retries++;
       
       try {
-        const payment = await getPaymentStatus(paymentId, authToken || undefined);
+        const payment = await getPaymentStatus(paymentId, effectiveToken);
         console.log("💳 [PAYMENT] Status check result:", payment?.status ? String(payment.status).replace(/[\r\n]/g, "") : "unknown");
 
         if (payment.status === "succeeded") {
-          console.log("✅ [PAYMENT] Payment succeeded!");
+          console.log("✅ [PAYMENT] Payment succeeded! Finalizing booking...");
           clearInterval(pollInterval);
+          
+          // 🎯 КРИТИЧНО: Вызываем финализацию бронирования
+          try {
+            const finalizeResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'https://antreclub-app.ru'}/api/bookings/finalize`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${effectiveToken}`
+              },
+              body: JSON.stringify({ paymentId })
+            });
+
+            if (!finalizeResponse.ok) {
+              throw new Error('Failed to finalize booking');
+            }
+
+            const finalizeData = await finalizeResponse.json();
+            console.log("✅ [PAYMENT] Booking finalized:", finalizeData);
+          } catch (finalizeError) {
+            console.error("❌ [PAYMENT] Finalize booking error:", finalizeError);
+            // Продолжаем показывать success, т.к. webhook/scheduler подстрахуют
+          }
+
           setIsCheckingPayment(false);
           setStep("success");
           localStorage.removeItem("orchids_pending_payment_id");
           localStorage.removeItem("orchids_pending_payment_time");
+          sessionStorage.removeItem('orchids_auth_token');
+          sessionStorage.removeItem('orchids_slot_id');
           return;
         } else if (payment.status === "failed" || payment.status === "canceled") {
           console.log("❌ [PAYMENT] Payment failed or canceled");
@@ -71,6 +96,8 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
           setIsCheckingPayment(false);
           setPaymentError("Платёж не прошел. Пожалуйста, попробуйте снова.");
           localStorage.removeItem("orchids_pending_payment_id");
+          sessionStorage.removeItem('orchids_auth_token');
+          sessionStorage.removeItem('orchids_slot_id');
           return;
         }
         // Если pending - продолжаем polling
@@ -86,7 +113,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         setPaymentError("Не удалось подтвердить платёж. Пожалуйста, проверьте статус вручную.");
         // Не удаляем paymentId - может понадобиться для ручной проверки
       }
-    }, 2000); // Проверяем каждые 2 секунды
+    }, 1500); // Проверяем каждые 1.5 секунды (быстрее для лучшего UX)
     
     // Возвращаем функцию очистки для предотвращения memory leak
     return () => clearInterval(pollInterval);
@@ -97,13 +124,22 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
     const params = new URLSearchParams(window.location.search);
     const paymentIdFromUrl = params.get("payment_id");
 
+    // 🔐 ВОССТАНАВЛИВАЕМ authToken из sessionStorage если его нет
+    let effectiveAuthToken = authToken;
+    if (!effectiveAuthToken && paymentIdFromUrl) {
+      const savedToken = sessionStorage.getItem('orchids_auth_token');
+      if (savedToken) {
+        console.log('🔐 [PAYMENT] Restored auth token from sessionStorage');
+        effectiveAuthToken = savedToken;
+      }
+    }
+
     // Проверяем статус платежа ТОЛЬКО если в URL есть payment_id (возврат с платежной страницы)
-    // НЕ проверяем localStorage - пользователь может просто открыть страницу бронирования
-    if (paymentIdFromUrl && authToken) {
+    if (paymentIdFromUrl && effectiveAuthToken) {
       console.log("💰 [PAYMENT] Payment return detected, checking status...");
       console.log("  From URL:", String(paymentIdFromUrl).replace(/[\r\n]/g, ""));
       
-      const cleanup = checkPaymentStatus(parseInt(paymentIdFromUrl));
+      const cleanup = checkPaymentStatus(parseInt(paymentIdFromUrl), effectiveAuthToken);
       
       // Очищаем URL от параметра payment_id
       const newUrl = new URL(window.location.href);
@@ -114,6 +150,10 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
       return () => {
         cleanup?.then(clearFn => clearFn?.());
       };
+    } else if (paymentIdFromUrl && !effectiveAuthToken) {
+      console.error("❌ [PAYMENT] Payment return detected but no auth token available!");
+      setPaymentError("Ошибка аутентификации. Пожалуйста, попробуйте снова.");
+      setStep("slots");
     } else {
       // Обычный вход в приложение - показываем список мероприятий
       setStep("slots");
@@ -168,6 +208,14 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
     try {
       setIsLoading(true);
       setPaymentError(null);
+
+      // 🎯 КРИТИЧНО: Сохраняем authToken в sessionStorage ПЕРЕД редиректом
+      // Это позволит восстановить аутентификацию после возврата с ЮКассы
+      if (authToken) {
+        sessionStorage.setItem('orchids_auth_token', authToken);
+        sessionStorage.setItem('orchids_slot_id', selectedSlot.id.toString());
+        console.log('💾 [PAYMENT] Saved auth token to sessionStorage');
+      }
 
       // 🎯 ВАЖНО: Явно указываем returnUrl на свой домен
       // ЮКасса будет редиректить на этот URL после оплаты
