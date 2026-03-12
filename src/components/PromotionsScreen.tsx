@@ -128,14 +128,14 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
     let isMounted = true;
 
     async function init() {
-      // Проверяем наличие платежа в URL или localStorage
+      // Проверяем наличие платежа ТОЛЬКО в URL (это означает возврат с платежной страницы)
+      // НЕ проверяем localStorage - пользователь может просто открыть экран "Акции"
       const urlParams = new URLSearchParams(window.location.search);
       const paymentIdFromUrl = urlParams.get("payment_id");
-      const paymentIdFromStorage = localStorage.getItem("orchids_pending_payment_id");
-      const pendingPaymentId = paymentIdFromUrl || paymentIdFromStorage;
 
-      if (pendingPaymentId && authToken) {
-        await checkPaymentStatus(parseInt(pendingPaymentId));
+      if (paymentIdFromUrl && authToken) {
+        console.log("💳 [PROMOTIONS] Payment return detected, checking status...");
+        await checkPaymentStatus(parseInt(paymentIdFromUrl));
       }
 
       // Загружаем акции
