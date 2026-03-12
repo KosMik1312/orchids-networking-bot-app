@@ -219,7 +219,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             className="flex-1 flex flex-col px-6 pb-32"
           >
             {/* Location & Settings */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
@@ -232,7 +232,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Dining Image */}
-            <div className="rounded-[24px] overflow-hidden shadow-lg h-[160px] mb-6">
+            <div className="rounded-[24px] overflow-hidden shadow-lg h-[140px] mb-4">
               <img
                 src="/images/dining.png"
                 alt="Dining"
@@ -241,7 +241,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Title */}
-            <h2 className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+            <h2 className="text-[#E15859] text-[26px] font-black uppercase text-center tracking-tight leading-none mb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
               {t.title}
             </h2>
 
@@ -258,14 +258,14 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                   <button
                     key={slot.id}
                     onClick={() => handleSlotSelect(slot)}
-                    className="w-full flex items-center justify-between px-6 py-5 rounded-[20px] bg-white shadow-sm hover:shadow-md transition-all"
+                    className="w-full flex items-center justify-between px-5 py-4 rounded-[18px] bg-white shadow-sm hover:shadow-md transition-all"
                   >
                     <div className="text-left">
-                      <p className="text-[#404243] text-[17px] font-semibold">{slot.date}, {slot.time}</p>
-                      <p className="text-[#8E8E93] text-[13px] mt-0.5">{slot.address}</p>
+                      <p className="text-[#404243] text-[16px] font-semibold">{slot.date}, {slot.time}</p>
+                      <p className="text-[#8E8E93] text-[12px] mt-0">{slot.address}</p>
                     </div>
-                    <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
-                      <ChevronRight className="text-white" size={24} />
+                    <div className="w-11 h-11 bg-[#E15859] rounded-full flex items-center justify-center flex-shrink-0">
+                      <ChevronRight className="text-white" size={22} />
                     </div>
                   </button>
                 ))
@@ -275,7 +275,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             {/* Promo Button */}
             <button
               onClick={onPromotions}
-              className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-6"
+              className="w-full py-3 rounded-[20px] bg-[#E15859] text-white text-[16px] font-semibold mt-4"
             >
               {t.promotionsButton}
             </button>
@@ -283,7 +283,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             {/* Contacts Button */}
             <button
               onClick={onContacts}
-              className="w-full py-4 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold mt-3"
+              className="w-full py-3 rounded-[20px] bg-[#E15859] text-white text-[16px] font-semibold mt-2"
             >
               {t.contactsButton}
             </button>
@@ -300,7 +300,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             className="flex-1 flex flex-col px-6"
           >
             {/* Location & Settings (dimmed) */}
-            <div className="flex justify-between items-center mb-6 opacity-50">
+            <div className="flex justify-between items-center mb-3 opacity-50">
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
@@ -313,7 +313,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Dining Image with overlay */}
-            <div className="rounded-[24px] overflow-hidden shadow-lg h-[180px] mb-0 relative">
+            <div className="rounded-[24px] overflow-hidden shadow-lg h-[160px] mb-0 relative">
               <img
                 src="/images/dining.png"
                 alt="Dining"
@@ -322,57 +322,57 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Payment Card */}
-            <div className="bg-white rounded-t-[32px] -mt-6 px-6 py-6 flex-1 relative z-10">
+            <div className="bg-white rounded-t-[32px] -mt-6 px-5 py-4 flex-1 relative z-10">
               {/* Date & Time */}
-              <div className="border-b border-gray-100 pb-3 mb-3">
-                <p className="text-[#404243] text-[13px] font-medium">{t.payment.date}</p>
-                <p className="text-[#E15859] text-[18px] font-bold mt-0.5">{selectedSlot?.date || "07.11.25"}, {selectedSlot?.time || "18:00"}</p>
+              <div className="border-b border-gray-100 pb-2 mb-2">
+                <p className="text-[#404243] text-[12px] font-medium">{t.payment.date}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{selectedSlot?.date || "07.11.25"}, {selectedSlot?.time || "18:00"}</p>
               </div>
 
               {/* Location */}
-              <div className="border-b border-gray-100 pb-3 mb-3">
-                <p className="text-[#404243] text-[13px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[18px] font-bold mt-0.5 line-clamp-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
+              <div className="border-b border-gray-100 pb-2 mb-2">
+                <p className="text-[#404243] text-[12px] font-medium">{t.payment.location}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5 line-clamp-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
               </div>
 
               {/* Promo Code */}
-              <div className="border-b border-gray-100 pb-3 mb-3">
+              <div className="border-b border-gray-100 pb-2 mb-2">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder={t.payment.promoPlaceholder}
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
-                    className="flex-1 bg-white border border-[#E0E0E0] rounded-full px-4 py-3 text-[14px] focus:outline-none focus:border-[#E15859]"
+                    className="flex-1 bg-white border border-[#E0E0E0] rounded-full px-4 py-2 text-[13px] focus:outline-none focus:border-[#E15859]"
                   />
-                  <button className="w-16 bg-[#E15859] rounded-[14px] flex items-center justify-center">
-                    <Check className="text-white" size={20} />
+                  <button className="w-14 h-[38px] bg-[#E15859] rounded-[14px] flex items-center justify-center">
+                    <Check className="text-white" size={18} />
                   </button>
                 </div>
               </div>
 
               {/* Total */}
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[#404243] text-[15px] font-medium">{t.payment.total}</span>
-                <span className="text-[#2A2021] text-[20px] font-bold">{selectedSlot?.price || 10} ₽</span>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[#404243] text-[14px] font-medium">{t.payment.total}</span>
+                <span className="text-[#2A2021] text-[18px] font-bold">{selectedSlot?.price || 10} ₽</span>
               </div>
 
               {/* Info Text */}
-              <p className="text-[10px] text-[#404243] leading-[1.3] mb-4 opacity-70">
+              <p className="text-[9px] text-[#404243] leading-[1.3] mb-3 opacity-70">
                 {t.payment.refundPolicy}
               </p>
 
               {/* Offer Checkbox */}
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <button
                   onClick={() => setAcceptedOffer(!acceptedOffer)}
-                  className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${acceptedOffer ? "bg-[#E15859] border-[#E15859]" : "border-[#D1D1D1]"}`}
+                  className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all ${acceptedOffer ? "bg-[#E15859] border-[#E15859]" : "border-[#D1D1D1]"}`}
                 >
-                  {acceptedOffer && <Check className="text-white" size={14} strokeWidth={3} />}
+                  {acceptedOffer && <Check className="text-white" size={13} strokeWidth={3} />}
                 </button>
                 <button
                   onClick={onOffer}
-                  className="text-[#404243] text-[13px] underline text-left"
+                  className="text-[#404243] text-[12px] underline text-left"
                 >
                   {t.payment.acceptOffer}
                 </button>
@@ -385,16 +385,16 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="mb-4 p-4 rounded-[16px] bg-[#E15859]/10 border border-[#E15859]/20 flex items-start gap-3"
+                    className="mb-3 p-3 rounded-[16px] bg-[#E15859]/10 border border-[#E15859]/20 flex items-start gap-3"
                   >
-                    <AlertCircle className="text-[#E15859] flex-shrink-0 mt-0.5" size={18} />
+                    <AlertCircle className="text-[#E15859] flex-shrink-0 mt-0.5" size={16} />
                     <div className="flex-1">
-                      <p className="text-[#E15859] text-[13px] font-medium leading-[1.4]">
+                      <p className="text-[#E15859] text-[12px] font-medium leading-[1.4]">
                         {paymentError}
                       </p>
                       <button
                         onClick={() => setPaymentError(null)}
-                        className="text-[#E15859] text-[11px] font-bold uppercase mt-1 opacity-70"
+                        className="text-[#E15859] text-[10px] font-bold uppercase mt-0.5 opacity-70"
                       >
                         Закрыть
                       </button>
@@ -404,20 +404,12 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               </AnimatePresence>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
-                {/* Back Button */}
-                <button
-                  onClick={() => setStep("slots")}
-                  className="w-16 h-14 bg-[#FFF7EF] border border-[#E15859]/20 rounded-[20px] flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                >
-                  <ArrowLeft className="text-[#E15859]" size={24} />
-                </button>
-
+              <div className="flex flex-col gap-2">
                 {/* Pay Button */}
                 <button
                   disabled={!acceptedOffer || isLoading}
                   onClick={handlePayment}
-                  className={`flex-1 py-4 rounded-[20px] text-[17px] font-semibold transition-all active:scale-[0.98] shadow-sm ${acceptedOffer && !isLoading ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
+                  className={`w-full py-3 rounded-[20px] text-[16px] font-semibold transition-all active:scale-[0.98] shadow-sm ${acceptedOffer && !isLoading ? "bg-[#E15859] text-white" : "bg-[#E15859]/40 text-white/60 cursor-not-allowed"
                     }`}
                 >
                   {isLoading ? (
@@ -425,11 +417,19 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                       />
                       <span>Подождите...</span>
                     </div>
                   ) : t.payment.payButton}
+                </button>
+
+                {/* Back Button */}
+                <button
+                  onClick={() => setStep("slots")}
+                  className="w-full py-3 rounded-[20px] bg-[#FFF7EF] border-2 border-[#E15859]/20 text-[#E15859] font-semibold text-[16px] transition-all active:scale-95 shadow-sm"
+                >
+                  {t.payment.backButton || "Назад"}
                 </button>
               </div>
             </div>
@@ -445,7 +445,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             className="flex-1 flex flex-col px-6 pb-32"
           >
             {/* Location & Settings (dimmed) */}
-            <div className="flex justify-between items-center mb-6 opacity-50">
+            <div className="flex justify-between items-center mb-3 opacity-50">
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <div className="w-12 h-12 bg-[#E15859] rounded-full flex items-center justify-center">
                   <MapPin className="text-white" size={22} fill="white" />
@@ -458,7 +458,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Dining Image */}
-            <div className="rounded-[24px] overflow-hidden shadow-lg h-[180px] mb-6">
+            <div className="rounded-[24px] overflow-hidden shadow-lg h-[160px] mb-4">
               <img
                 src="/images/dining.png"
                 alt="Dining"
@@ -467,38 +467,38 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
             </div>
 
             {/* Title */}
-            <h2 className="text-[#BDBDBD] text-[28px] font-black uppercase text-center tracking-tight leading-none mb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+            <h2 className="text-[#BDBDBD] text-[26px] font-black uppercase text-center tracking-tight leading-none mb-3" style={{ fontFamily: "system-ui, sans-serif" }}>
               {t.success.titleGray}
             </h2>
 
             {/* Success Card */}
-            <div className="bg-white rounded-[24px] px-6 py-8 flex-1">
-              <h3 className="text-[#E15859] text-[26px] font-black uppercase text-center tracking-tight mb-6">
+            <div className="bg-white rounded-[24px] px-5 py-5 flex-1">
+              <h3 className="text-[#E15859] text-[24px] font-black uppercase text-center tracking-tight mb-4">
                 {t.success.successTitle}
               </h3>
 
               {/* Date */}
-              <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">{t.payment.date}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">{selectedSlot?.date || "07.11.25"}</p>
+              <div className="border-b border-gray-100 pb-2 mb-2">
+                <p className="text-[#404243] text-[12px] font-medium">{t.payment.date}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{selectedSlot?.date || "07.11.25"}</p>
               </div>
 
               {/* Location */}
-              <div className="border-b border-gray-100 pb-4 mb-4">
-                <p className="text-[#404243] text-[15px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "-"}</p>
+              <div className="border-b border-gray-100 pb-2 mb-2">
+                <p className="text-[#404243] text-[12px] font-medium">{t.payment.location}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "-"}</p>
               </div>
 
               {/* Time */}
-              <div className="border-b border-gray-100 pb-4 mb-6">
-                <p className="text-[#404243] text-[15px] font-medium">{t.success.time}</p>
-                <p className="text-[#E15859] text-[20px] font-bold mt-1">{selectedSlot?.time || "18:00"}</p>
+              <div className="border-b border-gray-100 pb-2 mb-4">
+                <p className="text-[#404243] text-[12px] font-medium">{t.success.time}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{selectedSlot?.time || "18:00"}</p>
               </div>
 
               {/* Continue Button */}
               <button
                 onClick={handleContinue}
-                className="w-full py-5 rounded-[20px] bg-[#E15859] text-white text-[17px] font-semibold"
+                className="w-full py-3 rounded-[20px] bg-[#E15859] text-white text-[16px] font-semibold"
               >
                 {t.success.continueButton}
               </button>
