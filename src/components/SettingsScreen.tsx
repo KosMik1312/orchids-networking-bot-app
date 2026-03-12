@@ -121,21 +121,65 @@ export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, onEmailC
                   <button
                     disabled={isDeleting}
                     onClick={async () => {
+                      // ✅ 1. Валидация перед отправкой
+                      if (!userId) {
+                        console.error("❌ userId is undefined - cannot delete profile");
+                        alert("Ошибка: ID пользователя не найден. Попробуйте перезагрузить приложение.");
+                        return;
+                      }
+
+                      if (!authToken) {
+                        console.error("❌ authToken is undefined - cannot delete profile");
+                        alert("Ошибка: Не удалось аутентифицироваться. Попробуйте заново войти.");
+                        return;
+                      }
+
                       setIsDeleting(true);
+                      console.log("🗑️ [DELETE] Starting profile deletion for user:", userId);
+
                       try {
                         const { deleteProfile } = await import("@/lib/api");
-                        // Передаём userId и authToken для аутентификации
-                        const result = await deleteProfile(userId, authToken || undefined);
+                        
+                        console.log("📤 [DELETE] Sending DELETE request to /api/profile");
+                        console.log("📤 [DELETE] userId:", userId);
+                        console.log("📤 [DELETE] authToken present:", !!authToken);
+                        
+                        // ✅ 2. Отправляем запрос с валидными параметрами
+                        const result = await deleteProfile(userId, authToken);
+                        
+                        console.log("📡 [DELETE] Response:", result);
+                        
+                        // ✅ 3. Проверяем успешность ответа
                         if (result.success) {
-                          // Redirect to welcome or reload
-                          window.location.href = "/?screen=welcome";
+                          console.log("✅ [DELETE] Profile deleted successfully!");
+                          // Небольшая задержка перед редиректом для UI feedback
+                          setTimeout(() => {
+                            window.location.href = "/?screen=welcome";
+                          }, 500);
                         } else {
-                          alert("Ошибка при удалении аккаунта");
+                          console.error("❌ [DELETE] API returned unsuccessful result:", result);
+                          alert("Ошибка при удалении: сервер вернул некорректный ответ");
                           setIsDeleting(false);
                         }
-                      } catch (error) {
-                        console.error("Delete failed:", error);
-                        alert("Произошла ошибка при удалении");
+                      } catch (error: any) {
+                        console.error("❌ [DELETE] Error during profile deletion:");
+                        console.error("Error message:", error.message);
+                        console.error("Error details:", error);
+                        
+                        // ✅ 4. Информативная обработка разных типов ошибок
+                        let errorMessage = "Произошла ошибка при удалении аккаунта";
+                        
+                        if (error.message?.includes("401")) {
+                          errorMessage = "Ошибка аутентификации. Попробуйте заново войти.";
+                        } else if (error.message?.includes("404")) {
+                          errorMessage = "Профиль пользователя не найден.";
+                        } else if (error.message?.includes("500")) {
+                          errorMessage = "Ошибка сервера. Попробуйте позже.";
+                        } else if (error.message) {
+                          errorMessage = `Ошибка: ${error.message}`;
+                        }
+                        
+                        alert(errorMessage);
                         setIsDeleting(false);
                       }
                     }}

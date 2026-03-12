@@ -45,8 +45,8 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   // Функция для проверки статуса платежа с polling
-  const checkPaymentStatus = async (paymentId: string, maxRetries = 15) => {
-    console.log("🔍 [PAYMENT] Checking payment status:", paymentId);
+  const checkPaymentStatus = async (paymentId: number, maxRetries = 15) => {
+    console.log("🔍 [PAYMENT] Checking payment status:", String(paymentId).replace(/[\r\n]/g, ""));
     setIsCheckingPayment(true);
 
     let retries = 0;
@@ -54,8 +54,8 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
       retries++;
       
       try {
-        const payment = await getPaymentStatus(parseInt(paymentId), authToken);
-        console.log("💳 [PAYMENT] Status check result:", payment);
+        const payment = await getPaymentStatus(paymentId, authToken || undefined);
+        console.log("💳 [PAYMENT] Status check result:", payment?.status ? String(payment.status).replace(/[\r\n]/g, "") : "unknown");
 
         if (payment.status === "succeeded") {
           console.log("✅ [PAYMENT] Payment succeeded!");
@@ -75,7 +75,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         }
         // Если pending - продолжаем polling
       } catch (err) {
-        console.error("❌ [PAYMENT] Error checking payment status:", err);
+        console.error("❌ [PAYMENT] Error checking payment status:", err instanceof Error ? err.message : "unknown error");
       }
 
       // Если превышено количество попыток - останавливаем polling
@@ -87,30 +87,38 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         // Не удаляем paymentId - может понадобиться для ручной проверки
       }
     }, 2000); // Проверяем каждые 2 секунды
+    
+    // Возвращаем функцию очистки для предотвращения memory leak
+    return () => clearInterval(pollInterval);
   };
 
   useEffect(() => {
     // 🎯 ГЛАВНАЯ ЛОГИКА: Проверка после возврата с платёжной страницы
     const params = new URLSearchParams(window.location.search);
     const paymentIdFromUrl = params.get("payment_id");
-    const pendingPaymentId = localStorage.getItem("orchids_pending_payment_id");
 
-    // Если приходим с payment_id из URL или есть в localStorage - проверяем статус
-    if (paymentIdFromUrl || pendingPaymentId) {
-      const activePaymentId = paymentIdFromUrl || pendingPaymentId;
-      console.log("💰 [PAYMENT] Detected return from payment. Checking status...");
-      console.log("  From URL:", paymentIdFromUrl);
-      console.log("  From localStorage:", pendingPaymentId);
+    // Проверяем статус платежа ТОЛЬКО если в URL есть payment_id (возврат с платежной страницы)
+    // НЕ проверяем localStorage - пользователь может просто открыть страницу бронирования
+    if (paymentIdFromUrl && authToken) {
+      console.log("💰 [PAYMENT] Payment return detected, checking status...");
+      console.log("  From URL:", String(paymentIdFromUrl).replace(/[\r\n]/g, ""));
       
-      // Проверяем статус платежа
-      if (activePaymentId) {
-        checkPaymentStatus(activePaymentId);
-      }
+      const cleanup = checkPaymentStatus(parseInt(paymentIdFromUrl));
+      
+      // Очищаем URL от параметра payment_id
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("payment_id");
+      window.history.replaceState({}, "", newUrl.toString());
+      
+      // Возвращаем функцию очистки для остановки polling при размонтировании
+      return () => {
+        cleanup?.then(clearFn => clearFn?.());
+      };
     } else {
       // Обычный вход в приложение - показываем список мероприятий
       setStep("slots");
     }
-  }, [authToken]);
+  }, []);
   useEffect(() => {
     let isMounted = true;
     async function fetchSlots() {
@@ -175,7 +183,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
       if (paymentData.confirmationUrl && paymentData.paymentId) {
         // 🎯 КРИТИЧНО: Сохраняем paymentId в localStorage ПЕРЕД редиректом
         // Это гарантирует, что при возврате мы сможем проверить статус платежа
-        localStorage.setItem("orchids_pending_payment_id", paymentData.paymentId);
+        localStorage.setItem("orchids_pending_payment_id", String(paymentData.paymentId));
         localStorage.setItem("orchids_pending_payment_time", Date.now().toString());
         
         console.log("💾 [PAYMENT] Saved payment ID to localStorage:", paymentData.paymentId);
@@ -184,8 +192,13 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         // 🎯 ВАЖНО: Используем tg.WebApp.openLink() чтобы открыть Yookassa в браузере
         // Это избегает X-Frame-Options блокировки (Yookassa не грузится в фрейме)
         // initData сохранится в параметрах URL и будет доступен при возврате
-        if (window.Telegram?.WebApp?.openLink) {
-          window.Telegram.WebApp.openLink(paymentData.confirmationUrl);
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+          const tg = window.Telegram.WebApp as any;
+          if (typeof tg.openLink === 'function') {
+            tg.openLink(paymentData.confirmationUrl);
+          } else {
+            window.location.href = paymentData.confirmationUrl;
+          }
         } else {
           // Fallback для браузера (не в Telegram)
           window.location.href = paymentData.confirmationUrl;
