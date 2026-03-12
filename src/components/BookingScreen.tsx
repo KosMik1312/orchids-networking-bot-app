@@ -181,9 +181,15 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         console.log("💾 [PAYMENT] Saved payment ID to localStorage:", paymentData.paymentId);
         console.log("🚀 [PAYMENT] Redirecting to YooKassa:", paymentData.confirmationUrl);
 
-        // 🎯 ВАЖНО: Используем window.location.href вместо tg.WebApp.openLink()
-        // Это позволяет остаться в контексте WebApp и сохранить initData
-        window.location.href = paymentData.confirmationUrl;
+        // 🎯 ВАЖНО: Используем tg.WebApp.openLink() чтобы открыть Yookassa в браузере
+        // Это избегает X-Frame-Options блокировки (Yookassa не грузится в фрейме)
+        // initData сохранится в параметрах URL и будет доступен при возврате
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(paymentData.confirmationUrl);
+        } else {
+          // Fallback для браузера (не в Telegram)
+          window.location.href = paymentData.confirmationUrl;
+        }
       } else {
         console.log("❌ [PAYMENT] Invalid payment response");
         setPaymentError("Ошибка создания платежа. Пожалуйста, попробуйте снова.");

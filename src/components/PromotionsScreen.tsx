@@ -182,8 +182,12 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
       if (paymentResult.confirmationUrl) {
         // Сохраняем paymentId в localStorage перед редиректом
         localStorage.setItem("orchids_pending_payment_id", String(paymentResult.paymentId));
-        // Перенаправляем на страницу оплаты YooKassa
-        window.location.href = paymentResult.confirmationUrl;
+        // Открываем Yookassa в браузере (не в фрейме WebApp), чтобы избежать X-Frame-Options блокировки
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(paymentResult.confirmationUrl);
+        } else {
+          window.location.href = paymentResult.confirmationUrl;
+        }
       }
     } catch (err: any) {
       console.error("Payment error:", err);
