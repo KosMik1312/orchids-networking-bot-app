@@ -8,7 +8,7 @@ async function adminFetch<T>(path: string, initData: string, options?: RequestIn
       'Content-Type': 'application/json',
       ...(options?.headers || {}),
     },
-    body: JSON.stringify({
+    body: options?.method === 'DELETE' ? JSON.stringify({ initData }) : JSON.stringify({
       ...(options?.body ? JSON.parse(options.body as string) : {}),
       initData,
     }),
@@ -213,6 +213,22 @@ export async function updateAdminPromotion(initData: string, promotionId: number
 
 export async function deleteAdminPromotion(initData: string, promotionId: number) {
   return adminFetch(`/api/admin/promotions/${promotionId}/delete`, initData);
+}
+
+export async function checkDeleteSlot(initData: string, slotId: number): Promise<{ can_delete: boolean; active_bookings: number; paid_payments: number }> {
+  return adminFetch(`/api/admin/slots/${slotId}/check-delete`, initData);
+}
+
+export async function deleteSlot(initData: string, slotId: number) {
+  return adminFetch(`/api/admin/slots/${slotId}`, initData, { method: 'DELETE' });
+}
+
+export async function checkDeletePromotion(initData: string, promotionId: number): Promise<{ can_delete: boolean; total_purchases: number }> {
+  return adminFetch(`/api/admin/promotions/${promotionId}/check-delete`, initData);
+}
+
+export async function deletePromotionHard(initData: string, promotionId: number) {
+  return adminFetch(`/api/admin/promotions/${promotionId}`, initData, { method: 'DELETE' });
 }
 
 // Платежи

@@ -804,6 +804,110 @@ async def admin_update_promotion(
     }
 
 
+@admin_router_api.post("/slots/{slot_id}/check-delete")
+async def admin_check_delete_slot(
+    slot_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Проверка возможности удаления слота."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from sqlalchemy import select, func
+    
+    # Подсчёт активных бронирований
+    bookings_count = await session.execute(
+        select(func.count(Booking.id))
+        .where(Booking.slot_id == slot_id)
+        .where(Booking.status == 'confirmed')
+    )
+    active_bookings = bookings_count.scalar_one()
+    
+    # Подсчёт оплаченных платежей
+    from db.models import Payment
+    payments_count = await session.execute(
+        select(func.count(Payment.id))
+        .where(Payment.slot_id == slot_id)
+        .where(Payment.status == 'succeeded')
+    )
+    paid_payments = payments_count.scalar_one()
+    
+    return {
+        "can_delete": True,
+        "active_bookings": active_bookings,
+        "paid_payments": paid_payments,
+    }
+
+
+@admin_router_api.delete("/slots/{slot_id}")
+async def admin_delete_slot(
+    slot_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+    force: bool = False,
+):
+    """Удаление слота."""
+    admin_id = await require_admin(request.initData, session)
+    
+    slot = await session.get(DinnerSlot, slot_id)
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    await session.delete(slot)
+    await session.commit()
+    
+    logger.info(f"Admin {admin_id} deleted slot {slot_id}")
+    return {"success": True}
+
+
+@admin_router_api.post("/promotions/{promotion_id}/check-delete")
+async def admin_check_delete_promotion(
+    promotion_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Проверка возможности удаления акции."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.models import PromotionPurchase
+    from sqlalchemy import select, func
+    
+    # Подсчёт покупок акции
+    purchases_count = await session.execute(
+        select(func.count(PromotionPurchase.id))
+        .where(PromotionPurchase.promotion_id == promotion_id)
+    )
+    total_purchases = purchases_count.scalar_one()
+    
+    return {
+        "can_delete": True,
+        "total_purchases": total_purchases,
+    }
+
+
+@admin_router_api.delete("/promotions/{promotion_id}")
+async def admin_delete_promotion_hard(
+    promotion_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+    force: bool = False,
+):
+    """Удаление акции."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.models import Promotion
+    
+    promo = await session.get(Promotion, promotion_id)
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    
+    await session.delete(promo)
+    await session.commit()
+    
+    logger.info(f"Admin {admin_id} deleted promotion {promotion_id}")
+    return {"success": True}
+
+
 @admin_router_api.post("/promotions/{promotion_id}/delete")
 async def admin_delete_promotion(
     promotion_id: int,

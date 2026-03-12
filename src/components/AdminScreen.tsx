@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Grid, CreditCard } from "lucide-react";
+import { ArrowLeft, Users, Calendar, UsersRound, Send, BarChart3, Plus, Trash2, ChevronRight, Check, X, RefreshCw, ChevronLeft, ChevronDown, ChevronUp, Grid, CreditCard, Edit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
   updateAdminSlot, getSlotParticipants, getAdminGroups, createAdminGroup,
   deleteAdminGroup, getGroupMembers, addGroupMembers, removeGroupMember,
   sendBroadcast, getAdminUserProfile, getAdminPromotions, createAdminPromotion,
-  updateAdminPromotion, deleteAdminPromotion,
+  updateAdminPromotion, deleteAdminPromotion, checkDeleteSlot, deleteSlot,
+  checkDeletePromotion, deletePromotionHard,
   type AdminStats, type AdminUser, type AdminSlot, type SlotParticipant,
   type AdminGroup, type GroupMember, type BroadcastResult, type AdminUserProfile,
   type AdminPromotion
@@ -225,6 +226,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
 
   const [promotions, setPromotions] = useState<AdminPromotion[]>([]);
   const [showPromoForm, setShowPromoForm] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<AdminPromotion | null>(null);
   const [promoForm, setPromoForm] = useState({
     title: "",
     description: "",
@@ -233,6 +235,8 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     quantity: "1",
     validity_days: "30"
   });
+
+  const [editingSlot, setEditingSlot] = useState<AdminSlot | null>(null);
 
   // Custom Dialog State
   const [dialog, setDialog] = useState<{
@@ -397,7 +401,12 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     if (!slotForm.date || !slotForm.time || !slotForm.city || !slotForm.restaurant || !slotForm.max_people || !slotForm.price) return;
     setLoading(true);
     try {
-      await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people), price: parseInt(slotForm.price) });
+      if (editingSlot) {
+        await updateAdminSlot(initData, editingSlot.id, { ...slotForm, max_people: parseInt(slotForm.max_people), price: parseInt(slotForm.price) });
+        setEditingSlot(null);
+      } else {
+        await createAdminSlot(initData, { ...slotForm, max_people: parseInt(slotForm.max_people), price: parseInt(slotForm.price) });
+      }
       setShowSlotForm(false);
       setSlotForm({ date: "", time: "", city: "Москва", restaurant: "", max_people: "", price: "10" });
       await loadSlots();
@@ -503,12 +512,22 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     if (!promoForm.title || !promoForm.price) return;
     setLoading(true);
     try {
-      await createAdminPromotion(initData, {
-        ...promoForm,
-        price: parseInt(promoForm.price),
-        quantity: parseInt(promoForm.quantity),
-        validity_days: parseInt(promoForm.validity_days)
-      });
+      if (editingPromo) {
+        await updateAdminPromotion(initData, editingPromo.id, {
+          ...promoForm,
+          price: parseInt(promoForm.price),
+          quantity: parseInt(promoForm.quantity),
+          validity_days: parseInt(promoForm.validity_days)
+        });
+        setEditingPromo(null);
+      } else {
+        await createAdminPromotion(initData, {
+          ...promoForm,
+          price: parseInt(promoForm.price),
+          quantity: parseInt(promoForm.quantity),
+          validity_days: parseInt(promoForm.validity_days)
+        });
+      }
       setShowPromoForm(false);
       setPromoForm({ title: "", description: "", target_audience: "", price: "", quantity: "1", validity_days: "30" });
       await loadAdminPromotions();
@@ -679,7 +698,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                 className="overflow-hidden mb-4"
               >
                 <div className={`${cardClass} border-2 border-[#E15859]/10 bg-white/50 backdrop-blur-sm flex flex-col gap-3`}>
-                  <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">Новое мероприятие</div>
+                  <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">{editingSlot ? "Редактирование мероприятия" : "Новое мероприятие"}</div>
 
                   <div className="relative">
                     <button
@@ -720,16 +739,25 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                   </div>
 
                   <button onClick={handleCreateSlot} disabled={loading} className={`${btnPrimary} mt-2 shadow-lg shadow-[#E15859]/20`}>
-                    {loading ? "Создание..." : "Создать мероприятие"}
+                    {loading ? "Сохранение..." : editingSlot ? "Сохранить изменения" : "Создать мероприятие"}
                   </button>
+                  {editingSlot && (
+                    <button onClick={() => {
+                      setEditingSlot(null);
+                      setSlotForm({ date: "", time: "", city: "Москва", restaurant: "", max_people: "", price: "10" });
+                      setShowSlotForm(false);
+                    }} className="py-2 text-sm text-gray-400 hover:text-[#E15859] transition-colors">
+                      Отменить редактирование
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}
 
             {slots.map(s => (
-              <button key={s.id} onClick={() => { setSelectedSlotId(s.id); setTab("slot_detail"); }} className={`${cardClass} w-full text-left`}>
-                <div className="flex justify-between items-start">
-                  <div>
+              <div key={s.id} className={`${cardClass} w-full`}>
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
                     <div className="font-medium text-[#404243]">{s.restaurant}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{s.date} {s.time} | {s.city}</div>
                   </div>
@@ -739,7 +767,49 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                     <div className={`w-2.5 h-2.5 rounded-full ${s.is_active ? "bg-green-400" : "bg-red-400"}`} />
                   </div>
                 </div>
-              </button>
+                <div className="flex gap-2">
+                  <button onClick={() => { setSelectedSlotId(s.id); setTab("slot_detail"); }} className="flex-1 py-2 px-3 rounded-xl bg-gray-50 text-[#404243] text-xs font-medium hover:bg-gray-100 transition-colors">
+                    Участники
+                  </button>
+                  <button onClick={() => {
+                    setEditingSlot(s);
+                    setSlotForm({
+                      date: s.date,
+                      time: s.time,
+                      city: s.city,
+                      restaurant: s.restaurant,
+                      max_people: s.max_people.toString(),
+                      price: s.price.toString()
+                    });
+                    setShowSlotForm(true);
+                  }} className="py-2 px-3 rounded-xl bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors flex items-center gap-1">
+                    <Edit size={14} /> Изменить
+                  </button>
+                  <button onClick={async () => {
+                    try {
+                      const check = await checkDeleteSlot(initData, s.id);
+                      const hasData = check.active_bookings > 0 || check.paid_payments > 0;
+                      openConfirm(
+                        "Удаление мероприятия",
+                        hasData 
+                          ? `⚠️ У этого мероприятия есть ${check.active_bookings} активных бронирований и ${check.paid_payments} оплаченных платежей. Вы уверены, что хотите удалить?`
+                          : "Вы уверены, что хотите удалить это мероприятие?",
+                        async () => {
+                          try {
+                            await deleteSlot(initData, s.id);
+                            await loadSlots();
+                          } catch (e: any) { setError(e.message); }
+                        }
+                      );
+                    } catch (e: any) { setError(e.message); }
+                  }} className="py-2 px-3 rounded-xl bg-red-50 text-red-500 text-xs font-medium hover:bg-red-100 transition-colors flex items-center gap-1">
+                    <Trash2 size={14} /> Удалить
+                  </button>
+                  <button onClick={() => handleToggleSlotActive(s)} className={`py-2 px-3 rounded-xl text-xs font-medium transition-colors ${s.is_active ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                    {s.is_active ? "Деактивировать" : "Активировать"}
+                  </button>
+                </div>
+              </div>
             ))}
           </>
         )}
@@ -1031,7 +1101,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               className="overflow-hidden mb-4"
             >
               <div className={`${cardClass} border-2 border-[#E15859]/10 bg-white/50 backdrop-blur-sm flex flex-col gap-3`}>
-                <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">Новая акция</div>
+                <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">{editingPromo ? "Редактирование акции" : "Новая акция"}</div>
                 <input placeholder="Название (например: Подписка для пар)" value={promoForm.title} onChange={e => setPromoForm(p => ({ ...p, title: e.target.value }))} className={inputClass} />
                 <textarea placeholder="Описание" value={promoForm.description} onChange={e => setPromoForm(p => ({ ...p, description: e.target.value }))} className={`${inputClass} resize-none`} rows={3} />
                 <input placeholder="Для кого (целевая аудитория)" value={promoForm.target_audience} onChange={e => setPromoForm(p => ({ ...p, target_audience: e.target.value }))} className={inputClass} />
@@ -1052,8 +1122,17 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                 </div>
 
                 <button onClick={handleCreatePromotion} disabled={loading} className={`${btnPrimary} mt-2 shadow-lg shadow-[#E15859]/20`}>
-                  {loading ? "Создание..." : "Создать акцию"}
+                  {loading ? "Сохранение..." : editingPromo ? "Сохранить изменения" : "Создать акцию"}
                 </button>
+                {editingPromo && (
+                  <button onClick={() => {
+                    setEditingPromo(null);
+                    setPromoForm({ title: "", description: "", target_audience: "", price: "", quantity: "1", validity_days: "30" });
+                    setShowPromoForm(false);
+                  }} className="py-2 text-sm text-gray-400 hover:text-[#E15859] transition-colors">
+                    Отменить редактирование
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -1084,10 +1163,51 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-[11px] text-gray-400">
                   <span className="flex items-center gap-1"><UsersRound size={12} /> {p.quantity} визитов</span>
                   <span className="flex items-center gap-1"><Calendar size={12} /> {p.validity_days} дн.</span>
-                  <div className="flex-1" />
+                </div>
+                
+                <div className="flex gap-2 mt-2">
+                  <button 
+                    onClick={() => {
+                      setEditingPromo(p);
+                      setPromoForm({
+                        title: p.title,
+                        description: p.description,
+                        target_audience: p.target_audience || "",
+                        price: p.price.toString(),
+                        quantity: p.quantity.toString(),
+                        validity_days: p.validity_days.toString()
+                      });
+                      setShowPromoForm(true);
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-lg font-medium transition-colors bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center gap-1"
+                  >
+                    <Edit size={12} /> Изменить
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const check = await checkDeletePromotion(initData, p.id);
+                        openConfirm(
+                          "Удаление акции",
+                          check.total_purchases > 0
+                            ? `⚠️ Эту акцию купили ${check.total_purchases} раз. Вы уверены, что хотите удалить?`
+                            : "Вы уверены, что хотите удалить эту акцию?",
+                          async () => {
+                            try {
+                              await deletePromotionHard(initData, p.id);
+                              await loadAdminPromotions();
+                            } catch (e: any) { setError(e.message); }
+                          }
+                        );
+                      } catch (e: any) { setError(e.message); }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-lg font-medium transition-colors bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center gap-1"
+                  >
+                    <Trash2 size={12} /> Удалить
+                  </button>
                   <button 
                     onClick={() => handleTogglePromoActive(p)}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${p.is_active ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                    className={`flex-1 px-3 py-1.5 rounded-lg font-medium transition-colors ${p.is_active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
                   >
                     {p.is_active ? 'Деактивировать' : 'Активировать'}
                   </button>
