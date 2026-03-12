@@ -1,44 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ru } from "@/lib/i18n";
-
-interface Promotion {
-  id: number;
-  title: string;
-  shortText: string;
-  fullText: string;
-  price: string;
-}
+import { getPromotions, createPayment, type Promotion } from "@/lib/api";
 
 interface PromotionsScreenProps {
+  authToken?: string | null;
   onBack?: () => void;
+  onBuy?: (promotionId: number) => void;
 }
-
-const promotions: Promotion[] = [
-  {
-    id: 1,
-    title: "Ужин в подарок",
-    shortText: "Получите бесплатный ужин при бронировании столика на 4 персоны...",
-    fullText: "Получите бесплатный ужин при бронировании столика на 4 персоны. Акция действует в выходные дни. Насладитесь изысканной кухней в компании друзей!",
-    price: "Бесплатно",
-  },
-  {
-    id: 2,
-    title: "Скидка на день рождения",
-    shortText: "Празднуйте с нами! Скидка 20% для именинников...",
-    fullText: "Празднуйте с нами! Скидка 20% для именинников действует в течение недели до и после вашего дня рождения. Предъявите паспорт для получения скидки.",
-    price: "-20%",
-  },
-  {
-    id: 3,
-    title: "Романтический вечер",
-    shortText: "Специальное предложение для пар: сет из 3 блюд и бутылка вина...",
-    fullText: "Специальное предложение для пар: сет из 3 блюд и бутылка вина по специальной цене. Проведите незабываемый вечер в романтической обстановке.",
-    price: "5000 ₽",
-  },
-];
 
 function DiscountBadge() {
   return (
@@ -48,8 +19,12 @@ function DiscountBadge() {
   );
 }
 
-function PromotionCard({ promo }: { promo: Promotion }) {
+function PromotionCard({ promo, onBuy, isBuying }: { promo: Promotion; onBuy?: (id: number) => void; isBuying: boolean }) {
   const [expanded, setExpanded] = useState(false);
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString("ru-RU") + " ₽";
+  };
 
   return (
     <div className="bg-white rounded-[20px] px-6 py-6 shadow-sm">
@@ -58,27 +33,108 @@ function PromotionCard({ promo }: { promo: Promotion }) {
         <DiscountBadge />
       </div>
 
-      <p className="text-[#404243] text-[14px] leading-relaxed mb-4">
-        {expanded ? promo.fullText : promo.shortText}{" "}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-[#E15859] font-medium"
-        >
-          {expanded ? ru.promotions.collapse : ru.promotions.expand}
-        </button>
+      <p className="text-[#404243] text-[14px] leading-relaxed mb-2">
+        {expanded ? promo.description : promo.description.length > 100 ? promo.description.slice(0, 100) + "..." : promo.description}
+        {promo.description.length > 100 && (
+          <>
+            {" "}
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-[#E15859] font-medium"
+            >
+              {expanded ? ru.promotions.collapse : ru.promotions.expand}
+            </button>
+          </>
+        )}
       </p>
 
+      {promo.target_audience && (
+        <p className="text-[#8E8E93] text-[13px] mb-1">
+          <span className="font-semibold text-[#404243]">Для кого: </span>
+          {promo.target_audience}
+        </p>
+      )}
+
+      <div className="flex gap-2 text-[12px] text-[#8E8E93] mb-4">
+        <span className="bg-[#FDEEEE] text-[#E15859] px-2 py-0.5 rounded-full font-medium">
+          {promo.quantity} {promo.quantity === 1 ? "посещение" : promo.quantity < 5 ? "посещения" : "посещений"}
+        </span>
+        <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+          {promo.validity_days} дней
+        </span>
+      </div>
+
       <div className="flex items-center gap-4">
-        <button className="bg-[#E15859] text-white text-[15px] font-semibold px-8 py-3 rounded-[14px]">
-          {ru.promotions.buyButton}
+        <button
+          className="bg-[#E15859] text-white text-[15px] font-semibold px-8 py-3 rounded-[14px] disabled:opacity-50"
+          onClick={() => onBuy?.(promo.id)}
+          disabled={isBuying}
+        >
+          {isBuying ? "Загрузка..." : ru.promotions.buyButton}
         </button>
-        <span className="text-[#2A2021] text-[16px] font-semibold">{promo.price}</span>
+        <span className="text-[#2A2021] text-[16px] font-semibold">{formatPrice(promo.price)}</span>
       </div>
     </div>
   );
 }
 
-export function PromotionsScreen({ onBack }: PromotionsScreenProps) {
+export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenProps) {
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [buyingId, setBuyingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchPromotions() {
+      try {
+        setIsLoading(true);
+        const data = await getPromotions();
+        if (isMounted) {
+          setPromotions(data.promotions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promotions:", err);
+        if (isMounted) setError("Не удалось загрузить акции");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    fetchPromotions();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleBuy = async (promotionId: number) => {
+    if (!authToken) return;
+    setBuyingId(promotionId);
+    setError(null);
+
+    try {
+      const promo = promotions.find((p) => p.id === promotionId);
+      if (!promo) return;
+
+      const returnUrl = window.location.href;
+      const paymentResult = await createPayment(
+        {
+          amount: String(promo.price),
+          promotionId: promotionId,
+          returnUrl,
+        },
+        authToken
+      );
+
+      if (paymentResult.confirmationUrl) {
+        // Перенаправляем на страницу оплаты YooKassa
+        window.location.href = paymentResult.confirmationUrl;
+      }
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      setError(err.message || "Ошибка при создании платежа");
+    } finally {
+      setBuyingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
       {/* Title */}
@@ -89,19 +145,42 @@ export function PromotionsScreen({ onBack }: PromotionsScreenProps) {
         {ru.promotions.title}
       </h2>
 
-      {/* Promotions List */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
-        {promotions.map((promo) => (
-          <motion.div
-            key={promo.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: promo.id * 0.08 }}
-          >
-            <PromotionCard promo={promo} />
-          </motion.div>
-        ))}
-      </div>
+      {/* Error */}
+      {error && (
+        <div className="mx-6 mb-4 bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[#8E8E93] text-[16px]">Загрузка...</p>
+        </div>
+      ) : promotions.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center px-6">
+          <p className="text-[#8E8E93] text-[16px] text-center">
+            Пока нет активных акций и предложений
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
+          {promotions.map((promo, index) => (
+            <motion.div
+              key={promo.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08 }}
+            >
+              <PromotionCard
+                promo={promo}
+                onBuy={handleBuy}
+                isBuying={buyingId === promo.id}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Back Button */}
       <div className="px-6 pb-10 pt-2">

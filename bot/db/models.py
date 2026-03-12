@@ -148,3 +148,42 @@ class UserGroup(Base):
     __table_args__ = (
         Index('ix_user_groups_unique', 'user_id', 'group_id', unique=True),
     )
+
+
+class Promotion(Base):
+    """Акция / специальное предложение (пакет мероприятий)."""
+    __tablename__ = 'promotions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String, nullable=False)              # "Подписка для пар"
+    description = Column(Text, nullable=False)           # Подробное описание
+    target_audience = Column(String, nullable=True)      # "Пары, близкие друзья, коллеги"
+    price = Column(Integer, nullable=False)              # Стоимость в рублях
+    quantity = Column(Integer, nullable=False, default=1) # Кол-во посещений в пакете
+    validity_days = Column(Integer, nullable=False, default=30)  # Срок действия (дней)
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    purchases = relationship("PromotionPurchase", back_populates="promotion", cascade="all, delete-orphan")
+
+
+class PromotionPurchase(Base):
+    """Покупка акции пользователем."""
+    __tablename__ = 'promotion_purchases'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
+    promotion_id = Column(Integer, ForeignKey('promotions.id', ondelete="CASCADE"), nullable=False, index=True)
+    payment_id = Column(Integer, ForeignKey('payments.id', ondelete="SET NULL"), nullable=True)
+    status = Column(String, default='pending', index=True)  # pending, active, expired, used
+    purchased_at = Column(TIMESTAMP, server_default=func.now())
+    expires_at = Column(TIMESTAMP, nullable=True)
+    visits_remaining = Column(Integer, nullable=True)  # Оставшиеся посещения
+
+    user = relationship("User")
+    promotion = relationship("Promotion", back_populates="purchases")
+    payment = relationship("Payment")
+
+    __table_args__ = (
+        Index('ix_promotion_purchases_user_status', 'user_id', 'status'),
+    )

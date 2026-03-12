@@ -366,8 +366,8 @@ export interface PaymentResponse {
   status: string;
 }
 
-export async function createPayment(params: { amount: string; slotId: number; returnUrl: string }, authToken?: string): Promise<PaymentResponse> {
-  console.log(`[API] Creating payment for slot_id=${params.slotId}`);
+export async function createPayment(params: { amount: string; slotId?: number; promotionId?: number; returnUrl: string }, authToken?: string): Promise<PaymentResponse> {
+  console.log(`[API] Creating payment for slot_id=${params.slotId}, promotion_id=${params.promotionId}`);
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -383,7 +383,8 @@ export async function createPayment(params: { amount: string; slotId: number; re
     cache: 'no-store',
     body: JSON.stringify({
       amount: params.amount,
-      slotId: params.slotId,
+      slotId: params.slotId || null,
+      promotionId: params.promotionId || null,
       returnUrl: params.returnUrl,
     }),
   });
@@ -407,5 +408,28 @@ export async function getPaymentStatus(paymentId: number, authToken?: string): P
     body: JSON.stringify({ initData: authToken }), // Backend InitDataRequest model
   });
 
+  return handleResponse(response);
+}
+
+// Promotions API
+export interface Promotion {
+  id: number;
+  title: string;
+  description: string;
+  target_audience: string | null;
+  price: number;
+  quantity: number;
+  validity_days: number;
+}
+
+export async function getPromotions(): Promise<{ promotions: Promotion[] }> {
+  console.log(`[API] Getting promotions`);
+
+  const response = await fetch(`${API_BASE}/api/promotions`, {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  console.log(`[API] Promotions response status: ${response.status}`);
   return handleResponse(response);
 }

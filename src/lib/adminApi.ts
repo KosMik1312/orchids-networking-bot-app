@@ -185,3 +185,32 @@ export async function removeGroupMember(initData: string, groupId: number, userI
 export async function sendBroadcast(initData: string, data: { text: string; group_ids?: number[]; slot_id?: number; all_users?: boolean }): Promise<BroadcastResult> {
   return adminFetch('/api/admin/broadcast', initData, { method: 'POST', body: JSON.stringify(data) });
 }
+
+// Акции и предложения
+export interface AdminPromotion {
+  id: number;
+  title: string;
+  description: string;
+  target_audience: string | null;
+  price: number;
+  quantity: number;
+  validity_days: number;
+  is_active: boolean;
+  created_at: string | null;
+}
+
+export async function getAdminPromotions(initData: string): Promise<{ promotions: AdminPromotion[] }> {
+  return adminFetch('/api/admin/promotions', initData);
+}
+
+export async function createAdminPromotion(initData: string, data: { title: string; description: string; target_audience?: string; price: number; quantity?: number; validity_days?: number }) {
+  return adminFetch('/api/admin/promotions/create', initData, { body: JSON.stringify(data) });
+}
+
+export async function updateAdminPromotion(initData: string, promotionId: number, data: Partial<AdminPromotion>) {
+  return adminFetch(`/api/admin/promotions/${promotionId}`, initData, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteAdminPromotion(initData: string, promotionId: number) {
+  return adminFetch(`/api/admin/promotions/${promotionId}/delete`, initData);
+}

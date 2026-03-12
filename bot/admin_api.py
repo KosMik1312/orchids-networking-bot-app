@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.session import get_session
-from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo
+from db.repository import AdminRepo, GroupRepo, SlotRepo, BookingRepo, PromotionRepo
 from config import ADMIN_IDS, SECRET_KEY, BOT_TOKEN, AUTH_DISABLED
 from auth_token import validate_auth_header
 from logger import get_api_logger
@@ -65,6 +65,25 @@ class BroadcastRequest(InitDataRequest):
     group_ids: Optional[List[int]] = None
     slot_id: Optional[int] = None
     all_users: bool = False
+
+
+class PromotionCreateRequest(InitDataRequest):
+    title: str
+    description: str
+    target_audience: Optional[str] = None
+    price: int
+    quantity: int = 1
+    validity_days: int = 30
+
+
+class PromotionUpdateRequest(InitDataRequest):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    target_audience: Optional[str] = None
+    price: Optional[int] = None
+    quantity: Optional[int] = None
+    validity_days: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 async def require_admin(
@@ -523,3 +542,103 @@ async def admin_broadcast(
         "target_count": len(target_user_ids),
         "message": f"Рассылка запущена для {len(target_user_ids)} пользователей"
     }
+
+
+# ===== Акции и предложения =====
+
+@admin_router_api.post("/promotions")
+async def admin_promotions(request: InitDataRequest, session: AsyncSession = Depends(get_session)):
+    """Список всех акций (включая неактивные)."""
+    admin_id = await require_admin(request.initData, session)
+    repo = PromotionRepo(session)
+    promos = await repo.get_all_promotions()
+    return {
+        "promotions": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "description": p.description,
+                "target_audience": p.target_audience,
+                "price": p.price,
+                "quantity": p.quantity,
+                "validity_days": p.validity_days,
+                "is_active": p.is_active,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+            }
+            for p in promos
+        ]
+    }
+
+
+@admin_router_api.post("/promotions/create")
+async def admin_create_promotion(
+    request: PromotionCreateRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Создание акции."""
+    admin_id = await require_admin(request.initData, session)
+    repo = PromotionRepo(session)
+    promo = await repo.create_promotion(
+        title=request.title,
+        description=request.description,
+        price=request.price,
+        target_audience=request.target_audience,
+        quantity=request.quantity,
+        validity_days=request.validity_days,
+    )
+    logger.info(f"Admin {admin_id} created promotion '{promo.title}' (id={promo.id})")
+    return {
+        "id": promo.id,
+        "title": promo.title,
+        "description": promo.description,
+        "target_audience": promo.target_audience,
+        "price": promo.price,
+        "quantity": promo.quantity,
+        "validity_days": promo.validity_days,
+        "is_active": promo.is_active,
+    }
+
+
+@admin_router_api.patch("/promotions/{promotion_id}")
+async def admin_update_promotion(
+    promotion_id: int,
+    request: PromotionUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Обновление акции."""
+    admin_id = await require_admin(request.initData, session)
+    repo = PromotionRepo(session)
+    updates = request.model_dump(exclude_none=True)
+    updates.pop('initData', None)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    promo = await repo.update_promotion(promotion_id, **updates)
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    logger.info(f"Admin {admin_id} updated promotion {promotion_id}: {list(updates.keys())}")
+    return {
+        "id": promo.id,
+        "title": promo.title,
+        "description": promo.description,
+        "target_audience": promo.target_audience,
+        "price": promo.price,
+        "quantity": promo.quantity,
+        "validity_days": promo.validity_days,
+        "is_active": promo.is_active,
+    }
+
+
+@admin_router_api.post("/promotions/{promotion_id}/delete")
+async def admin_delete_promotion(
+    promotion_id: int,
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Деактивация акции (мягкое удаление)."""
+    admin_id = await require_admin(request.initData, session)
+    repo = PromotionRepo(session)
+    ok = await repo.delete_promotion(promotion_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    logger.info(f"Admin {admin_id} deactivated promotion {promotion_id}")
+    return {"success": True}

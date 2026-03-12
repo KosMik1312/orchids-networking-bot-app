@@ -7,13 +7,16 @@ import {
   checkAdmin, getAdminStats, getAdminUsers, getAdminSlots, createAdminSlot,
   updateAdminSlot, getSlotParticipants, getAdminGroups, createAdminGroup,
   deleteAdminGroup, getGroupMembers, addGroupMembers, removeGroupMember,
-  sendBroadcast, getAdminUserProfile,
+  sendBroadcast, getAdminUserProfile, getAdminPromotions, createAdminPromotion,
+  updateAdminPromotion, deleteAdminPromotion,
   type AdminStats, type AdminUser, type AdminSlot, type SlotParticipant,
-  type AdminGroup, type GroupMember, type BroadcastResult, type AdminUserProfile
+  type AdminGroup, type GroupMember, type BroadcastResult, type AdminUserProfile,
+  type AdminPromotion
 } from "@/lib/adminApi";
 import { AdminUserProfileScreen } from "./AdminUserProfileScreen";
+import { Tag } from "lucide-react";
 
-type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast" | "user_profile";
+type AdminTab = "dashboard" | "users" | "slots" | "slot_detail" | "groups" | "group_detail" | "broadcast" | "user_profile" | "promotions";
 
 interface AdminScreenProps {
   token: string;
@@ -219,6 +222,17 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [promotions, setPromotions] = useState<AdminPromotion[]>([]);
+  const [showPromoForm, setShowPromoForm] = useState(false);
+  const [promoForm, setPromoForm] = useState({
+    title: "",
+    description: "",
+    target_audience: "",
+    price: "",
+    quantity: "1",
+    validity_days: "30"
+  });
+
   // Custom Dialog State
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
@@ -321,6 +335,15 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     setLoading(false);
   }, [initData]);
 
+  const loadAdminPromotions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getAdminPromotions(initData);
+      setPromotions(res.promotions);
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
+  }, [initData]);
+
   useEffect(() => {
     if (authorized) loadStats();
   }, [authorized, loadStats]);
@@ -329,7 +352,8 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     if (tab === "users") loadUsers(0);
     if (tab === "slots") loadSlots();
     if (tab === "broadcast") loadSlots();
-  }, [tab, loadUsers, loadSlots]);
+    if (tab === "promotions") loadAdminPromotions();
+  }, [tab, loadUsers, loadSlots, loadAdminPromotions]);
 
   useEffect(() => {
     if (tab === "broadcast" && broadcastTarget === "groups" && broadcastSlotId) {
@@ -474,6 +498,34 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
     }
   };
 
+  const handleCreatePromotion = async () => {
+    if (!promoForm.title || !promoForm.price) return;
+    setLoading(true);
+    try {
+      await createAdminPromotion(initData, {
+        ...promoForm,
+        price: parseInt(promoForm.price),
+        quantity: parseInt(promoForm.quantity),
+        validity_days: parseInt(promoForm.validity_days)
+      });
+      setShowPromoForm(false);
+      setPromoForm({ title: "", description: "", target_audience: "", price: "", quantity: "1", validity_days: "30" });
+      await loadAdminPromotions();
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleTogglePromoActive = async (promo: AdminPromotion) => {
+    try {
+      if (promo.is_active) {
+        await deleteAdminPromotion(initData, promo.id);
+      } else {
+        await updateAdminPromotion(initData, promo.id, { is_active: true });
+      }
+      await loadAdminPromotions();
+    } catch (e: any) { setError(e.message); }
+  };
+
   const renderHeader = (title: string, backTo?: AdminTab) => (
     <div className="flex items-center gap-3 mb-4">
       <button onClick={() => backTo ? setTab(backTo) : undefined} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
@@ -531,6 +583,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               {[
                 { icon: Users, label: "Пользователи", t: "users" as AdminTab },
                 { icon: Calendar, label: "Мероприятия", t: "slots" as AdminTab },
+                { icon: Tag, label: "Акции и спецпредложения", t: "promotions" as AdminTab },
                 { icon: Send, label: "Рассылка", t: "broadcast" as AdminTab },
               ].map(({ icon: Icon, label, t }) => (
                 <button key={t} onClick={() => setTab(t)} className={`${cardClass} flex items-center gap-4 text-left`}>
@@ -959,6 +1012,89 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         )}
 
       </div>
+
+      {/* ===== АКЦИИ ===== */}
+      {tab === "promotions" && (
+        <>
+          {renderHeader("Акции и предложения", "dashboard")}
+          <button onClick={() => setShowPromoForm(!showPromoForm)} className={`${btnPrimary} mb-4 flex items-center justify-center gap-2`}>
+            <Plus size={18} /> Добавить акцию
+          </button>
+
+          {showPromoForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-4"
+            >
+              <div className={`${cardClass} border-2 border-[#E15859]/10 bg-white/50 backdrop-blur-sm flex flex-col gap-3`}>
+                <div className="text-xs font-bold text-[#E15859] uppercase tracking-wider mb-1">Новая акция</div>
+                <input placeholder="Название (например: Подписка для пар)" value={promoForm.title} onChange={e => setPromoForm(p => ({ ...p, title: e.target.value }))} className={inputClass} />
+                <textarea placeholder="Описание" value={promoForm.description} onChange={e => setPromoForm(p => ({ ...p, description: e.target.value }))} className={`${inputClass} resize-none`} rows={3} />
+                <input placeholder="Для кого (целевая аудитория)" value={promoForm.target_audience} onChange={e => setPromoForm(p => ({ ...p, target_audience: e.target.value }))} className={inputClass} />
+                
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <div className="text-[10px] text-gray-400 mb-1 ml-1">Цена (₽)</div>
+                    <input placeholder="7500" type="number" value={promoForm.price} onChange={e => setPromoForm(p => ({ ...p, price: e.target.value }))} className={inputClass} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[10px] text-gray-400 mb-1 ml-1">Посещений</div>
+                    <input placeholder="5" type="number" value={promoForm.quantity} onChange={e => setPromoForm(p => ({ ...p, quantity: e.target.value }))} className={inputClass} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[10px] text-gray-400 mb-1 ml-1">Срок (дней)</div>
+                    <input placeholder="60" type="number" value={promoForm.validity_days} onChange={e => setPromoForm(p => ({ ...p, validity_days: e.target.value }))} className={inputClass} />
+                  </div>
+                </div>
+
+                <button onClick={handleCreatePromotion} disabled={loading} className={`${btnPrimary} mt-2 shadow-lg shadow-[#E15859]/20`}>
+                  {loading ? "Создание..." : "Создать акцию"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {promotions.length === 0 && !loading && (
+            <div className="text-center py-10 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+              <Tag size={40} className="mx-auto text-gray-200 mb-2" />
+              <p className="text-gray-400 text-sm">Акций пока нет</p>
+            </div>
+          )}
+
+          <div className="space-y-3 pb-4">
+            {promotions.map(p => (
+              <div key={p.id} className={cardClass}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-bold text-[#404243]">{p.title}</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{p.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-[#E15859]">{p.price} ₽</div>
+                    <div className={`text-[10px] font-bold uppercase mt-1 ${p.is_active ? 'text-green-500' : 'text-gray-300'}`}>
+                      {p.is_active ? 'Активна' : 'Неактивна'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-[11px] text-gray-400">
+                  <span className="flex items-center gap-1"><UsersRound size={12} /> {p.quantity} визитов</span>
+                  <span className="flex items-center gap-1"><Calendar size={12} /> {p.validity_days} дн.</span>
+                  <div className="flex-1" />
+                  <button 
+                    onClick={() => handleTogglePromoActive(p)}
+                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${p.is_active ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                  >
+                    {p.is_active ? 'Деактивировать' : 'Активировать'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <AdminDialog
         isOpen={dialog.isOpen}

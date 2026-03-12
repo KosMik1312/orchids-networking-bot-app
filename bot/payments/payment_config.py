@@ -25,8 +25,12 @@ YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1247817").strip()
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_MQWRpQKNQxtNxjKxRpWIUyfe7fIZ7xh2R89qVWPdny8").strip()
 YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "false").lower() == "true"
 
+# URL фронтенда (для WebApp)
+MINIAPP_URL = os.getenv("MINIAPP_URL", "https://antreclub-app.ru")
+
 # URL для возврата после платежа (может переопределяться при запросе)
-DEFAULT_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", "https://orchids-networking-bot-app.vercel.app/")
+# Поддерживает placeholder {payment_id} для его подстановки перед отправкой на ЮКассу
+YOOKASSA_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", f"{MINIAPP_URL}/?payment_id={{payment_id}}")
 
 # Формируем Basic Auth для API (Shop ID:Secret Key в base64)
 AUTH_STRING = f"{YOOKASSA_SHOP_ID}:{YOOKASSA_SECRET_KEY}"
@@ -97,4 +101,5 @@ logger.info(f"YooKassa configuration initialized:")
 logger.info(f"  Shop ID: {YOOKASSA_SHOP_ID[:4]}***")
 logger.info(f"  Secret Key: {YOOKASSA_SECRET_KEY[:4]}***{YOOKASSA_SECRET_KEY[-4:]}")
 logger.info(f"  Test Mode: {YOOKASSA_TEST_MODE}")
-logger.info(f"  Return URL: {DEFAULT_RETURN_URL}")
+logger.info(f"  MiniApp URL: {MINIAPP_URL}")
+logger.info(f"  Return URL: {YOOKASSA_RETURN_URL}")

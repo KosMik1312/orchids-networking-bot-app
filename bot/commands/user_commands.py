@@ -1,3 +1,4 @@
+import asyncio
 from urllib.parse import urlencode
 
 from aiogram import Router
@@ -26,15 +27,26 @@ async def start_command(message: Message, state: FSMContext) -> None:
     # Больше не нужны токены! Telegram MiniApp автоматически передаст initData
     miniapp_url = MINIAPP_URL
     
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    # Первое сообщение с двумя кнопками
+    keyboard1 = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=i18n.get("btn_start", lang), web_app=WebAppInfo(url=miniapp_url))],
         [InlineKeyboardButton(text=i18n.get("btn_learn_more", lang), callback_data="learn_more")]
     ])
-    await message.answer(i18n.get("welcome_text", lang), reply_markup=keyboard)
+    await message.answer(i18n.get("welcome_text", lang), reply_markup=keyboard1)
+
+    # Задержка 4 секунды перед вторым сообщением
+    await asyncio.sleep(4)
+
+    # Второе сообщение только с кнопкой "Начать"
+    keyboard2 = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=i18n.get("btn_start", lang), web_app=WebAppInfo(url=miniapp_url))]
+    ])
+    await message.answer(i18n.get("welcome_text_2", lang), reply_markup=keyboard2)
+
 
 @user_router.callback_query(lambda c: c.data == "learn_more")
 async def learn_more(callback) -> None:
-    """Обработчик кнопки 'Узнать больше'"""
+    """Обработчик кнопки 'Узнать больше' - показывает второе приветственное сообщение"""
     lang = callback.from_user.language_code
 
     # initData передаётся автоматически через WebApp API
@@ -43,4 +55,4 @@ async def learn_more(callback) -> None:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=i18n.get("btn_start", lang), web_app=WebAppInfo(url=miniapp_url))]
     ])
-    await callback.message.answer(i18n.get("learn_more_text", lang), reply_markup=keyboard)
+    await callback.message.answer(i18n.get("welcome_text_2", lang), reply_markup=keyboard)

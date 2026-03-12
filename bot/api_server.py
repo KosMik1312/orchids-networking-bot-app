@@ -5,6 +5,7 @@ FastAPI сервер для Orchids Networking Bot.
 - Централизованным логированием
 - Валидацией webhook
 - Обработкой отмены платежа
+- APScheduler для проверки pending платежей
 """
 
 import os
@@ -12,6 +13,7 @@ import traceback
 import hashlib
 import hmac
 from typing import Optional, List
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,9 +21,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from db.session import init_db, get_session
-from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo
+from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo, PromotionRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME, SECRET_KEY, AUTH_DISABLED
@@ -35,6 +38,89 @@ from admin_api import admin_router_api
 # Логгер для API
 logger = get_api_logger()
 
+# Глобальный scheduler (инициализируется в lifespan)
+scheduler = None
+
+
+async def check_pending_payments():
+    """
+    🔄 Проверяет платежи со статусом 'pending' или 'created', которые старше 5 минут.
+    Если статус в ЮКассе 'succeeded', а бронирование не создано - создает его.
+    
+    Запускается каждые 5 минут.
+    """
+    logger.info("🔍 [SCHEDULER] Starting pending payments check...")
+    
+    try:
+        # Получаем БД сессию
+        from db.session import engine
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.orm import sessionmaker
+        
+        # Создаём сессию для scheduler'а
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        
+        async with async_session() as session:
+            payment_repo = PaymentRepo(session)
+            
+            # Получаем платежи старше 5 минут со статусом pending/created и без бронирования
+            pending_payments = await payment_repo.get_pending_payments(minutes=5)
+            
+            if not pending_payments:
+                logger.debug("✅ [SCHEDULER] No pending payments found")
+                return
+            
+            logger.warning(f"⚠️ [SCHEDULER] Found {len(pending_payments)} pending payments. Checking with YooKassa...")
+            
+            for payment in pending_payments:
+                try:
+                    logger.info(f"   📌 Checking payment {payment.id} (yookassa_id={payment.yookassa_payment_id})")
+                    
+                    # Проверяем статус в ЮКассе
+                    payment_service = PaymentService()
+                    yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
+                    
+                    logger.info(f"      YooKassa status: {yookassa_payment.get('status')}")
+                    
+                    # Если статус succeeded, но бронирования нет - создаём
+                    if yookassa_payment.get('status') == 'succeeded' and not payment.booking_id:
+                        logger.warning(f"   ⚠️ Payment {payment.id} succeeded but booking is missing! Creating booking...")
+                        
+                        # Обновляем статус платежа
+                        await payment_repo.update_payment_status(payment.id, 'succeeded')
+                        
+                        # Создаём бронирование
+                        booking_repo = BookingRepo(session)
+                        booking = await booking_repo.create_booking_after_payment(
+                            user_id=payment.user_id,
+                            slot_id=payment.slot_id,
+                            payment_id=payment.id
+                        )
+                        
+                        if booking:
+                            logger.info(f"   ✅ [SCHEDULER] Booking created for payment {payment.id}: booking_id={booking.id}")
+                        else:
+                            logger.error(f"   ❌ [SCHEDULER] Failed to create booking for payment {payment.id}")
+                    
+                    # Если статус failed/canceled - обновляем статус
+                    elif yookassa_payment.get('status') in ['failed', 'canceled']:
+                        logger.info(f"   ❌ [SCHEDULER] Payment {payment.id} is {yookassa_payment.get('status')} - updating status")
+                        await payment_repo.update_payment_status(payment.id, yookassa_payment.get('status'))
+                    
+                    else:
+                        logger.debug(f"   ℹ️ Payment {payment.id} status is {yookassa_payment.get('status')} - no action needed")
+                
+                except Exception as item_error:
+                    logger.error(f"   ❌ [SCHEDULER] Error checking payment {payment.id}: {item_error}")
+                    traceback.print_exc()
+                    continue
+            
+            logger.info("✅ [SCHEDULER] Pending payments check completed")
+    
+    except Exception as e:
+        logger.error(f"❌ [SCHEDULER] Error in check_pending_payments: {e}")
+        traceback.print_exc()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,8 +128,30 @@ async def lifespan(app: FastAPI):
     logger.info("Starting FastAPI server...")
     await init_db()
     logger.info("✅ Database initialized")
+    
+    # Запускаем APScheduler для проверки pending платежей
+    global scheduler
+    scheduler = AsyncIOScheduler()
+    
+    # Добавляем job для проверки платежей каждые 5 минут
+    scheduler.add_job(
+        check_pending_payments,
+        "interval",
+        minutes=5,
+        id="check_pending_payments",
+        name="Check pending payments from Yookassa",
+        replace_existing=True,
+        max_instances=1  # Только одна инстанция одновременно
+    )
+    
+    scheduler.start()
+    logger.info("✅ APScheduler started - pending payments check enabled (every 5 minutes)")
+    
     yield
+    
     # Shutdown
+    scheduler.shutdown(wait=False)
+    logger.info("✅ APScheduler shutdown")
     logger.info("Shutting down FastAPI server...")
 
 
@@ -147,7 +255,8 @@ class BookingRequest(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: str
-    slotId: int
+    slotId: Optional[int] = None
+    promotionId: Optional[int] = None
     returnUrl: str
 
 
@@ -348,6 +457,35 @@ async def get_slots_endpoint(city: Optional[str] = None, session: AsyncSession =
         return {"slots": slots_data}
     except Exception as e:
         logger.error(f"Ошибка получения слотов: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/promotions")
+async def get_promotions_endpoint(session: AsyncSession = Depends(get_session)):
+    """Получить активные акции и предложения (публичный)."""
+    try:
+        logger.info("📦 Getting active promotions")
+        promo_repo = PromotionRepo(session)
+        promos = await promo_repo.get_active_promotions()
+
+        promos_data = [
+            {
+                "id": p.id,
+                "title": p.title,
+                "description": p.description,
+                "target_audience": p.target_audience,
+                "price": p.price,
+                "quantity": p.quantity,
+                "validity_days": p.validity_days,
+            }
+            for p in promos
+        ]
+
+        logger.info(f"✅ Found {len(promos_data)} active promotions")
+        return {"promotions": promos_data}
+    except Exception as e:
+        logger.error(f"Get promotions error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -790,17 +928,32 @@ async def create_payment_endpoint(
         
         logger.info(f"💳 Creating payment: user={user_id}, amount={request.amount}")
         
-        # Получаем цену из базы данных для безопасности
-        slot = await session.get(DinnerSlot, request.slotId)
-        if not slot:
-            raise HTTPException(status_code=404, detail="Slot not found")
-        secure_amount = str(slot.price)
+        # Определяем цену из базы данных для безопасности
+        slot_id_for_payment = request.slotId
+        promotion_id_for_payment = request.promotionId
+
+        if promotion_id_for_payment:
+            # Оплата акции
+            from db.models import Promotion as PromotionModel
+            promo = await session.get(PromotionModel, promotion_id_for_payment)
+            if not promo or not promo.is_active:
+                raise HTTPException(status_code=404, detail="Promotion not found or inactive")
+            secure_amount = str(promo.price)
+            logger.info(f"💳 Promotion payment: promo_id={promotion_id_for_payment}, price={secure_amount}")
+        elif slot_id_for_payment:
+            # Оплата мероприятия (существующая логика)
+            slot = await session.get(DinnerSlot, slot_id_for_payment)
+            if not slot:
+                raise HTTPException(status_code=404, detail="Slot not found")
+            secure_amount = str(slot.price)
+        else:
+            raise HTTPException(status_code=400, detail="Either slotId or promotionId required")
 
         payment_service = PaymentService()
         payment_result = await payment_service.create_payment(
             user_id=user_id,
             amount=secure_amount,
-            slot_id=request.slotId,
+            slot_id=slot_id_for_payment or 0,
             return_url=request.returnUrl
         )
         
@@ -818,11 +971,22 @@ async def create_payment_endpoint(
             user_id=user_id,
             yookassa_payment_id=payment_result['payment_id'],
             amount=secure_amount,
-            slot_id=request.slotId,
+            slot_id=slot_id_for_payment,
             status='created'
         )
         
-        logger.info(f"Payment saved to DB: id={db_payment.id}, user={user_id}, slot={request.slotId}")
+        logger.info(f"Payment saved to DB: id={db_payment.id}, user={user_id}, slot={slot_id_for_payment}, promo={promotion_id_for_payment}")
+
+        # Если это оплата акции — создаём запись о покупке после успешного создания платежа
+        if promotion_id_for_payment:
+            promo_repo = PromotionRepo(session)
+            purchase = await promo_repo.create_purchase(
+                user_id=user_id,
+                promotion_id=promotion_id_for_payment,
+                payment_id=db_payment.id,
+            )
+            if purchase:
+                logger.info(f"✅ Promotion purchase created: id={purchase.id}")
         
         return {
             "paymentId": db_payment.id,
@@ -834,59 +998,6 @@ async def create_payment_endpoint(
         raise
     except Exception as e:
         logger.error(f"Create payment error: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/payments/{payment_id}")
-async def get_payment_status(
-    payment_id: int,
-    request: InitDataRequest,
-    user_id: Optional[int] = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_session)
-):
-    """🎯 Получить статус платежа (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
-    
-    Использует гибридную аутентификацию:
-    - Telegram initData в Authorization заголовке (продакшн)
-    - JWT токен в Authorization заголовке (локальное тестирование)
-    """
-    logger.info(f"Getting payment status: payment_id={payment_id}")
-    
-    try:
-        if not user_id:
-            logger.error("❌ Authentication failed for get payment status")
-            raise HTTPException(status_code=401, detail="Invalid authentication")
-        
-        payment_repo = PaymentRepo(session)
-        payment = await payment_repo.get_payment(payment_id)
-        
-        if not payment:
-            raise HTTPException(status_code=404, detail="Payment not found")
-        
-        # Проверяем, что платеж принадлежит пользователю
-        if payment.user_id != user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
-        
-        # Получаем актуальный статус от ЮКассы
-        payment_service = PaymentService()
-        yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
-        
-        # Обновляем статус в базе данных
-        await payment_repo.update_payment_status(payment_id, yookassa_payment['status'])
-        
-        return {
-            "paymentId": payment_id,
-            "yookassaPaymentId": payment.yookassa_payment_id,
-            "status": yookassa_payment['status'],
-            "amount": payment.amount,
-            "userId": payment.user_id,
-            "bookingId": payment.booking_id
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Get payment status error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -969,6 +1080,59 @@ async def payment_webhook(
         logger.error(f"❌ Webhook error: {e}")
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/payments/{payment_id}")
+async def get_payment_status(
+    payment_id: int,
+    request: InitDataRequest,
+    user_id: Optional[int] = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)
+):
+    """🎯 Получить статус платежа (ОБНОВЛЁН ДЛЯ ГИБРИДНОЙ АУТЕНТИФИКАЦИИ)
+    
+    Использует гибридную аутентификацию:
+    - Telegram initData в Authorization заголовке (продакшн)
+    - JWT токен в Authorization заголовке (локальное тестирование)
+    """
+    logger.info(f"Getting payment status: payment_id={payment_id}")
+    
+    try:
+        if not user_id:
+            logger.error("❌ Authentication failed for get payment status")
+            raise HTTPException(status_code=401, detail="Invalid authentication")
+        
+        payment_repo = PaymentRepo(session)
+        payment = await payment_repo.get_payment(payment_id)
+        
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        # Проверяем, что платеж принадлежит пользователю
+        if payment.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Получаем актуальный статус от ЮКассы
+        payment_service = PaymentService()
+        yookassa_payment = await payment_service.get_payment_status(payment.yookassa_payment_id)
+        
+        # Обновляем статус в базе данных
+        await payment_repo.update_payment_status(payment_id, yookassa_payment['status'])
+        
+        return {
+            "paymentId": payment_id,
+            "yookassaPaymentId": payment.yookassa_payment_id,
+            "status": yookassa_payment['status'],
+            "amount": payment.amount,
+            "userId": payment.user_id,
+            "bookingId": payment.booking_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get payment status error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

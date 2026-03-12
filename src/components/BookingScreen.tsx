@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Settings, ChevronRight, Check, ArrowLeft, AlertCircle } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { getSlots, createBooking, createPayment } from "@/lib/api";
+import { getSlots, createBooking, createPayment, getPaymentStatus } from "@/lib/api";
 import { ru } from "@/lib/i18n/ru";
 
 type BookingStep = "slots" | "payment" | "success";
@@ -42,19 +42,75 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+
+  // Функция для проверки статуса платежа с polling
+  const checkPaymentStatus = async (paymentId: string, maxRetries = 15) => {
+    console.log("🔍 [PAYMENT] Checking payment status:", paymentId);
+    setIsCheckingPayment(true);
+
+    let retries = 0;
+    const pollInterval = setInterval(async () => {
+      retries++;
+      
+      try {
+        const payment = await getPaymentStatus(parseInt(paymentId), authToken);
+        console.log("💳 [PAYMENT] Status check result:", payment);
+
+        if (payment.status === "succeeded") {
+          console.log("✅ [PAYMENT] Payment succeeded!");
+          clearInterval(pollInterval);
+          setIsCheckingPayment(false);
+          setStep("success");
+          localStorage.removeItem("orchids_pending_payment_id");
+          localStorage.removeItem("orchids_pending_payment_time");
+          return;
+        } else if (payment.status === "failed" || payment.status === "canceled") {
+          console.log("❌ [PAYMENT] Payment failed or canceled");
+          clearInterval(pollInterval);
+          setIsCheckingPayment(false);
+          setPaymentError("Платёж не прошел. Пожалуйста, попробуйте снова.");
+          localStorage.removeItem("orchids_pending_payment_id");
+          return;
+        }
+        // Если pending - продолжаем polling
+      } catch (err) {
+        console.error("❌ [PAYMENT] Error checking payment status:", err);
+      }
+
+      // Если превышено количество попыток - останавливаем polling
+      if (retries >= maxRetries) {
+        console.log("⏱️ [PAYMENT] Polling timeout, showing warning");
+        clearInterval(pollInterval);
+        setIsCheckingPayment(false);
+        setPaymentError("Не удалось подтвердить платёж. Пожалуйста, проверьте статус вручную.");
+        // Не удаляем paymentId - может понадобиться для ручной проверки
+      }
+    }, 2000); // Проверяем каждые 2 секунды
+  };
 
   useEffect(() => {
-    // Проверка возврата с оплаты или сброс на список мероприятий
+    // 🎯 ГЛАВНАЯ ЛОГИКА: Проверка после возврата с платёжной страницы
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment_success') === 'true') {
-      console.log("💰 [PAYMENT] Detected redirect back from success payment");
-      setStep("success");
+    const paymentIdFromUrl = params.get("payment_id");
+    const pendingPaymentId = localStorage.getItem("orchids_pending_payment_id");
+
+    // Если приходим с payment_id из URL или есть в localStorage - проверяем статус
+    if (paymentIdFromUrl || pendingPaymentId) {
+      const activePaymentId = paymentIdFromUrl || pendingPaymentId;
+      console.log("💰 [PAYMENT] Detected return from payment. Checking status...");
+      console.log("  From URL:", paymentIdFromUrl);
+      console.log("  From localStorage:", pendingPaymentId);
+      
+      // Проверяем статус платежа
+      if (activePaymentId) {
+        checkPaymentStatus(activePaymentId);
+      }
     } else {
-      // Всегда начинаем с списка мероприятий при открытии BookingScreen (шаг 1: slots)
-      // Это гарантирует, что нажатие на "Home" всегда показывает список, а не форму оплаты
+      // Обычный вход в приложение - показываем список мероприятий
       setStep("slots");
     }
-  }, []);
+  }, [authToken]);
   useEffect(() => {
     let isMounted = true;
     async function fetchSlots() {
@@ -100,35 +156,41 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
   const handlePayment = async () => {
     if (!selectedSlot || !authToken) return;
+    
     try {
       setIsLoading(true);
-      // 1. Создаем платеж в Ю-Кассе напрямую (бронь создастся на бэкенде после оплаты)
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('payment_success', 'true');
+      setPaymentError(null);
 
-      console.log("💳 [PAYMENT] Initiating YooMoney payment for slot:", selectedSlot.id);
+      // 🎯 ВАЖНО: Явно указываем returnUrl на свой домен
+      // ЮКасса будет редиректить на этот URL после оплаты
+      const returnUrl = "https://antreclub-app.ru/?payment_id={paymentId}";
+
+      console.log("💳 [PAYMENT] Initiating payment for slot:", selectedSlot.id);
       const paymentData = await createPayment({
         amount: selectedSlot.price ? selectedSlot.price.toString() : "10",
         slotId: selectedSlot.id,
-        returnUrl: currentUrl.toString()
+        returnUrl: returnUrl
       }, authToken);
 
-      if (paymentData.confirmationUrl) {
-        console.log("🚀 [PAYMENT] Redirecting to:", paymentData.confirmationUrl);
-        // Используем Telegram API для открытия внешней ссылки, чтобы избежать ошибки X-Frame-Options: sameorigin
-        const tg = (window as any).Telegram;
-        if (tg && tg.WebApp && tg.WebApp.openLink) {
-          tg.WebApp.openLink(paymentData.confirmationUrl);
-        } else {
-          window.location.href = paymentData.confirmationUrl;
-        }
+      if (paymentData.confirmationUrl && paymentData.paymentId) {
+        // 🎯 КРИТИЧНО: Сохраняем paymentId в localStorage ПЕРЕД редиректом
+        // Это гарантирует, что при возврате мы сможем проверить статус платежа
+        localStorage.setItem("orchids_pending_payment_id", paymentData.paymentId);
+        localStorage.setItem("orchids_pending_payment_time", Date.now().toString());
+        
+        console.log("💾 [PAYMENT] Saved payment ID to localStorage:", paymentData.paymentId);
+        console.log("🚀 [PAYMENT] Redirecting to YooKassa:", paymentData.confirmationUrl);
+
+        // 🎯 ВАЖНО: Используем window.location.href вместо tg.WebApp.openLink()
+        // Это позволяет остаться в контексте WebApp и сохранить initData
+        window.location.href = paymentData.confirmationUrl;
       } else {
-        console.log("✅ [PAYMENT] No confirmation needed, showing success");
-        setStep("success");
+        console.log("❌ [PAYMENT] Invalid payment response");
+        setPaymentError("Ошибка создания платежа. Пожалуйста, попробуйте снова.");
       }
     } catch (e: any) {
       console.error("❌ [PAYMENT] Payment flow failed:", e);
-      setPaymentError(e.message || t.errors.bookingFailed);
+      setPaymentError(e.message || "Ошибка при обработке платежа");
     } finally {
       setIsLoading(false);
     }

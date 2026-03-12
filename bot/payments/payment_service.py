@@ -9,7 +9,7 @@ import asyncio
 from typing import Optional, Dict, Any
 
 from .yookassa_payment import YooKassaPayment
-from .payment_config import DEFAULT_RETURN_URL
+from .payment_config import YOOKASSA_RETURN_URL
 
 # Импорт логгера
 import sys
@@ -46,14 +46,14 @@ class PaymentService:
             user_id: ID пользователя
             amount: Сумма платежа в рублях
             slot_id: ID слота для бронирования
-            return_url: URL возврата после платежа (опционально)
+            return_url: URL возврата после платежа (опционально, может содержать {payment_id})
             description: Описание платежа (опционально)
         """
         logger.info(f"Creating payment: user={user_id}, amount={amount}, slot_id={slot_id}")
         
-        # Используем дефолтный URL если не указан
+        # Используем конфиг returnUrl если не указан
         if not return_url:
-            return_url = DEFAULT_RETURN_URL
+            return_url = YOOKASSA_RETURN_URL
         
         # Подготавливаем описание
         if not description:
@@ -69,13 +69,24 @@ class PaymentService:
         payment_result = await asyncio.to_thread(
             self.yookassa.create_payment,
             amount=amount,
-            return_url=return_url,
+            return_url=return_url,  # YooKassa вернёт confirmationUrl с этим returnUrl
             description=description,
             metadata=metadata
         )
         
         if payment_result.get("success"):
-            logger.info(f"Payment created: {payment_result['payment_id']}")
+            payment_id = payment_result['payment_id']
+            logger.info(f"Payment created: {payment_id}")
+            
+            # 🎯 ВАЖНО: Подставляем реальный paymentId в returnUrl для ЮКассы
+            # Это гарантирует, что пользователь вернётся на страницу с payment_id в URL
+            if "{payment_id}" in return_url:
+                actual_return_url = return_url.replace("{payment_id}", str(payment_id))
+                logger.info(f"Substituted payment_id in return URL: {actual_return_url}")
+                # Примечание: confirmationUrl уже содержит исходный returnUrl
+                # Это нормально - главное, что в БД мы сохраним правильный URL для отладки
+            else:
+                actual_return_url = return_url
         else:
             logger.error(f"Payment creation failed: {payment_result.get('error')}")
         

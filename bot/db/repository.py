@@ -13,7 +13,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from . import models
-from .models import User, DinnerSlot, Booking, Payment, Group, UserGroup
+from .models import User, DinnerSlot, Booking, Payment, Group, UserGroup, Promotion, PromotionPurchase
 
 # Импортируем из родительского пакета
 import sys
@@ -576,6 +576,38 @@ class PaymentRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_pending_payments(self, minutes: int = 5) -> List[Payment]:
+        """
+        Получает платежи со статусом 'pending' или 'created', которые старше N минут.
+        Используется для автопроверки "зависших" платежей scheduler'ом.
+        
+        Args:
+            minutes: Количество минут, после которых платёж считается "зависшим"
+        
+        Returns:
+            Список Payment'ов, которые могут быть потеряны
+        """
+        from datetime import timedelta
+        
+        cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+        
+        stmt = (
+            select(Payment)
+            .where(
+                Payment.created_at <= cutoff_time,
+                Payment.status.in_(['pending', 'created']),
+                Payment.booking_id == None  # Бронирование ещё не создано
+            )
+            .order_by(Payment.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        payments = list(result.scalars().all())
+        
+        if payments:
+            logger.warning(f"⚠️ Found {len(payments)} pending/orphaned payments older than {minutes} minutes")
+        
+        return payments
+
 
 class AdminRepo(BaseRepo):
     """Репозиторий для админских операций."""
@@ -795,3 +827,99 @@ class GroupRepo(BaseRepo):
         teammates_stmt = select(UserGroup.user_id).where(UserGroup.group_id.in_(group_ids))
         teammates_result = await self.session.execute(teammates_stmt)
         return {row[0] for row in teammates_result.all() if row[0] != user_id}
+
+
+class PromotionRepo(BaseRepo):
+    """Репозиторий для работы с акциями и предложениями."""
+
+    async def get_active_promotions(self) -> List[Promotion]:
+        """Возвращает все активные акции (для пользователей)."""
+        stmt = (
+            select(Promotion)
+            .where(Promotion.is_active == True)
+            .order_by(Promotion.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_all_promotions(self) -> List[Promotion]:
+        """Возвращает все акции (для админа, включая неактивные)."""
+        stmt = select(Promotion).order_by(Promotion.created_at.desc())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_promotion_by_id(self, promotion_id: int) -> Optional[Promotion]:
+        """Возвращает акцию по ID."""
+        return await self.session.get(Promotion, promotion_id)
+
+    async def create_promotion(
+        self,
+        title: str,
+        description: str,
+        price: int,
+        target_audience: Optional[str] = None,
+        quantity: int = 1,
+        validity_days: int = 30,
+    ) -> Promotion:
+        """Создаёт новую акцию."""
+        promo = Promotion(
+            title=title,
+            description=description,
+            target_audience=target_audience,
+            price=price,
+            quantity=quantity,
+            validity_days=validity_days,
+        )
+        self.session.add(promo)
+        await self.session.commit()
+        await self.session.refresh(promo)
+        return promo
+
+    async def update_promotion(self, promotion_id: int, **kwargs) -> Optional[Promotion]:
+        """Обновляет поля акции."""
+        promo = await self.session.get(Promotion, promotion_id)
+        if not promo:
+            return None
+        for key, value in kwargs.items():
+            if hasattr(promo, key):
+                setattr(promo, key, value)
+        await self.session.commit()
+        await self.session.refresh(promo)
+        return promo
+
+    async def delete_promotion(self, promotion_id: int) -> bool:
+        """Деактивирует акцию (мягкое удаление)."""
+        promo = await self.session.get(Promotion, promotion_id)
+        if not promo:
+            return False
+        promo.is_active = False
+        await self.session.commit()
+        return True
+
+    async def create_purchase(
+        self,
+        user_id: int,
+        promotion_id: int,
+        payment_id: Optional[int] = None,
+    ) -> Optional[PromotionPurchase]:
+        """Создаёт покупку акции пользователем."""
+        promo = await self.session.get(Promotion, promotion_id)
+        if not promo:
+            return None
+
+        from datetime import timedelta
+        expires_at = datetime.utcnow() + timedelta(days=promo.validity_days)
+
+        purchase = PromotionPurchase(
+            user_id=user_id,
+            promotion_id=promotion_id,
+            payment_id=payment_id,
+            status='active',
+            expires_at=expires_at,
+            visits_remaining=promo.quantity,
+        )
+        self.session.add(purchase)
+        await self.session.commit()
+        await self.session.refresh(purchase)
+        return purchase
+
