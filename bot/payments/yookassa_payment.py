@@ -62,6 +62,11 @@ class YooKassaPayment:
                 "capture": True,  # Сразу захватываем деньги
                 "description": description[:128],  # Обрезаем до 128 символов
                 "test": self.test_mode,  # Режим тестирования
+                # 🎯 ВАЖНО: Явно указываем методы платежа для правильного интерфейса
+                # Без этого Yookassa может открыть только Yomoney
+                "payment_method_data": {
+                    "type": "bank_card"  # Основной метод - банковская карта
+                },
                 "receipt": {
                     "customer": {
                         "email": "no-reply@leracinema.ru"  # Фиктивный email, так как мы его не собираем
