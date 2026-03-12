@@ -529,7 +529,7 @@ export default function Home() {
 
             {currentScreen === "promotions" && (
               <motion.div key="promotions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <PromotionsScreen onBack={() => setCurrentScreen("booking")} />
+                <PromotionsScreen authToken={userToken} onBack={() => setCurrentScreen("booking")} />
               </motion.div>
             )}
 

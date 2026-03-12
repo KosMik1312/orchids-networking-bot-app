@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ru } from "@/lib/i18n";
-import { getPromotions, createPayment, type Promotion } from "@/lib/api";
+import { getPromotions, createPayment, getPaymentStatus, type Promotion } from "@/lib/api";
 
 interface PromotionsScreenProps {
   authToken?: string | null;
@@ -83,10 +83,62 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
   const [isLoading, setIsLoading] = useState(true);
   const [buyingId, setBuyingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Функция для проверки статуса платежа
+  const checkPaymentStatus = async (paymentId: number, maxRetries = 15) => {
+    setIsCheckingPayment(true);
+    let retries = 0;
+    const maxAttempts = maxRetries;
+
+    while (retries < maxAttempts) {
+      try {
+        const status = await getPaymentStatus(paymentId, authToken || undefined);
+        console.log(`[Payment Check] attempt ${retries + 1}/${maxAttempts}, status:`, status);
+
+        if (status.status === "succeeded") {
+          setPaymentSuccess(true);
+          localStorage.removeItem("orchids_pending_payment_id");
+          setIsCheckingPayment(false);
+          return true;
+        }
+
+        if (status.status === "failed" || status.status === "canceled") {
+          setError("Платеж не прошел");
+          localStorage.removeItem("orchids_pending_payment_id");
+          setIsCheckingPayment(false);
+          return false;
+        }
+      } catch (err) {
+        console.log(`[Payment Check] Error on attempt ${retries + 1}:`, err);
+      }
+
+      retries++;
+      if (retries < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    setIsCheckingPayment(false);
+    return false;
+  };
 
   useEffect(() => {
     let isMounted = true;
-    async function fetchPromotions() {
+
+    async function init() {
+      // Проверяем наличие платежа в URL или localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentIdFromUrl = urlParams.get("payment_id");
+      const paymentIdFromStorage = localStorage.getItem("orchids_pending_payment_id");
+      const pendingPaymentId = paymentIdFromUrl || paymentIdFromStorage;
+
+      if (pendingPaymentId && authToken) {
+        await checkPaymentStatus(parseInt(pendingPaymentId));
+      }
+
+      // Загружаем акции
       try {
         setIsLoading(true);
         const data = await getPromotions();
@@ -100,12 +152,16 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
         if (isMounted) setIsLoading(false);
       }
     }
-    fetchPromotions();
+
+    init();
     return () => { isMounted = false; };
-  }, []);
+  }, [authToken]);
 
   const handleBuy = async (promotionId: number) => {
-    if (!authToken) return;
+    if (!authToken) {
+      setError("Требуется аутентификация");
+      return;
+    }
     setBuyingId(promotionId);
     setError(null);
 
@@ -113,7 +169,7 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
       const promo = promotions.find((p) => p.id === promotionId);
       if (!promo) return;
 
-      const returnUrl = window.location.href;
+      const returnUrl = `${window.location.origin}/?payment_id={paymentId}`;
       const paymentResult = await createPayment(
         {
           amount: String(promo.price),
@@ -124,6 +180,8 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
       );
 
       if (paymentResult.confirmationUrl) {
+        // Сохраняем paymentId в localStorage перед редиректом
+        localStorage.setItem("orchids_pending_payment_id", String(paymentResult.paymentId));
         // Перенаправляем на страницу оплаты YooKassa
         window.location.href = paymentResult.confirmationUrl;
       }
@@ -137,6 +195,30 @@ export function PromotionsScreen({ authToken, onBack, onBuy }: PromotionsScreenP
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FFF7EF" }}>
+      {/* Success Message */}
+      {paymentSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-6 mt-4 mb-4 bg-green-50 border border-green-200 rounded-xl p-4 text-green-600 text-center"
+        >
+          <p className="font-semibold">✅ Покупка успешно завершена!</p>
+          <p className="text-sm mt-1">Акция добавлена в ваш аккаунт</p>
+        </motion.div>
+      )}
+
+      {/* Payment Checking */}
+      {isCheckingPayment && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-6 mt-4 mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-600 text-center"
+        >
+          <p className="font-semibold">Проверка платежа...</p>
+          <p className="text-sm mt-1">Пожалуйста, подождите</p>
+        </motion.div>
+      )}
+
       {/* Title */}
       <h2
         className="text-[#E15859] text-[28px] font-black uppercase text-center tracking-tight leading-none px-6 mt-12 mb-6"
