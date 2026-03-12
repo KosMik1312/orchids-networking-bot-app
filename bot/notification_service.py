@@ -55,19 +55,10 @@ class NotificationService:
                 f"До встречи! 🎉"
             )
             
-            # Кнопка для открытия MiniApp
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="📱 Открыть приложение",
-                    url="https://t.me/AntreClub_bot/app"
-                )]
-            ])
-            
             await self.bot.send_message(
                 chat_id=user_id,
                 text=message,
-                parse_mode="HTML",
-                reply_markup=keyboard
+                parse_mode="HTML"
             )
             
             logger.info(f"✅ Payment success notification sent to user {user_id}, booking {booking_id}")
