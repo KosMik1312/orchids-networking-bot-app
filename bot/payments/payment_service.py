@@ -69,7 +69,7 @@ class PaymentService:
         payment_result = await asyncio.to_thread(
             self.yookassa.create_payment,
             amount=amount,
-            return_url=return_url,  # YooKassa вернёт confirmationUrl с этим returnUrl
+            return_url=return_url,
             description=description,
             metadata=metadata
         )
@@ -77,16 +77,6 @@ class PaymentService:
         if payment_result.get("success"):
             payment_id = payment_result['payment_id']
             logger.info(f"Payment created: {payment_id}")
-            
-            # 🎯 ВАЖНО: Подставляем реальный paymentId в returnUrl для ЮКассы
-            # Это гарантирует, что пользователь вернётся на страницу с payment_id в URL
-            if "{payment_id}" in return_url:
-                actual_return_url = return_url.replace("{payment_id}", str(payment_id))
-                logger.info(f"Substituted payment_id in return URL: {actual_return_url}")
-                # Примечание: confirmationUrl уже содержит исходный returnUrl
-                # Это нормально - главное, что в БД мы сохраним правильный URL для отладки
-            else:
-                actual_return_url = return_url
         else:
             logger.error(f"Payment creation failed: {payment_result.get('error')}")
         

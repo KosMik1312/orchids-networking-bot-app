@@ -28,9 +28,9 @@ YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "false").lower() == "true"
 # URL фронтенда (для WebApp)
 MINIAPP_URL = os.getenv("MINIAPP_URL", "https://antreclub-app.ru")
 
-# URL для возврата после платежа (может переопределяться при запросе)
-# Поддерживает placeholder {payment_id} для его подстановки перед отправкой на ЮКассу
-YOOKASSA_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", f"{MINIAPP_URL}/?payment_id={{payment_id}}")
+# URL для возврата после платежа (Deep Link в MiniApp)
+# При клике на "Вернуться на сайт" в ЮКассе откроется MiniApp с параметром startapp
+YOOKASSA_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/AntreClub_bot/app?startapp=payment_success")
 
 # Формируем Basic Auth для API (Shop ID:Secret Key в base64)
 AUTH_STRING = f"{YOOKASSA_SHOP_ID}:{YOOKASSA_SECRET_KEY}"

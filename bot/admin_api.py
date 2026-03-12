@@ -548,6 +548,62 @@ async def admin_broadcast(
 
 # ===== Платежи =====
 
+@admin_router_api.post("/payments/stats")
+async def admin_payment_stats(
+    request: InitDataRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Статистика по платежам."""
+    admin_id = await require_admin(request.initData, session)
+    
+    from db.models import Payment
+    from sqlalchemy import select, func
+    
+    # Общая выручка (succeeded)
+    revenue_result = await session.execute(
+        select(func.sum(func.cast(Payment.amount, Integer)))
+        .where(Payment.status == 'succeeded')
+    )
+    total_revenue = revenue_result.scalar() or 0
+    
+    # Количество платежей по статусам
+    status_counts = {}
+    for status in ['created', 'pending', 'succeeded', 'failed', 'canceled', 'expired', 'refunded']:
+        count_result = await session.execute(
+            select(func.count(Payment.id)).where(Payment.status == status)
+        )
+        status_counts[status] = count_result.scalar_one()
+    
+    # Общее количество
+    total_result = await session.execute(select(func.count(Payment.id)))
+    total_payments = total_result.scalar_one()
+    
+    # Конверсия (created → succeeded)
+    conversion_rate = 0
+    if status_counts['created'] + status_counts['pending'] > 0:
+        conversion_rate = round(
+            (status_counts['succeeded'] / (status_counts['created'] + status_counts['pending'] + status_counts['succeeded'])) * 100,
+            2
+        )
+    
+    # Средний чек
+    avg_result = await session.execute(
+        select(func.avg(func.cast(Payment.amount, Integer)))
+        .where(Payment.status == 'succeeded')
+    )
+    average_payment = round(avg_result.scalar() or 0, 2)
+    
+    logger.info(f"Admin {admin_id} requested payment stats")
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_payments": total_payments,
+        "conversion_rate": conversion_rate,
+        "average_payment": average_payment,
+        "status_breakdown": status_counts,
+    }
+
+
 @admin_router_api.post("/payments")
 async def admin_payments(
     request: InitDataRequest,
@@ -661,62 +717,6 @@ async def admin_payment_detail(
         "booking_status": booking.status if booking else None,
         "created_at": payment.created_at.isoformat() if payment.created_at else None,
         "updated_at": payment.updated_at.isoformat() if payment.updated_at else None,
-    }
-
-
-@admin_router_api.post("/payments/stats")
-async def admin_payment_stats(
-    request: InitDataRequest,
-    session: AsyncSession = Depends(get_session),
-):
-    """Статистика по платежам."""
-    admin_id = await require_admin(request.initData, session)
-    
-    from db.models import Payment
-    from sqlalchemy import select, func
-    
-    # Общая выручка (succeeded)
-    revenue_result = await session.execute(
-        select(func.sum(func.cast(Payment.amount, Integer)))
-        .where(Payment.status == 'succeeded')
-    )
-    total_revenue = revenue_result.scalar() or 0
-    
-    # Количество платежей по статусам
-    status_counts = {}
-    for status in ['created', 'pending', 'succeeded', 'failed', 'canceled', 'expired', 'refunded']:
-        count_result = await session.execute(
-            select(func.count(Payment.id)).where(Payment.status == status)
-        )
-        status_counts[status] = count_result.scalar_one()
-    
-    # Общее количество
-    total_result = await session.execute(select(func.count(Payment.id)))
-    total_payments = total_result.scalar_one()
-    
-    # Конверсия (created → succeeded)
-    conversion_rate = 0
-    if status_counts['created'] + status_counts['pending'] > 0:
-        conversion_rate = round(
-            (status_counts['succeeded'] / (status_counts['created'] + status_counts['pending'] + status_counts['succeeded'])) * 100,
-            2
-        )
-    
-    # Средний чек
-    avg_result = await session.execute(
-        select(func.avg(func.cast(Payment.amount, Integer)))
-        .where(Payment.status == 'succeeded')
-    )
-    average_payment = round(avg_result.scalar() or 0, 2)
-    
-    logger.info(f"Admin {admin_id} requested payment stats")
-    
-    return {
-        "total_revenue": total_revenue,
-        "total_payments": total_payments,
-        "conversion_rate": conversion_rate,
-        "average_payment": average_payment,
-        "status_breakdown": status_counts,
     }
 
 

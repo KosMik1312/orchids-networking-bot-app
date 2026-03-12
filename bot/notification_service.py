@@ -50,9 +50,8 @@ class NotificationService:
                 f"📅 <b>Дата:</b> {slot_date}\n"
                 f"🕐 <b>Время:</b> {slot_time}\n"
                 f"🏙 <b>Город:</b> {slot_city}\n"
-                f"🍽 <b>Ресторан:</b> {slot_restaurant}\n\n"
-                f"💰 <b>Оплачено:</b> {amount} ₽\n"
-                f"🎫 <b>Номер брони:</b> #{booking_id}\n\n"
+                f"📍 <b>Место:</b> {slot_restaurant}\n\n"
+                f"💰 <b>Оплачено:</b> {amount} ₽\n\n"
                 f"До встречи! 🎉"
             )
             
@@ -60,7 +59,7 @@ class NotificationService:
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(
                     text="📱 Открыть приложение",
-                    url="https://t.me/antre_club_bot/app"
+                    url="https://t.me/AntreClub_bot/app"
                 )]
             ])
             
@@ -106,7 +105,7 @@ class NotificationService:
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(
                     text="🔄 Попробовать снова",
-                    url="https://t.me/antre_club_bot/app"
+                    url="https://t.me/AntreClub_bot/app"
                 )],
                 [InlineKeyboardButton(
                     text="💬 Поддержка",
@@ -214,7 +213,7 @@ class NotificationService:
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(
                     text="📱 Открыть приложение",
-                    url="https://t.me/antre_club_bot/app"
+                    url="https://t.me/AntreClub_bot/app"
                 )]
             ])
             

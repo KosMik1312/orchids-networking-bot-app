@@ -455,8 +455,8 @@ class BookingRepo(BaseRepo):
             new_booking = Booking(user_id=user_id, slot_id=slot_id, status='active')
             self.session.add(new_booking)
             
-            # 3. Обновляем счетчик в слоте
-            slot.current_bookings += 1
+            # 3. Счётчик УЖЕ увеличен при создании платежа (soft lock)
+            # Ничего не делаем с current_bookings - он уже корректный
             
             # 4. Привязываем бронирование к платежу
             payment_repo = PaymentRepo(self.session)
