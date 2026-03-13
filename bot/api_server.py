@@ -1139,6 +1139,13 @@ async def create_payment_endpoint(
             slot = await session.get(DinnerSlot, slot_id_for_payment)
             if not slot:
                 raise HTTPException(status_code=404, detail="Slot not found")
+            
+            # 🎯 ПРОВЕРКА: Есть ли доступные места?
+            available_seats = slot.max_people - slot.current_bookings
+            if available_seats <= 0:
+                logger.warning(f"❌ Slot {slot_id_for_payment} is sold out (available: {available_seats})")
+                raise HTTPException(status_code=400, detail="Все места раскуплены! Выберите другое мероприятие.")
+            
             secure_amount = str(slot.price)
         else:
             raise HTTPException(status_code=400, detail="Either slotId or promotionId required")

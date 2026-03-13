@@ -356,7 +356,8 @@ export const ru = {
     noEvents: "Нет доступных мероприятий",
     seatsAvailable: "Свободных мест {available}/{total}",
     bookButton: "Забронировать",
-    noSeatsButton: "Мест нет",
+    noSeatsButton: "Всё раскуплено!",
+    soldOut: "Всё раскуплено!",
   },
 
   // Favorites

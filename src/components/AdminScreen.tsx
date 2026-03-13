@@ -754,63 +754,71 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
               </motion.div>
             )}
 
-            {slots.map(s => (
-              <div key={s.id} className={`${cardClass} w-full`}>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <div className="font-medium text-[#404243]">{s.restaurant}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{s.date} {s.time} | {s.city}</div>
+            {slots.map(s => {
+              const availableSeats = s.max_people - s.current_bookings;
+              const isSoldOut = availableSeats <= 0;
+              return (
+                <div key={s.id} className={`${cardClass} w-full`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <div className="font-medium text-[#404243]">{s.restaurant}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{s.date} {s.time} | {s.city}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#E15859] mr-2">{s.price} ₽</span>
+                      <span className={`text-xs font-semibold ${
+                        isSoldOut ? 'text-[#E15859]' : 'text-gray-400'
+                      }`}>
+                        {isSoldOut ? 'Всё раскуплено!' : `${s.current_bookings}/${s.max_people}`}
+                      </span>
+                      <div className={`w-2.5 h-2.5 rounded-full ${s.is_active ? "bg-green-400" : "bg-red-400"}`} />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#E15859] mr-2">{s.price} ₽</span>
-                    <span className="text-xs text-gray-400">{s.current_bookings}/{s.max_people}</span>
-                    <div className={`w-2.5 h-2.5 rounded-full ${s.is_active ? "bg-green-400" : "bg-red-400"}`} />
+                  <div className="flex gap-2">
+                    <button onClick={() => { setSelectedSlotId(s.id); setTab("slot_detail"); }} className="flex-1 py-2 px-3 rounded-xl bg-gray-50 text-[#404243] text-xs font-medium hover:bg-gray-100 transition-colors">
+                      Участники
+                    </button>
+                    <button onClick={() => {
+                      setEditingSlot(s);
+                      setSlotForm({
+                        date: s.date,
+                        time: s.time,
+                        city: s.city,
+                        restaurant: s.restaurant,
+                        max_people: s.max_people.toString(),
+                        price: s.price.toString()
+                      });
+                      setShowSlotForm(true);
+                    }} className="py-2 px-3 rounded-xl bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors flex items-center gap-1">
+                      <Edit size={14} /> Изменить
+                    </button>
+                    <button onClick={async () => {
+                      try {
+                        const check = await checkDeleteSlot(initData, s.id);
+                        const hasData = check.active_bookings > 0 || check.paid_payments > 0;
+                        openConfirm(
+                          "Удаление мероприятия",
+                          hasData 
+                            ? `⚠️ У этого мероприятия есть ${check.active_bookings} активных бронирований и ${check.paid_payments} оплаченных платежей. Вы уверены, что хотите удалить?`
+                            : "Вы уверены, что хотите удалить это мероприятие?",
+                          async () => {
+                            try {
+                              await deleteSlot(initData, s.id);
+                              await loadSlots();
+                            } catch (e: any) { setError(e.message); }
+                          }
+                        );
+                      } catch (e: any) { setError(e.message); }
+                    }} className="py-2 px-3 rounded-xl bg-red-50 text-red-500 text-xs font-medium hover:bg-red-100 transition-colors flex items-center gap-1">
+                      <Trash2 size={14} /> Удалить
+                    </button>
+                    <button onClick={() => handleToggleSlotActive(s)} className={`py-2 px-3 rounded-xl text-xs font-medium transition-colors ${s.is_active ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                      {s.is_active ? "Деактивировать" : "Активировать"}
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => { setSelectedSlotId(s.id); setTab("slot_detail"); }} className="flex-1 py-2 px-3 rounded-xl bg-gray-50 text-[#404243] text-xs font-medium hover:bg-gray-100 transition-colors">
-                    Участники
-                  </button>
-                  <button onClick={() => {
-                    setEditingSlot(s);
-                    setSlotForm({
-                      date: s.date,
-                      time: s.time,
-                      city: s.city,
-                      restaurant: s.restaurant,
-                      max_people: s.max_people.toString(),
-                      price: s.price.toString()
-                    });
-                    setShowSlotForm(true);
-                  }} className="py-2 px-3 rounded-xl bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors flex items-center gap-1">
-                    <Edit size={14} /> Изменить
-                  </button>
-                  <button onClick={async () => {
-                    try {
-                      const check = await checkDeleteSlot(initData, s.id);
-                      const hasData = check.active_bookings > 0 || check.paid_payments > 0;
-                      openConfirm(
-                        "Удаление мероприятия",
-                        hasData 
-                          ? `⚠️ У этого мероприятия есть ${check.active_bookings} активных бронирований и ${check.paid_payments} оплаченных платежей. Вы уверены, что хотите удалить?`
-                          : "Вы уверены, что хотите удалить это мероприятие?",
-                        async () => {
-                          try {
-                            await deleteSlot(initData, s.id);
-                            await loadSlots();
-                          } catch (e: any) { setError(e.message); }
-                        }
-                      );
-                    } catch (e: any) { setError(e.message); }
-                  }} className="py-2 px-3 rounded-xl bg-red-50 text-red-500 text-xs font-medium hover:bg-red-100 transition-colors flex items-center gap-1">
-                    <Trash2 size={14} /> Удалить
-                  </button>
-                  <button onClick={() => handleToggleSlotActive(s)} className={`py-2 px-3 rounded-xl text-xs font-medium transition-colors ${s.is_active ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
-                    {s.is_active ? "Деактивировать" : "Активировать"}
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -821,11 +829,17 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
             {(() => {
               const slot = slots.find(s => s.id === selectedSlotId);
               if (!slot) return null;
+              const availableSeats = slot.max_people - slot.current_bookings;
+              const isSoldOut = availableSeats <= 0;
               return (
                 <div className={`${cardClass} mb-4`}>
                   <div className="font-medium text-[#404243]">{slot.restaurant}</div>
                   <div className="text-xs text-gray-400 mt-1">{slot.date} {slot.time} | {slot.city}</div>
-                  <div className="text-xs text-gray-400">Мест: {slot.current_bookings}/{slot.max_people}</div>
+                  <div className={`text-xs mt-1 font-semibold ${
+                    isSoldOut ? 'text-[#E15859]' : 'text-gray-400'
+                  }`}>
+                    {isSoldOut ? 'Всё раскуплено!' : `Мест: ${slot.current_bookings}/${slot.max_people}`}
+                  </div>
                   <div className="flex gap-2 mt-3">
                     <button onClick={() => handleToggleSlotActive(slot)} className={`text-xs px-3 py-1.5 rounded-full ${slot.is_active ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
                       {slot.is_active ? "Деактивировать" : "Активировать"}

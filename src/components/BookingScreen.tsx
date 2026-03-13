@@ -315,21 +315,37 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               ) : slots.length === 0 ? (
                 <div className="text-center py-10 text-gray-500">{t.noSlots}</div>
               ) : (
-                slots.map((slot) => (
+                slots.map((slot) => {
+                const seatsAvailable = slot.max_people - slot.current_bookings;
+                const isSoldOut = seatsAvailable <= 0;
+                return (
                   <button
                     key={slot.id}
-                    onClick={() => handleSlotSelect(slot)}
-                    className="w-full flex items-center justify-between px-5 py-4 rounded-[18px] bg-white shadow-sm hover:shadow-md transition-all"
+                    onClick={() => !isSoldOut && handleSlotSelect(slot)}
+                    className={`w-full flex items-center justify-between px-5 py-4 rounded-[18px] shadow-sm transition-all ${
+                      isSoldOut 
+                        ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                        : 'bg-white hover:shadow-md'
+                    }`}
+                    disabled={isSoldOut}
                   >
                     <div className="text-left">
-                      <p className="text-[#404243] text-[16px] font-semibold">{slot.date}, {slot.time}</p>
+                      <p className={`text-[16px] font-semibold ${
+                        isSoldOut ? 'text-gray-400' : 'text-[#404243]'
+                      }`}>{slot.date}, {slot.time}</p>
                       <p className="text-[#8E8E93] text-[12px] mt-0">{slot.address}</p>
+                      {isSoldOut && (
+                        <p className="text-[#E15859] text-[11px] font-bold mt-1">Всё раскуплено!</p>
+                      )}
                     </div>
-                    <div className="w-11 h-11 bg-[#E15859] rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      isSoldOut ? 'bg-gray-300' : 'bg-[#E15859]'
+                    }`}>
                       <ChevronRight className="text-white" size={22} />
                     </div>
                   </button>
-                ))
+                );
+              })
               )}
             </div>
 

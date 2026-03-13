@@ -80,6 +80,7 @@ export interface Slot {
   max_people: number;
   price: number;
   current_bookings: number;
+  available_places?: number; // Доступные места (вычисляется на backend)
   created_at: string | null;
   is_active: boolean;
 }

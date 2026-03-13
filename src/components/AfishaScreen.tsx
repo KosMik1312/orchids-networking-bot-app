@@ -90,6 +90,7 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
             slots.map((slot) => {
               const isFav = favoriteIds.has(Number(slot.id));
               const seatsAvailable = slot.max_people - slot.current_bookings;
+              const isSoldOut = seatsAvailable <= 0;
               return (
                 <div key={slot.id} className="bg-white rounded-[20px] overflow-hidden shadow-sm">
                   <div className="px-6 pt-5 pb-4 flex items-start justify-between">
@@ -120,19 +121,19 @@ export function AfishaScreen({ city = "Москва", onFavorites, onHome, onPro
                           stroke={isFav ? undefined : "white"}
                         />
                       </button>
-                      <span className="text-[#8E8E93] text-[11px] text-center leading-tight">
-                        {ru.afisha.seatsAvailable
+                      <span className={`text-[11px] text-center leading-tight font-semibold ${isSoldOut ? 'text-[#E15859]' : 'text-[#8E8E93]'}`}>
+                        {isSoldOut ? "Всё раскуплено!" : ru.afisha.seatsAvailable
                           .replace("{available}", seatsAvailable.toString())
                           .replace("{total}", slot.max_people.toString())}
                       </span>
                     </div>
                   </div>
                   <button
-                    onClick={() => onBook?.(slot.id)}
-                    className="w-full py-3 bg-[#E15859] text-white text-[15px] font-semibold"
-                    disabled={seatsAvailable <= 0}
+                    onClick={() => !isSoldOut && onBook?.(slot.id)}
+                    className={`w-full py-3 text-white text-[15px] font-semibold transition-colors ${isSoldOut ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#E15859] hover:bg-[#C14748]'}`}
+                    disabled={isSoldOut}
                   >
-                    {seatsAvailable > 0 ? ru.afisha.bookButton : ru.afisha.noSeatsButton}
+                    {isSoldOut ? "Всё раскуплено!" : ru.afisha.bookButton}
                   </button>
                 </div>
               );
