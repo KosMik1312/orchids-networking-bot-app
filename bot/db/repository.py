@@ -224,7 +224,7 @@ class UserRepo(BaseRepo):
                     select(Payment).where(Payment.user_id == user_id)
                 )
                 for payment in payments.scalars():
-                    payment.user_id = 0 # Или какой-то спец ID для удаленных
+                    payment.user_id = None  # NULL вместо 0 - не нарушает FK
                     logger.info(f"  Payment {payment.id} anonymized")
 
                 # 4. Удаление самого пользователя

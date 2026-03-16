@@ -105,7 +105,7 @@ class Payment(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     yookassa_payment_id = Column(String, unique=True, nullable=False, index=True)
-    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey('users.user_id', ondelete="SET NULL"), nullable=True, index=True)
     slot_id = Column(Integer, ForeignKey('dinner_slots.id', ondelete="SET NULL"), nullable=True)
     booking_id = Column(Integer, ForeignKey('bookings.id', ondelete="SET NULL"), nullable=True)
     amount = Column(String, nullable=False)
