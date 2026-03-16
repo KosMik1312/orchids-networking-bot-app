@@ -79,28 +79,36 @@ async def init_db():
             # Создаем все таблицы согласно ORM моделям
             await conn.run_sync(Base.metadata.create_all)
 
-        # Безопасное добавление колонки price в существующую БД
+        # Безопасное добавление колонок в существующую БД
         from sqlalchemy import text
-        try:
-            async with engine.begin() as conn2:
-                await conn2.execute(text("ALTER TABLE dinner_slots ADD COLUMN price INTEGER DEFAULT 10"))
-        except Exception:
-            # Если колонка уже существует, будет ошибка, которую мы игнорируем
-            pass
+        
+        # Проверяем, что это PostgreSQL (т.к. SQLite не поддерживает ADD COLUMN IF NOT EXISTS)
+        is_postgres = "postgresql" in DATABASE_URL.lower()
+        
+        if is_postgres:
+            try:
+                # В PostgreSQL можно использовать ADD COLUMN IF NOT EXISTS
+                async with engine.begin() as conn_mig:
+                    await conn_mig.execute(text("ALTER TABLE dinner_slots ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 10"))
+                    await conn_mig.execute(text("ALTER TABLE groups ADD COLUMN IF NOT EXISTS slot_id INTEGER REFERENCES dinner_slots(id) ON DELETE CASCADE"))
+                    # DROP CONSTRAINT IF EXISTS уже безопасен
+                    await conn_mig.execute(text("ALTER TABLE groups DROP CONSTRAINT IF EXISTS groups_name_key"))
+                logger.info("✅ PostgreSQL columns checked/added successfully")
+            except Exception as mig_err:
+                logger.warning(f"⚠️ Non-critical migration warning (PostgreSQL): {mig_err}")
+        else:
+            # Для SQLite оставляем старую логику с замалчиванием ошибок
+            try:
+                async with engine.begin() as conn2:
+                    await conn2.execute(text("ALTER TABLE dinner_slots ADD COLUMN price INTEGER DEFAULT 10"))
+            except Exception: pass
 
-        try:
-            # Добавляем колонку slot_id в группы
-            async with engine.begin() as conn3:
-                await conn3.execute(text("ALTER TABLE groups ADD COLUMN slot_id INTEGER REFERENCES dinner_slots(id) ON DELETE CASCADE"))
-        except Exception:
-            pass
+            try:
+                async with engine.begin() as conn3:
+                    await conn3.execute(text("ALTER TABLE groups ADD COLUMN slot_id INTEGER REFERENCES dinner_slots(id) ON DELETE CASCADE"))
+            except Exception: pass
             
-        try:
-            # Удаляем уникальность имени группы
-            async with engine.begin() as conn4:
-                await conn4.execute(text("ALTER TABLE groups DROP CONSTRAINT IF EXISTS groups_name_key"))
-        except Exception:
-            pass
+            logger.info("✅ SQLite columns check completed")
         
         logger.info("✅ Database initialized successfully!")
     except Exception as e:
