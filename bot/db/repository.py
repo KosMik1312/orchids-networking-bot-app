@@ -192,42 +192,47 @@ class UserRepo(BaseRepo):
             return False
 
         try:
-            # 1. Обработка бронирований
-            # Используем session.execute для получения всех бронирований
-            bookings = await self.session.execute(
-                select(Booking).where(Booking.user_id == user_id)
-            )
-            for booking in bookings.scalars():
-                if booking.status == 'active':
-                    # Возвращаем место в слоте
-                    slot = await self.session.get(DinnerSlot, booking.slot_id)
-                    if slot and slot.current_bookings > 0:
-                        slot.current_bookings -= 1
-                        logger.info(f"  Slot {slot.id} bookings decremented")
+            # 🎯 ИСПРАВЛЕНИЕ: Отключаем autoflush для предотвращения преждевременного сохранения
+            with self.session.no_autoflush:
+                # 1. Обработка бронирований
+                # Используем session.execute для получения всех бронирований
+                bookings = await self.session.execute(
+                    select(Booking).where(Booking.user_id == user_id)
+                )
+                for booking in bookings.scalars():
+                    if booking.status == 'active':
+                        # Возвращаем место в слоте
+                        slot = await self.session.get(DinnerSlot, booking.slot_id)
+                        if slot and slot.current_bookings > 0:
+                            slot.current_bookings -= 1
+                            logger.info(f"  Slot {slot.id} bookings decremented")
+                    
+                    # Удаляем бронирование
+                    await self.session.delete(booking)
+                    logger.info(f"  Booking {booking.id} deleted")
+
+                # 2. Обработка групп
+                groups = await self.session.execute(
+                    select(UserGroup).where(UserGroup.user_id == user_id)
+                )
+                for ug in groups.scalars():
+                    await self.session.delete(ug)
+                    logger.info(f"  UserGroup record deleted")
+
+                # 3. Обработка платежей (анонимизируем, но не удаляем)
+                payments = await self.session.execute(
+                    select(Payment).where(Payment.user_id == user_id)
+                )
+                for payment in payments.scalars():
+                    payment.user_id = 0 # Или какой-то спец ID для удаленных
+                    logger.info(f"  Payment {payment.id} anonymized")
+
+                # 4. Удаление самого пользователя
+                await self.session.delete(user)
                 
-                # Удаляем бронирование
-                await self.session.delete(booking)
-                logger.info(f"  Booking {booking.id} deleted")
-
-            # 2. Обработка групп
-            groups = await self.session.execute(
-                select(UserGroup).where(UserGroup.user_id == user_id)
-            )
-            for ug in groups.scalars():
-                await self.session.delete(ug)
-                logger.info(f"  UserGroup record deleted")
-
-            # 3. Обработка платежей (анонимизируем, но не удаляем)
-            payments = await self.session.execute(
-                select(Payment).where(Payment.user_id == user_id)
-            )
-            for payment in payments.scalars():
-                payment.user_id = 0 # Или какой-то спец ID для удаленных
-                logger.info(f"  Payment {payment.id} anonymized")
-
-            # 4. Удаление самого пользователя
-            await self.session.delete(user)
-            await self.session.commit()
+                # 5. Явно выполняем flush и commit
+                await self.session.flush()
+                await self.session.commit()
             
             logger.info(f"✅ User {user_id} successfully deleted from system")
             return True
@@ -564,17 +569,31 @@ class PaymentRepo(BaseRepo):
         )
         self.session.add(payment)
         
-        # 🎯 SOFT LOCK: Резервируем место в слоте при создании платежа
+        # 🎯 ИСПРАВЛЕНИЕ OVERBOOKING: Атомарная проверка и резервация
         if slot_id:
+            # Получаем слот с блокировкой FOR UPDATE (предотвращает race condition)
             slot_result = await self.session.execute(
                 select(DinnerSlot).where(DinnerSlot.id == slot_id).with_for_update()
             )
             slot = slot_result.scalar_one_or_none()
-            if slot and slot.current_bookings < slot.max_people:
-                slot.current_bookings += 1
-                logger.info(f"🔒 Soft lock: Reserved place in slot {slot_id} for payment (current: {slot.current_bookings}/{slot.max_people})")
-            else:
-                logger.warning(f"⚠️ Cannot reserve place in slot {slot_id} - already full or not found")
+            
+            if not slot:
+                logger.error(f"❌ Slot {slot_id} not found for payment creation")
+                raise ValueError(f"Slot {slot_id} not found")
+            
+            if not slot.is_active:
+                logger.error(f"❌ Slot {slot_id} is not active")
+                raise ValueError(f"Slot {slot_id} is not active")
+            
+            # 🎯 КРИТИЧНАЯ ПРОВЕРКА: Есть ли доступные места?
+            available_seats = slot.max_people - slot.current_bookings
+            if available_seats <= 0:
+                logger.error(f"❌ OVERBOOKING PREVENTED! Slot {slot_id} is full ({slot.current_bookings}/{slot.max_people})")
+                raise ValueError(f"Все места раскуплены! Выберите другое мероприятие.")
+            
+            # Резервируем место (soft lock)
+            slot.current_bookings += 1
+            logger.info(f"🔒 Soft lock: Reserved place in slot {slot_id} for payment (current: {slot.current_bookings}/{slot.max_people})")
         
         await self.session.commit()
         await self.session.refresh(payment)
@@ -611,13 +630,13 @@ class PaymentRepo(BaseRepo):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_pending_payments(self, minutes: int = 2) -> List[Payment]:
+    async def get_pending_payments(self, minutes: int = 1) -> List[Payment]:
         """
         Получает платежи со статусом 'pending' или 'created', которые старше N минут.
         Используется для автопроверки "зависших" платежей scheduler'ом.
         
         Args:
-            minutes: Количество минут, после которых платёж считается "зависшим" (по умолчанию 2)
+            minutes: Количество минут, после которых платёж считается "зависшим" (по умолчанию 1)
         
         Returns:
             Список Payment'ов, которые могут быть потеряны

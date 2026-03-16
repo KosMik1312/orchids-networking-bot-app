@@ -210,7 +210,29 @@ export default function Home() {
     };
 
     const startApp = () => {
-      // 🔐 ПРОВЕРЯЕМ sessionStorage ПЕРВЫМ ДЕЛОМ (возврат с ЮКассы)
+      // 🎯 ПРОВЕРЯЕМ STARTAPP ПАРАМЕТР ПЕРВЫМ ДЕЛОМ
+      const webApp = (window as any).Telegram?.WebApp;
+      const startParam = webApp?.initDataUnsafe?.start_param;
+      
+      if (startParam && startParam.startsWith('payment_success')) {
+        console.log('🎉 [PAYMENT] Payment success detected from startapp parameter!');
+        
+        // Показываем popup уведомление о спешной оплате
+        if (webApp?.showPopup) {
+          webApp.showPopup({
+            title: '✅ Оплата прошла успешно!',
+            message: 'Ваше бронирование подтверждено. Мы отправим вам детали в чат.',
+            buttons: [{ type: 'ok' }]
+          });
+        }
+        
+        // Очищаем start_param чтобы не показывать popup повторно
+        if (webApp?.initDataUnsafe) {
+          webApp.initDataUnsafe.start_param = null;
+        }
+      }
+      
+      // 🔐 ПРОВЕРЯЕМ sessionStorage ВТОРЫМ ДЕЛОМ (возврат с ЮКассы)
       const savedToken = sessionStorage.getItem('orchids_main_auth_token');
       if (savedToken) {
         console.log('🔐 Restored auth token from sessionStorage (payment return)');

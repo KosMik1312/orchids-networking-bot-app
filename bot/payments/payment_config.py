@@ -21,8 +21,8 @@ from logger import get_payment_logger
 logger = get_payment_logger()
 
 # Получаем данные из переменных окружения (с очисткой от пробелов)
-YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1247817").strip()
-YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_MQWRpQKNQxtNxjKxRpWIUyfe7fIZ7xh2R89qVWPdny8").strip()
+YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "1297534").strip()
+YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "live_ScKUDuZDZN9Ws1LofY85j0HJeHo7DVrkeTaXxTai8is").strip()
 YOOKASSA_TEST_MODE = os.getenv("YOOKASSA_TEST_MODE", "false").lower() == "true"
 
 # URL фронтенда (для WebApp)

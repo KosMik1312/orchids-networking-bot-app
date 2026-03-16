@@ -217,9 +217,12 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         console.log('💾 [PAYMENT] Saved auth token to sessionStorage');
       }
 
-      // 🎯 ВАЖНО: Явно указываем returnUrl на свой домен
-      // ЮКасса будет редиректить на этот URL после оплаты
-      const returnUrl = "https://antreclub-app.ru/?payment_id={paymentId}";
+      // 🎯 ВАЖНО: Создаем правильный return_url для Telegram MiniApp
+      // Формат: https://t.me/{bot_username}/app?startapp=payment_success_{paymentId}
+      const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || 'antre_club_bot';
+      const returnUrl = `https://t.me/${botUsername}/app?startapp=payment_success`;
+      
+      console.log('🔗 [PAYMENT] Using Telegram return URL:', returnUrl);
 
       console.log("💳 [PAYMENT] Initiating payment for slot:", selectedSlot.id);
       const paymentData = await createPayment({
@@ -237,18 +240,35 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         console.log("💾 [PAYMENT] Saved payment ID to localStorage:", paymentData.paymentId);
         console.log("🚀 [PAYMENT] Redirecting to YooKassa:", paymentData.confirmationUrl);
 
-        // 🎯 ВАЖНО: Используем tg.WebApp.openLink() чтобы открыть Yookassa в браузере
-        // Это избегает X-Frame-Options блокировки (Yookassa не грузится в фрейме)
-        // initData сохранится в параметрах URL и будет доступен при возврате
-        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-          const tg = window.Telegram.WebApp as any;
-          if (typeof tg.openLink === 'function') {
-            tg.openLink(paymentData.confirmationUrl);
-          } else {
+        // 🎯 ВАЖНО: Используем window.open() для открытия ЮКассы
+        // Это позволит пользователю вернуться в Telegram через return_url
+        if (typeof window !== 'undefined') {
+          // Открываем в новом окне/вкладке
+          const paymentWindow = window.open(paymentData.confirmationUrl, '_blank');
+          
+          // Если окно заблокировано popup blocker'ом, используем обычный редирект
+          if (!paymentWindow) {
+            console.log('🚨 [PAYMENT] Popup blocked, using direct redirect');
             window.location.href = paymentData.confirmationUrl;
+          } else {
+            console.log('✅ [PAYMENT] Payment window opened successfully');
+            
+            // Запускаем polling для проверки статуса платежа
+            const cleanup = checkPaymentStatus(paymentData.paymentId, authToken);
+            
+            // Очищаем polling при закрытии окна
+            const checkClosed = setInterval(() => {
+              if (paymentWindow.closed) {
+                console.log('🔄 [PAYMENT] Payment window closed, checking status...');
+                clearInterval(checkClosed);
+                // Дополнительная проверка статуса при закрытии окна
+                checkPaymentStatus(paymentData.paymentId, authToken, 5); // Быстрая проверка
+              }
+            }, 1000);
           }
         } else {
-          // Fallback для браузера (не в Telegram)
+          // Fallback для SSR
+          console.log('🔄 [PAYMENT] Using fallback redirect');
           window.location.href = paymentData.confirmationUrl;
         }
       } else {

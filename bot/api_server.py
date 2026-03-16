@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from db.session import init_db, get_session
-from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo, PromotionRepo
+from db.repository import UserRepo, SlotRepo, BookingRepo, PaymentRepo, PromotionRepo, GroupRepo
 from db.models import User, DinnerSlot, Booking
 from schemas import UserProfile as UserProfileSchema
 from config import DATABASE_NAME, SECRET_KEY, AUTH_DISABLED
@@ -45,10 +45,10 @@ scheduler = None
 
 async def check_pending_payments():
     """
-    🔄 Проверяет платежи со статусом 'pending' или 'created', которые старше 2 минут.
+    🔄 Проверяет платежи со статусом 'pending' или 'created', которые старше 1 минуты.
     Если статус в ЮКассе 'succeeded', а бронирование не создано - создает его.
     
-    Запускается каждые 2 минуты (улучшенный UX).
+    Запускается каждую минуту (оптимальный UX).
     """
     logger.info("🔍 [SCHEDULER] Starting pending payments check...")
     
@@ -64,8 +64,8 @@ async def check_pending_payments():
         async with async_session() as session:
             payment_repo = PaymentRepo(session)
             
-            # Получаем платежи старше 2 минут со статусом pending/created и без бронирования
-            pending_payments = await payment_repo.get_pending_payments(minutes=2)
+            # Получаем платежи старше 1 минуты со статусом pending/created и без бронирования
+            pending_payments = await payment_repo.get_pending_payments(minutes=1)
             
             if not pending_payments:
                 logger.debug("✅ [SCHEDULER] No pending payments found")
@@ -200,11 +200,11 @@ async def lifespan(app: FastAPI):
     global scheduler
     scheduler = AsyncIOScheduler()
     
-    # Job 1: Проверка pending платежей каждые 2 минуты
+    # Job 1: Проверка pending платежей каждую минуту (улучшенный UX)
     scheduler.add_job(
         check_pending_payments,
         "interval",
-        minutes=2,
+        minutes=1,
         id="check_pending_payments",
         name="Check pending payments from Yookassa",
         replace_existing=True,
@@ -224,7 +224,7 @@ async def lifespan(app: FastAPI):
     
     scheduler.start()
     logger.info("✅ APScheduler started:")
-    logger.info("   - Pending payments check: every 2 minutes")
+    logger.info("   - Pending payments check: every 1 minute")
     logger.info("   - Expired reservations cleanup: every 5 minutes")
     
     yield
@@ -1231,37 +1231,53 @@ async def payment_webhook(
     Обработчик вебхука от Yookassa.
     Создает бронирование только после успешной оплаты.
     """
-    logger.info("🔔 Received payment webhook")
+    # 🎯 ДИАГНОСТИКА: Детальное логирование webhook'ов
+    logger.info("🔔 [WEBHOOK] Received payment webhook")
+    logger.info(f"   Headers: {dict(request.headers)}")
     
     try:
         body = await request.body()
         signature = request.headers.get("YooKassa-Signature", "")
         
+        logger.info(f"   Body length: {len(body)} bytes")
+        logger.info(f"   Signature present: {bool(signature)}")
+        
         if signature and not verify_webhook_signature(body, signature):
-            logger.error("❌ Invalid webhook signature")
+            logger.error("❌ [WEBHOOK] Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
 
         payload = await request.json()
+        logger.info(f"   Payload keys: {list(payload.keys())}")
+        logger.info(f"   Event type: {payload.get('event')}")
+        logger.info(f"   Payment object: {payload.get('object', {}).get('id')}")
+        
         payment_service = PaymentService()
         result = await payment_service.handle_webhook(payload)
         
+        logger.info(f"   Payment service result: {result}")
+        
         if not result.get("success"):
+            logger.warning("⚠️ [WEBHOOK] Payment service returned no success")
             return {"status": "ignored"}
 
         payment_repo = PaymentRepo(session)
         db_payment = await payment_repo.get_payment_by_yookassa_id(result["payment_id"])
         
         if not db_payment:
-            logger.error(f"❌ Payment {result['payment_id']} not found in DB")
+            logger.error(f"❌ [WEBHOOK] Payment {result['payment_id']} not found in DB")
             return {"status": "error", "message": "Payment not found"}
+
+        logger.info(f"   Found DB payment: id={db_payment.id}, status={db_payment.status}, booking_id={db_payment.booking_id}")
 
         # Обновляем статус платежа
         await payment_repo.update_payment_status(db_payment.id, result["status"])
+        logger.info(f"   Updated payment status to: {result['status']}")
         
         # Если оплата прошла успешно - создаем бронирование
         if result["action"] == "confirm_booking":
+            logger.info(f"   Action: {result['action']} - creating booking")
             if not db_payment.booking_id:
-                logger.info(f"✨ Payment successful! Creating booking for user={db_payment.user_id}, slot={db_payment.slot_id}")
+                logger.info(f"✨ [WEBHOOK] Payment successful! Creating booking for user={db_payment.user_id}, slot={db_payment.slot_id}")
                 booking_repo = BookingRepo(session)
                 booking = await booking_repo.create_booking_after_payment(
                     user_id=db_payment.user_id,
@@ -1269,9 +1285,9 @@ async def payment_webhook(
                     payment_id=db_payment.id
                 )
                 if booking:
-                    logger.info(f"✅ Booking finalized: {booking.id}")
+                    logger.info(f"✅ [WEBHOOK] Booking finalized: {booking.id}")
                     
-                    # 🎯 ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ ПОЛЬЗОВАТЕЛЮ
+                    # 🎯 ОТПРАВЛЯЕМ МГНОВЕННОЕ УВЕДОМЛЕНИЕ ЧЕРЕЗ TELEGRAM BOT
                     try:
                         slot = await session.get(DinnerSlot, db_payment.slot_id)
                         if slot:
@@ -1285,20 +1301,23 @@ async def payment_webhook(
                                 slot_restaurant=slot.restaurant,
                                 amount=db_payment.amount
                             )
-                            logger.info(f"📧 Success notification sent to user {db_payment.user_id}")
+                            logger.info(f"📧 [WEBHOOK] Мгновенное уведомление отправлено пользователю {db_payment.user_id}")
                     except Exception as notify_error:
-                        logger.error(f"❌ Failed to send success notification: {notify_error}")
+                        logger.error(f"❌ [WEBHOOK] Ошибка отправки мгновенного уведомления: {notify_error}")
                         # Не падаем, если уведомление не отправилось
                 else:
-                    logger.error(f"❌ Failed to finalize booking for payment {db_payment.id}")
+                    logger.error(f"❌ [WEBHOOK] Failed to finalize booking for payment {db_payment.id}")
             else:
-                logger.info(f"ℹ️ Booking {db_payment.booking_id} already exists for this payment")
+                logger.info(f"ℹ️ [WEBHOOK] Booking {db_payment.booking_id} already exists for this payment")
+        else:
+            logger.info(f"   Action: {result.get('action', 'none')} - no booking creation needed")
 
+        logger.info("✅ [WEBHOOK] Webhook processed successfully")
         return {"status": "ok"}
         
     except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
-        traceback.print_exc()
+        logger.error(f"❌ [WEBHOOK] Webhook error: {e}")
+        logger.error(f"   Traceback: {traceback.format_exc()}")
         return {"status": "error", "message": str(e)}
 
 

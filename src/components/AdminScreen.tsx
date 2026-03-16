@@ -623,6 +623,14 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         {tab === "users" && (
           <>
             {renderHeader("Пользователи", "dashboard")}
+            {selectedUserProfile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex justify-between items-center">
+                <span className="text-blue-600 text-sm">Просматривается профиль: {selectedUserProfile.name || "Без имени"}</span>
+                <button onClick={() => setSelectedUserProfile(null)} className="text-blue-400 hover:text-blue-600">
+                  <X size={16} />
+                </button>
+              </div>
+            )}
             <div className="text-xs text-gray-400 mb-3">Всего: {usersTotal}</div>
             {users.map(u => (
               <div 
@@ -774,7 +782,7 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
                       <div className={`w-2.5 h-2.5 rounded-full ${s.is_active ? "bg-green-400" : "bg-red-400"}`} />
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button onClick={() => { setSelectedSlotId(s.id); setTab("slot_detail"); }} className="flex-1 py-2 px-3 rounded-xl bg-gray-50 text-[#404243] text-xs font-medium hover:bg-gray-100 transition-colors">
                       Участники
                     </button>
@@ -826,6 +834,14 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         {tab === "slot_detail" && selectedSlotId && (
           <>
             {renderHeader("Участники", "slots")}
+            {selectedUserProfile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex justify-between items-center">
+                <span className="text-blue-600 text-sm">Просматривается профиль: {selectedUserProfile.name || "Без имени"}</span>
+                <button onClick={() => setSelectedUserProfile(null)} className="text-blue-400 hover:text-blue-600">
+                  <X size={16} />
+                </button>
+              </div>
+            )}
             {(() => {
               const slot = slots.find(s => s.id === selectedSlotId);
               if (!slot) return null;
@@ -944,6 +960,14 @@ export function AdminScreen({ token: initData, onBack, isAuthorized: isAuthorize
         {tab === "group_detail" && selectedGroupId && (
           <>
             {renderHeader("Управление группой", "groups")}
+            {selectedUserProfile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex justify-between items-center">
+                <span className="text-blue-600 text-sm">Просматривается профиль: {selectedUserProfile.name || "Без имени"}</span>
+                <button onClick={() => setSelectedUserProfile(null)} className="text-blue-400 hover:text-blue-600">
+                  <X size={16} />
+                </button>
+              </div>
+            )}
             <div className={cardClass}>
               <div className="text-sm font-medium text-[#404243] mb-2">Добавить участников (через запятую ID):</div>
               <div className="flex gap-2">
