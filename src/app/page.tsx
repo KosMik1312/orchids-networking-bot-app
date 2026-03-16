@@ -211,24 +211,20 @@ export default function Home() {
 
     const startApp = () => {
       // 🎯 ПРОВЕРЯЕМ STARTAPP ПАРАМЕТР ПЕРВЫМ ДЕЛОМ
-      const webApp = (window as any).Telegram?.WebApp;
-      const startParam = webApp?.initDataUnsafe?.start_param;
+      const tgWebApp = (window as any).Telegram?.WebApp;
+      const startParam = tgWebApp?.initDataUnsafe?.start_param;
       
       if (startParam && startParam.startsWith('payment_success')) {
         console.log('🎉 [PAYMENT] Payment success detected from startapp parameter!');
-        
-        // Показываем popup уведомление о спешной оплате
-        if (webApp?.showPopup) {
-          webApp.showPopup({
+        if (tgWebApp?.showPopup) {
+          tgWebApp.showPopup({
             title: '✅ Оплата прошла успешно!',
             message: 'Ваше бронирование подтверждено. Мы отправим вам детали в чат.',
             buttons: [{ type: 'ok' }]
           });
         }
-        
-        // Очищаем start_param чтобы не показывать popup повторно
-        if (webApp?.initDataUnsafe) {
-          webApp.initDataUnsafe.start_param = null;
+        if (tgWebApp?.initDataUnsafe) {
+          tgWebApp.initDataUnsafe.start_param = null;
         }
       }
       
@@ -239,13 +235,11 @@ export default function Home() {
         initializeApp(savedToken);
         return;
       }
-      
-      // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
-      const webApp = (window as any).Telegram?.WebApp;
 
-      if (webApp && webApp.initData) {
+      // ✅ ИСПОЛЬЗУЕМ ТОЛЬКО INITDATA ОТ TELEGRAM
+      if (tgWebApp && tgWebApp.initData) {
         console.log('✅ Got Telegram initData');
-        initializeApp(webApp.initData);
+        initializeApp(tgWebApp.initData);
       } else {
         // Ждём пока WebApp инициализируется
         console.log('⏳ Waiting for Telegram WebApp...');
@@ -260,7 +254,7 @@ export default function Home() {
             clearInterval(pollingRef.current!);
             console.log('✅ WebApp ready');
             initializeApp(webApp.initData);
-          } else if (attempts > 25) { // ~5 seconds
+          } else if (attempts > 25) {
             clearInterval(pollingRef.current!);
             console.error('❌ Timeout waiting for Telegram WebApp');
 
