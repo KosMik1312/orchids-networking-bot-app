@@ -13,7 +13,7 @@ const meta = {
     initialData: {
       name: '',
       gender: '',
-      age: '',
+      age: 25,
       zodiac: '',
       career: '',
       familyStatus: '',

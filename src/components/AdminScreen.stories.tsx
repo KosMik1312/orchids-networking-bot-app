@@ -74,6 +74,7 @@ const mockSlots: AdminSlot[] = [
     current_bookings: 8,
     is_active: true,
     created_at: "2024-02-01",
+    price: 1500,
   },
   {
     id: 2,
@@ -85,6 +86,7 @@ const mockSlots: AdminSlot[] = [
     current_bookings: 7,
     is_active: true,
     created_at: "2024-02-05",
+    price: 1500,
   },
   {
     id: 3,
@@ -96,6 +98,7 @@ const mockSlots: AdminSlot[] = [
     current_bookings: 3,
     is_active: false,
     created_at: "2024-02-08",
+    price: 1500,
   },
 ];
 
@@ -173,7 +176,7 @@ export const Broadcast: Story = {
 export const Unauthorized: Story = {
   args: {
     isAuthorized: false,
-    mockStats: null,
+    mockStats: undefined,
     mockUsers: [],
     mockSlots: [],
     mockGroups: [],

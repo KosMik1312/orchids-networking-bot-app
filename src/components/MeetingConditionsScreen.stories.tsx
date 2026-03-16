@@ -14,8 +14,8 @@ const meta = {
       metro: [],
       days: [],
       time: { from: '10:00', to: '22:00' },
-      goal: '',
-      format: '',
+      goal: [],
+      format: [],
     },
   },
 } satisfies Meta<typeof MeetingConditionsScreen>;

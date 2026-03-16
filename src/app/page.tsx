@@ -474,6 +474,8 @@ export default function Home() {
                 <ProfileFormScreen
                   onContinue={handleProfileFormComplete}
                   onBack={handleProfileFormBack}
+                  userId={userId}
+                  userToken={userToken}
                   // Only pass data if we have it. If new user, fullProfile is empty.
                   initialData={{
                     name: fullProfile.name || "",

@@ -152,6 +152,13 @@ export function SettingsScreen({ onBack, onPrivacy, onOffer, onConsent, onEmailC
                         // ✅ 3. Проверяем успешность ответа
                         if (result.success) {
                           console.log("✅ [DELETE] Profile deleted successfully!");
+                          
+                          // Очищаем все локальные данные, чтобы не осталось кешированных токенов
+                          sessionStorage.removeItem('orchids_auth_token');
+                          sessionStorage.removeItem('orchids_slot_id');
+                          localStorage.removeItem('orchids_pending_payment_id');
+                          localStorage.removeItem('orchids_pending_payment_time');
+                          
                           // Небольшая задержка перед редиректом для UI feedback
                           setTimeout(() => {
                             window.location.href = "/?screen=welcome";

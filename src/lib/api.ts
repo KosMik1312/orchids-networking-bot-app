@@ -44,7 +44,7 @@ export interface UserProfile {
   children?: string;
   occupation?: string;
   goal?: string[];
-  interests?: string;
+  interests?: string[];
   comfort_level?: number;
   social_frequency?: number;
   communication_format?: string[] | string;

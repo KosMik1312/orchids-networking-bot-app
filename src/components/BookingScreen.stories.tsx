@@ -10,12 +10,11 @@ const meta = {
   args: {
     city: 'Москва',
     authToken: 'mock-token-123',
-    onHome: () => console.log('Home clicked'),
+    onProfile: () => console.log('Profile clicked'),
     onAfisha: () => console.log('Afisha clicked'),
-    onMyProfile: () => console.log('Profile clicked'),
-    onBookings: () => console.log('Bookings clicked'),
-    onFavorites: () => console.log('Favorites clicked'),
-    onHelp: () => console.log('Help clicked'),
+    onSettings: () => console.log('Settings clicked'),
+    onContacts: () => console.log('Contacts clicked'),
+    onOffer: () => console.log('Offer clicked'),
   },
 } satisfies Meta<typeof BookingScreen>;
 

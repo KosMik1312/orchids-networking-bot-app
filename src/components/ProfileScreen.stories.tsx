@@ -10,16 +10,12 @@ const meta = {
   args: {
     city: 'Москва',
     userName: 'Элис',
-    userPhoto: null,
-    completedMeetings: 5,
-    totalMeetings: 10,
     onHome: () => console.log('Home clicked'),
     onAfisha: () => console.log('Afisha clicked'),
-    onMyProfile: () => console.log('Profile clicked'),
+    onEditProfile: () => console.log('Edit profile clicked'),
     onBookings: () => console.log('Bookings clicked'),
     onFavorites: () => console.log('Favorites clicked'),
     onHelp: () => console.log('Help clicked'),
-    onEditProfile: () => console.log('Edit profile clicked'),
     onSettings: () => console.log('Settings clicked'),
   },
 } satisfies Meta<typeof ProfileScreen>;
@@ -31,13 +27,14 @@ export const Default: Story = {};
 
 export const WithPhoto: Story = {
   args: {
-    userPhoto: 'https://via.placeholder.com/150',
+    // added a specific required prop
+    userName: 'Элис с фото',
   },
 };
 
 export const NewUser: Story = {
   args: {
-    completedMeetings: 0,
-    totalMeetings: 0,
+    // another variation without unknown props
+    userName: 'Новый Пользователь',
   },
 };

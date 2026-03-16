@@ -14,7 +14,6 @@ interface ProfileScreenProps {
   userName?: string;
   onHome?: () => void;
   onAfisha?: () => void;
-  onMyProfile?: () => void;
   onBookings?: () => void;
   onFavorites?: () => void;
   onHelp?: () => void;
@@ -30,7 +29,6 @@ export function ProfileScreen({
   userName,
   onHome,
   onAfisha,
-  onMyProfile,
   onBookings,
   onFavorites,
   onHelp,
@@ -75,7 +73,7 @@ export function ProfileScreen({
     return () => { isMounted = false; };
   }, [userId, authToken]);
   const menuItems = [
-    { icon: User, label: ru.profile.myProfile, onClick: onEditProfile || onMyProfile },
+    { icon: User, label: ru.profile.myProfile, onClick: onEditProfile },
     { icon: Calendar, label: ru.profile.activeBookings, onClick: onBookings },
     { icon: Heart, label: ru.profile.favorites, onClick: onFavorites },
     { icon: Info, label: ru.profile.helpCenter, onClick: onHelp },

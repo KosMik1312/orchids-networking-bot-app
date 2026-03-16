@@ -4,18 +4,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Settings, ChevronRight, Check, ArrowLeft, AlertCircle } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { getSlots, createBooking, createPayment, getPaymentStatus } from "@/lib/api";
-import { ru } from "@/lib/i18n/ru";
+import { getSlots, createBooking, createPayment, getPaymentStatus, type Slot } from "@/lib/api";
+import { ru } from "@/lib/i18n";
 
 type BookingStep = "slots" | "payment" | "success";
-
-interface Slot {
-  id: number;
-  date: string;
-  time: string;
-  address: string;
-  price: number;
-}
 
 interface BookingScreenProps {
   city?: string;
@@ -121,8 +113,31 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
 
   useEffect(() => {
     // 🎯 ГЛАВНАЯ ЛОГИКА: Проверка после возврата с платёжной страницы
+    
+    // Пытаемся получить ID из URL параметров (обычный веб)
     const params = new URLSearchParams(window.location.search);
-    const paymentIdFromUrl = params.get("payment_id");
+    let paymentIdFromUrl = params.get("payment_id");
+
+    // Пытаемся получить ID из Telegram start_param (ТГ мини-апп)
+    if (!paymentIdFromUrl && (window.Telegram?.WebApp?.initDataUnsafe as any)?.start_param) {
+      const startParam = (window.Telegram?.WebApp?.initDataUnsafe as any).start_param;
+      if (startParam && startParam.startsWith('payment_success_')) {
+        paymentIdFromUrl = startParam.replace('payment_success_', '');
+      }
+    }
+
+    // Fallback: берем из localStorage, если мы вернулись на страницу, но параметров нет
+    if (!paymentIdFromUrl) {
+      paymentIdFromUrl = localStorage.getItem("orchids_pending_payment_id");
+      const savedTime = localStorage.getItem("orchids_pending_payment_time");
+      
+      // Если платеж старый (больше 30 минут), игнорируем его
+      if (savedTime && Date.now() - parseInt(savedTime) > 30 * 60 * 1000) {
+        localStorage.removeItem("orchids_pending_payment_id");
+        localStorage.removeItem("orchids_pending_payment_time");
+        paymentIdFromUrl = null;
+      }
+    }
 
     // 🔐 ВОССТАНАВЛИВАЕМ authToken из sessionStorage если его нет
     let effectiveAuthToken = authToken;
@@ -134,24 +149,19 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
       }
     }
 
-    // Проверяем статус платежа ТОЛЬКО если в URL есть payment_id (возврат с платежной страницы)
+    // Проверяем статус платежа ТОЛЬКО если есть payment_id
     if (paymentIdFromUrl && effectiveAuthToken) {
-      console.log("💰 [PAYMENT] Payment return detected, checking status...");
-      console.log("  From URL:", String(paymentIdFromUrl).replace(/[\r\n]/g, ""));
+      console.log("💰 [PAYMENT] Pending payment detected, checking status...");
+      console.log("  Payment ID:", String(paymentIdFromUrl).replace(/[\r\n]/g, ""));
       
       const cleanup = checkPaymentStatus(parseInt(paymentIdFromUrl), effectiveAuthToken);
-      
-      // Очищаем URL от параметра payment_id
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete("payment_id");
-      window.history.replaceState({}, "", newUrl.toString());
       
       // Возвращаем функцию очистки для остановки polling при размонтировании
       return () => {
         cleanup?.then(clearFn => clearFn?.());
       };
     } else if (paymentIdFromUrl && !effectiveAuthToken) {
-      console.error("❌ [PAYMENT] Payment return detected but no auth token available!");
+      console.error("❌ [PAYMENT] Pending payment detected but no auth token available!");
       setPaymentError("Ошибка аутентификации. Пожалуйста, попробуйте снова.");
       setStep("slots");
     } else {
@@ -167,12 +177,8 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         const data = await getSlots("all");
         if (isMounted) {
           const mappedSlots: Slot[] = data.slots.map((s: any) => ({
-            id: s.id,
+            ...s,
             date: new Date(s.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
-            time: s.time,
-            address: s.restaurant,
-            city: s.city,
-            price: s.price
           }));
           setSlots(mappedSlots);
 
@@ -240,36 +246,46 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
         console.log("💾 [PAYMENT] Saved payment ID to localStorage:", paymentData.paymentId);
         console.log("🚀 [PAYMENT] Redirecting to YooKassa:", paymentData.confirmationUrl);
 
-        // 🎯 ВАЖНО: Используем window.open() для открытия ЮКассы
-        // Это позволит пользователю вернуться в Telegram через return_url
+        // 🎯 ВАЖНО: В Telegram Mini App ЮКасса должна открываться во внешнем браузере,
+        // иначе она может блокироваться (т.к. запрещает iframes).
+        // Используем встроенный метод Telegram WebApp.openLink
         if (typeof window !== 'undefined') {
-          // Открываем в новом окне/вкладке
-          const paymentWindow = window.open(paymentData.confirmationUrl, '_blank');
-          
-          // Если окно заблокировано popup blocker'ом, используем обычный редирект
-          if (!paymentWindow) {
-            console.log('🚨 [PAYMENT] Popup blocked, using direct redirect');
-            window.location.href = paymentData.confirmationUrl;
-          } else {
-            console.log('✅ [PAYMENT] Payment window opened successfully');
+          const telegramWebApp = (window as any).Telegram?.WebApp;
+          if (telegramWebApp?.openLink) {
+            console.log('🔗 [PAYMENT] Opening YooKassa via Telegram openLink');
+            telegramWebApp.openLink(paymentData.confirmationUrl);
             
             // Запускаем polling для проверки статуса платежа
             const cleanup = checkPaymentStatus(paymentData.paymentId, authToken);
+          } else {
+            // Открываем в новом окне/вкладке
+            const paymentWindow = window.open(paymentData.confirmationUrl, '_blank');
             
-            // Очищаем polling при закрытии окна
-            const checkClosed = setInterval(() => {
-              if (paymentWindow.closed) {
-                console.log('🔄 [PAYMENT] Payment window closed, checking status...');
-                clearInterval(checkClosed);
-                // Дополнительная проверка статуса при закрытии окна
-                checkPaymentStatus(paymentData.paymentId, authToken, 5); // Быстрая проверка
-              }
-            }, 1000);
+            // Если окно заблокировано popup blocker'ом, используем обычный редирект
+            if (!paymentWindow) {
+              console.log('🚨 [PAYMENT] Popup blocked, using direct redirect');
+              window.location.href = paymentData.confirmationUrl;
+            } else {
+              console.log('✅ [PAYMENT] Payment window opened successfully');
+              
+              // Запускаем polling для проверки статуса платежа
+              const cleanup = checkPaymentStatus(paymentData.paymentId, authToken);
+              
+              // Очищаем polling при закрытии окна
+              const checkClosed = setInterval(() => {
+                if (paymentWindow.closed) {
+                  console.log('🔄 [PAYMENT] Payment window closed, checking status...');
+                  clearInterval(checkClosed);
+                  // Дополнительная проверка статуса при закрытии окна
+                  checkPaymentStatus(paymentData.paymentId, authToken, 5); // Быстрая проверка
+                }
+              }, 1000);
+            }
           }
         } else {
           // Fallback для SSR
           console.log('🔄 [PAYMENT] Using fallback redirect');
-          window.location.href = paymentData.confirmationUrl;
+          (window as any).location.href = paymentData.confirmationUrl;
         }
       } else {
         console.log("❌ [PAYMENT] Invalid payment response");
@@ -336,7 +352,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                 <div className="text-center py-10 text-gray-500">{t.noSlots}</div>
               ) : (
                 slots.map((slot) => {
-                const seatsAvailable = slot.max_people - slot.current_bookings;
+                const seatsAvailable = (slot.max_people ?? 0) - (slot.current_bookings ?? 0);
                 const isSoldOut = seatsAvailable <= 0;
                 return (
                   <button
@@ -353,7 +369,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
                       <p className={`text-[16px] font-semibold ${
                         isSoldOut ? 'text-gray-400' : 'text-[#404243]'
                       }`}>{slot.date}, {slot.time}</p>
-                      <p className="text-[#8E8E93] text-[12px] mt-0">{slot.address}</p>
+                      <p className="text-[#8E8E93] text-[12px] mt-0">{slot.restaurant}</p>
                       {isSoldOut && (
                         <p className="text-[#E15859] text-[11px] font-bold mt-1">Всё раскуплено!</p>
                       )}
@@ -429,7 +445,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Location */}
               <div className="border-b border-gray-100 pb-2 mb-2">
                 <p className="text-[#404243] text-[12px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[17px] font-bold mt-0.5 line-clamp-1">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "ул. Скляренко д. 2"}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5 line-clamp-1">{selectedSlot?.city || city}, {selectedSlot?.restaurant || "ул. Скляренко д. 2"}</p>
               </div>
 
               {/* Promo Code */}
@@ -583,7 +599,7 @@ export function BookingScreen({ city = "Москва", authToken, selectedEventI
               {/* Location */}
               <div className="border-b border-gray-100 pb-2 mb-2">
                 <p className="text-[#404243] text-[12px] font-medium">{t.payment.location}</p>
-                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{(selectedSlot as any)?.city || city}, {selectedSlot?.address || "-"}</p>
+                <p className="text-[#E15859] text-[17px] font-bold mt-0.5">{selectedSlot?.city || city}, {selectedSlot?.restaurant || "-"}</p>
               </div>
 
               {/* Time */}

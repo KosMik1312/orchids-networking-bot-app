@@ -65,11 +65,14 @@ class PaymentService:
             "slot_id": slot_id
         }
         
-        # Создаём платёж через Ю-Кассу (в отдельном потоке, так как SDK синхронный)
+        # Создаём платёж через Ю-Кассу (с временным return_url, если нужно)
+        temp_return_url = return_url
+        
+        # Создаем платеж
         payment_result = await asyncio.to_thread(
             self.yookassa.create_payment,
             amount=amount,
-            return_url=return_url,
+            return_url=temp_return_url,
             description=description,
             metadata=metadata
         )
@@ -77,6 +80,10 @@ class PaymentService:
         if payment_result.get("success"):
             payment_id = payment_result['payment_id']
             logger.info(f"Payment created: {payment_id}")
+            
+            # В ЮКассе нельзя изменить return_url после создания платежа.
+            # Если frontend ожидает payment_id в URL, он должен рассчитывать только на localStorage
+            # См. BookingScreen.tsx
         else:
             logger.error(f"Payment creation failed: {payment_result.get('error')}")
         
